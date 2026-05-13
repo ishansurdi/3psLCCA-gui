@@ -37,6 +37,7 @@ MAINTENANCE_FIELDS = [
         required=True,
         default=0.0,
         warn=(0.01, 100.0, "Routine Inspection Cost is 0 - cost will not be included"),
+        doc_slug=["Maintenance_repair", "Routine_inspection_cost"],
     ),
     FieldDef(
         "routine_inspection_freq",
@@ -52,6 +53,7 @@ MAINTENANCE_FIELDS = [
             50,
             "Routine Inspection Frequency seems unusual - expected between 1 and 50 years",
         ),
+        doc_slug=["Maintenance_repair", "Routine_inspection_frequency"],
     ),
     # ── Periodic Maintenance ─────────────────────────────────────────────
     Section("Periodic Maintenance"),
@@ -69,6 +71,7 @@ MAINTENANCE_FIELDS = [
             100.0,
             "Periodic Maintenance Cost is 0 - cost will not be included",
         ),
+        doc_slug=["Maintenance_repair", "Periodic_maintenance_cost"],
     ),
     FieldDef(
         "periodic_maintenance_carbon_cost",
@@ -84,6 +87,7 @@ MAINTENANCE_FIELDS = [
             100.0,
             "Periodic Maintenance Carbon Cost is 0 - cost will not be included",
         ),
+        doc_slug=["Maintenance_repair", "Periodic_maintenance_carbon_cost"],
     ),
     FieldDef(
         "periodic_maintenance_freq",
@@ -99,6 +103,7 @@ MAINTENANCE_FIELDS = [
             100,
             "Periodic Maintenance Frequency seems unusual - expected between 1 and 100 years",
         ),
+        doc_slug=["Maintenance_repair", "Periodic_maintenance_frequency"],
     ),
     # ── Major Works ──────────────────────────────────────────────────────
     Section("Major Works"),
@@ -112,6 +117,7 @@ MAINTENANCE_FIELDS = [
         required=True,
         default=0.0,
         warn=(0.01, 100.0, "Major Inspection Cost is 0 - cost will not be included"),
+        doc_slug=["Maintenance_repair", "Major_inspection_cost"],
     ),
     FieldDef(
         "major_inspection_freq",
@@ -127,6 +133,7 @@ MAINTENANCE_FIELDS = [
             100,
             "Major Inspection Frequency seems unusual - expected between 1 and 100 years",
         ),
+        doc_slug=["Maintenance_repair", "Major_inspection_frequency"],
     ),
     FieldDef(
         "major_repair_cost",
@@ -138,6 +145,7 @@ MAINTENANCE_FIELDS = [
         required=True,
         default=0.0,
         warn=(0.01, 100.0, "Major Repair Cost is 0 - cost will not be included"),
+        doc_slug=["Maintenance_repair", "Major_repair_cost"],
     ),
     FieldDef(
         "major_repair_carbon_cost",
@@ -149,6 +157,7 @@ MAINTENANCE_FIELDS = [
         required=True,
         default=0.0,
         warn=(0.01, 100.0, "Major Repair Carbon Cost is 0 - cost will not be included"),
+        doc_slug=["Maintenance_repair", "Major_repair_carbon_cost"],
     ),
     FieldDef(
         "major_repair_freq",
@@ -164,6 +173,7 @@ MAINTENANCE_FIELDS = [
             100,
             "Major Repair Frequency seems unusual - expected between 1 and 100 years",
         ),
+        doc_slug=["Maintenance_repair", "Major_repair_frequency"],
     ),
     FieldDef(
         "major_repair_duration",
@@ -179,6 +189,7 @@ MAINTENANCE_FIELDS = [
             60,
             "Major Repair Duration seems unusual - expected between 1 and 60 months",
         ),
+        doc_slug=["Maintenance_repair", "Major_repair_duration"],
     ),
     # ── Bearings & Expansion Joints ──────────────────────────────────────
     Section("Bearings & Expansion Joints"),
@@ -196,6 +207,7 @@ MAINTENANCE_FIELDS = [
             100.0,
             "Bearing & Expansion Joint Cost is 0 - cost will not be included",
         ),
+        doc_slug=["Maintenance_repair", "Bearing_expansion_joint_replacement_cost"],
     ),
     FieldDef(
         "bearing_exp_joint_freq",
@@ -211,6 +223,7 @@ MAINTENANCE_FIELDS = [
             100,
             "Bearing & Expansion Joint Frequency seems unusual - expected between 1 and 100 years",
         ),
+        doc_slug=["Maintenance_repair", "Bearing_expansion_joint_replacement_frequency"],
     ),
     FieldDef(
         "bearing_exp_joint_duration",
@@ -226,6 +239,7 @@ MAINTENANCE_FIELDS = [
             365,
             "Replacement Duration seems unusual - expected between 1 and 365 days",
         ),
+        doc_slug=["Maintenance_repair", "Bearing_expansion_joint_replacement_duration"],
     ),
 ]
 

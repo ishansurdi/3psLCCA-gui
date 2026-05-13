@@ -32,6 +32,7 @@ DEMOLITION_FIELDS = [
         unit="(%)",
         required=True,
         default=0.0,
+        doc_slug=["Demolition", "Demolition_disposal_cost"],
     ),
     FieldDef(
         "demolition_carbon_cost_pct",
@@ -42,6 +43,7 @@ DEMOLITION_FIELDS = [
         unit="(%)",
         required=True,
         default=0.0,
+        doc_slug=["Demolition", "Demolition_disposal_carbon_cost"],
     ),
     FieldDef(
         "demolition_duration",
@@ -52,6 +54,7 @@ DEMOLITION_FIELDS = [
         unit="(months)",
         required=True,
         default=0,
+        doc_slug=["Demolition", "Demolition_disposal_duration"],
     ),
     FieldDef(
         "demolition_method",

@@ -165,6 +165,7 @@ TRAFFIC_FIELDS = [
         (0.0, 999.0, 2),
         unit="(m)",
         required=True,
+        doc_slug=["Traffic_data", "Carriageway_width"],
     ),
     FieldDef(
         "hourly_capacity",
@@ -174,6 +175,7 @@ TRAFFIC_FIELDS = [
         (0, 99999),
         unit="(veh/hr)",
         required=True,
+        doc_slug=["Traffic_data", "Hourly_capacity"],
     ),
     Section("Accident Severity Distribution"),
     FieldDef(
@@ -183,6 +185,7 @@ TRAFFIC_FIELDS = [
         "float",
         (0.0, 100.0, 2),
         unit="(%)",
+        doc_slug=["Traffic_data", "Minor_injury"],
     ),
     FieldDef(
         "severity_major",
@@ -191,6 +194,7 @@ TRAFFIC_FIELDS = [
         "float",
         (0.0, 100.0, 2),
         unit="(%)",
+        doc_slug=["Traffic_data", "Major_injury"],
     ),
     FieldDef(
         "severity_fatal",
@@ -199,6 +203,7 @@ TRAFFIC_FIELDS = [
         "float",
         (0.0, 100.0, 2),
         unit="(%)",
+        doc_slug=["Traffic_data", "Fatal_accidents"],
     ),
     Section("Road Parameters"),
     FieldDef(
@@ -208,6 +213,7 @@ TRAFFIC_FIELDS = [
         "float",
         (2000, 1_00_000.0, 0),
         unit="(mm/km)",
+        doc_slug=["Traffic_data", "Road_roughness"],
     ),
     FieldDef(
         "road_rise_m_per_km",
@@ -222,6 +228,7 @@ TRAFFIC_FIELDS = [
             9_999.0,
             "Road Rise is 0 or unusually high - please verify the value",
         ),
+        doc_slug=["Traffic_data", "Road_rise_fall"],
     ),
     FieldDef(
         "road_fall_m_per_km",
@@ -236,6 +243,7 @@ TRAFFIC_FIELDS = [
             9_999.0,
             "Road Fall is 0 or unusually high - please verify the value",
         ),
+        doc_slug=["Traffic_data", "Road_rise_fall"],
     ),
     FieldDef(
         "additional_reroute_distance_km",
@@ -249,6 +257,7 @@ TRAFFIC_FIELDS = [
             1000,
             "Additional Reroute Distance is 0 or unusually high - please verify the value",
         ),
+        doc_slug=["Traffic_data", "Additional_reroute_distance"],
     ),
     FieldDef(
         "additional_travel_time_min",
@@ -262,6 +271,7 @@ TRAFFIC_FIELDS = [
             1000,
             "Additional Travel Time is 0 or unusually high - please verify the value",
         ),
+        doc_slug=["Traffic_data", "Additional_travel_time"],
     ),
     FieldDef(
         "crash_rate_accidents_per_million_km",
@@ -276,6 +286,7 @@ TRAFFIC_FIELDS = [
             10000,
             "Crash Rate is 0 or unusually high - please verify the value",
         ),
+        doc_slug=["Traffic_data", "Crash_rate"],
     ),
     FieldDef(
         "work_zone_multiplier",
@@ -290,6 +301,7 @@ TRAFFIC_FIELDS = [
             1.0,
             "Work Zone Multiplier is 0 - work zone accident scaling will be disabled",
         ),
+        doc_slug=["Traffic_data", "Workzone_multiplier"],
     ),
     Section("Traffic Flow"),
     FieldDef(
@@ -300,6 +312,7 @@ TRAFFIC_FIELDS = [
         (0, 24),
         required=True,
         warn=(1, 24, "Number of Peak Hours must be between 1 and 24"),
+        doc_slug=["Traffic_data", "Number_of_peak_hours"],
     ),
 ]
 

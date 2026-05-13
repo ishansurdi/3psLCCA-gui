@@ -91,7 +91,6 @@ BRIDGE_FIELDS = [
             "Slab",
             "Other",
         ],
-        doc_slug=["bridge", "bridge-type"],
     ),
     FieldDef(
         "span",
@@ -132,6 +131,7 @@ BRIDGE_FIELDS = [
         "Indicates whether a dedicated pedestrian footpath is provided.",
         "combo",
         options=["Yes", "No"],
+        doc_slug=["Bridge_data", "Footpath"],
     ),
     FieldDef(
         "wind_speed",
@@ -141,6 +141,7 @@ BRIDGE_FIELDS = [
         options=(0.0, 999.0, DECIMAL_PLACES),
         unit="(m/s)",
         default=0.0,
+        doc_slug=["Bridge_data", "Wind_Speed"],
     ),
     # ── Life Cycle ───────────────────────────────────────────────────────
     Section("Life Cycle"),
@@ -153,6 +154,7 @@ BRIDGE_FIELDS = [
         unit="(years)",
         required=True,
         default=0,
+        doc_slug=["Bridge_data", "Design_life"],
     ),
     FieldDef(
         "year_of_construction",
@@ -163,6 +165,7 @@ BRIDGE_FIELDS = [
         options=(2000, 2500),
         required=True,
         default=date.today().year,
+        doc_slug=["Bridge_data", "Year_of_construction"],
     ),
     # ── Construction Schedule ─────────────────────────────────────────────
     Section("Construction Schedule"),
@@ -175,6 +178,7 @@ BRIDGE_FIELDS = [
         required=True,
         unit="(months)",
         default=0.0,
+        doc_slug=["Bridge_data", "Duration_of_construction"],
     ),
     FieldDef(
         "working_days_per_month",

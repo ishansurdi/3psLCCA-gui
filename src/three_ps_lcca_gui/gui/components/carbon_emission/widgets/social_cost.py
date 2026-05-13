@@ -62,7 +62,7 @@ HEADER_FIELDS = [
         "Choose between government standards or peer-reviewed scientific models.",
         "combo",
         options=_SOURCES,
-        doc_slug=["carbon", "social-cost", "scc-methodology"],
+        doc_slug=["Carbon_emissions_data", "SSC"],
     ),
 ]
 NITI_FIELDS = [
