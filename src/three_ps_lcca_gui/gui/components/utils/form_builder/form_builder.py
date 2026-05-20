@@ -98,7 +98,7 @@ def _make_upload_img_widget(
     logo_input.hide()
 
     preview = QLabel("No image selected")
-    preview.setFixedSize(120, 120)
+    preview.setFixedHeight(180)
     preview.setAlignment(Qt.AlignCenter)
     preview.setStyleSheet(f"border: 1px solid {get_token('surface_mid')};")
 
@@ -133,8 +133,9 @@ def _make_upload_img_widget(
 
         pixmap = QPixmap()
         pixmap.loadFromData(img_bytes)
+        w = _preview.width() or 120
         scaled = pixmap.scaled(
-            120, 120, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            w, 180, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         _preview.setPixmap(scaled)
 
         _input.setText(base64.b64encode(img_bytes).decode("utf-8"))
@@ -156,14 +157,25 @@ def _make_upload_img_widget(
     btn_clear.clicked.connect(clear_image)
 
     btn_row = QWidget()
-    btn_row_layout = QHBoxLayout(btn_row)
+    btn_row_layout = QVBoxLayout(btn_row)
     btn_row_layout.setContentsMargins(0, 0, 0, 0)
     btn_row_layout.setSpacing(6)
+    btn_row_layout.setAlignment(Qt.AlignTop)
+    btn_browse.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    btn_clear.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     btn_row_layout.addWidget(btn_browse)
     btn_row_layout.addWidget(btn_clear)
 
-    file_layout.addWidget(preview)
-    file_layout.addWidget(btn_row)
+    row = QWidget()
+    row_layout = QHBoxLayout(row)
+    row_layout.setContentsMargins(0, 0, 0, 0)
+    row_layout.setSpacing(12)
+    row_layout.setAlignment(Qt.AlignTop)
+    preview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    row_layout.addWidget(preview, 1, Qt.AlignTop)
+    row_layout.addWidget(btn_row, 1, Qt.AlignTop)
+
+    file_layout.addWidget(row)
 
     return container, preview, logo_input, btn_row
 
@@ -395,8 +407,9 @@ def build_form(
                 pixmap.loadFromData(img_bytes)
                 if pixmap.isNull():
                     raise ValueError("QPixmap could not decode image data")
+                w = preview.width() or 120
                 scaled = pixmap.scaled(
-                    120, 120, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                    w, 180, Qt.KeepAspectRatio, Qt.SmoothTransformation
                 )
                 preview.setPixmap(scaled)
             except Exception:

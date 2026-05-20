@@ -23,8 +23,6 @@ from ..utils.validation_helpers import clear_field_styles, freeze_form, freeze_w
 from ..utils.countries_data import CURRENCIES, COUNTRIES
 
 
-
-
 GENERAL_FIELDS = []
 
 PROJECT_INFO_FIELDS = [
@@ -58,30 +56,30 @@ PROJECT_INFO_FIELDS = [
 ]
 
 AGENCY_FIELDS = [
-    Section("Evaluating Agency"),
+    Section("Assessing Organization"),
+    FieldDef(
+        "contact_person",
+        "Assessor's Name",
+        "",
+        "text",
+    ),
     FieldDef(
         "agency_logo",
-        "Agency Logo",
+        "Organization's Logo",
         "Appears on the report cover page. PNG or JPG recommended.",
         "upload_img",
         options="default",
     ),
     FieldDef(
         "agency_name",
-        "Agency Name",
+        "Organization's Name",
         "",
         "text",
         # required=True,
     ),
     FieldDef(
-        "contact_person",
-        "Contact Person Name",
-        "",
-        "text",
-    ),
-    FieldDef(
         "agency_address",
-        "Agency Address",
+        "Organization's Address",
         "Appears in the report footer.",
         "text",
     ),
@@ -110,19 +108,19 @@ REVIEWER_FIELDS = [
     Section("Reviewed By"),
     FieldDef(
         "reviewer_name",
-        "Name",
+        "Reviewer Name",
         "",
         "text",
     ),
     FieldDef(
         "reviewer_organization",
-        "Organization",
+        "Reviewer Organization",
         "",
         "text",
     ),
     FieldDef(
         "reviewer_address",
-        "Address",
+        "Reviewer Address",
         "",
         "text",
     ),
@@ -188,7 +186,8 @@ class GeneralInfo(ScrollableForm):
 
         # Lock country and currency - disable widget so user can't edit,
         # but keep in _field_map so get_data_dict() saves them normally
-        self.required_keys = [k for k in self.required_keys if k not in self._LOCKED]
+        self.required_keys = [
+            k for k in self.required_keys if k not in self._LOCKED]
         for key in self._LOCKED:
             w = getattr(self, key, None)
             if w is not None:
@@ -206,33 +205,36 @@ class GeneralInfo(ScrollableForm):
         btn_layout.addWidget(self.btn_clear_all)
         self.form.addRow(btn_row)
 
-        # ── Insert Load Profile button under Evaluating Agency ───────────
+        # ── Load Profile button inline with Assessing Organization header ──
         self.btn_load_profile = QPushButton("Load Agency Profile")
         self.btn_load_profile.setMinimumHeight(28)
         self.btn_load_profile.clicked.connect(self._load_agency_profile_dialog)
-        
+
         from PySide6.QtWidgets import QFormLayout
         for i in range(self.form.rowCount()):
             item = self.form.itemAt(i, QFormLayout.SpanningRole)
             if item and item.widget():
                 w = item.widget()
-                if isinstance(w, QLabel) and "Evaluating Agency" in w.text():
-                    btn_container = QWidget()
-                    lay = QHBoxLayout(btn_container)
-                    lay.setContentsMargins(0, 0, 0, 8)
+                if isinstance(w, QLabel) and "Assessing Organization" in w.text():
+                    self.form.takeRow(i)
+                    header_row = QWidget()
+                    lay = QHBoxLayout(header_row)
+                    lay.setContentsMargins(0, 0, 0, 0)
+                    lay.setSpacing(8)
+                    lay.addWidget(w)
                     lay.addStretch()
                     lay.addWidget(self.btn_load_profile)
-                    
-                    self.form.insertRow(i + 2, btn_container)
+                    self.form.insertRow(i, header_row)
                     break
 
     def _load_agency_profile_dialog(self):
-        import os, json
+        import os
+        import json
         from PySide6.QtWidgets import QInputDialog, QMessageBox
-        
+
         dir_path = os.path.join("data", "user_db")
         file_path = os.path.join(dir_path, "profile.json")
-        
+
         profiles = {}
         if os.path.exists(file_path):
             try:
@@ -242,11 +244,12 @@ class GeneralInfo(ScrollableForm):
                         profiles = json.loads(content)
             except Exception:
                 pass
-                
+
         if not profiles:
-            QMessageBox.information(self, "No Profiles", "No saved agency profiles found.")
+            QMessageBox.information(
+                self, "No Profiles", "No saved agency profiles found.")
             return
-            
+
         profile_names = list(profiles.keys())
         item, ok = QInputDialog.getItem(
             self, "Load Profile", "Select a profile to load:", profile_names, 0, False
@@ -336,7 +339,8 @@ class GeneralInfo(ScrollableForm):
         cb.addItem("- No suggestions -", "")
 
         idx = cb.findData(saved_key) if saved_key else -1
-        cb.setCurrentIndex(idx if idx >= 0 else cb.count() - 1)  # default → "- No suggestions -"
+        # default → "- No suggestions -"
+        cb.setCurrentIndex(idx if idx >= 0 else cb.count() - 1)
 
         cb.setEnabled(bool(options))
         cb.blockSignals(False)
@@ -354,5 +358,3 @@ class GeneralInfo(ScrollableForm):
     def _on_field_changed(self):
         super()._on_field_changed()
         self.created.emit()
-
-
