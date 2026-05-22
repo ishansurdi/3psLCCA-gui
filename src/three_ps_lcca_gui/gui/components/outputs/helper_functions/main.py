@@ -187,7 +187,7 @@ class LCCABreakdownChart(QWidget):
             bar_color_fill = QColor(bar_color)
             bar_color_fill.setAlpha(200)
             bar_x = x_bar + _PAD_X
-            bar_y = ry + 5
+            bar_y = ry + 7
             bar_h = _ROW_H - 10
             p.fillRect(bar_x, bar_y, bar_w, bar_h, bar_color_fill)
 

@@ -168,7 +168,7 @@ r"{\parbox[t]{1.5cm}{\raggedright\footnotesize\textbf{\hspace{0pt}" + escape_lat
         ]
         _available = [(k, cap) for k, cap in _charts if data.get(k)]
         if _available:
-            with doc.create(Subsection("Life cycle cost distribution- charts")):
+            with doc.create(Subsection("Distribution of LCC - charts")):
                 doc.append(
                     "The following charts visualise the distribution of life cycle "
                     "costs across stages and sustainability pillars."

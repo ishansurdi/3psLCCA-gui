@@ -287,7 +287,7 @@ class LCCSummaryCards(QWidget):
 
         # ── Row 1: Grand Total ────────────────────────────────────────────
         outer.addWidget(self._card(
-            "Total Life-Cycle Cost (NPV)", grand_total,
+            "Total Lifecycle Cost", grand_total,
             get_token("primary"), large=True,
         ))
 
@@ -329,7 +329,7 @@ class LCCSummaryCards(QWidget):
         v.setContentsMargins(SP5, SP4, SP5, SP4)
         v.setSpacing(0)
 
-        title_lbl = QLabel(title.upper())
+        title_lbl = QLabel(title)
         title_lbl.setFont(_f(FS_SM, FW_MEDIUM))
         title_lbl.setStyleSheet(
             f"color: {get_token('text_secondary')}; letter-spacing: 1px; border: none;"
@@ -337,7 +337,7 @@ class LCCSummaryCards(QWidget):
         v.addWidget(title_lbl)
         v.addSpacing(SP2)
 
-        val_str = fmt_currency(value, self._currency, decimals=0)
+        val_str = fmt_currency(value, self._currency, decimals=0, fmt="short").title()
         val_lbl = QLabel(val_str)
         val_lbl.setFont(_f(FS_DISP if large else FS_XL, FW_BOLD))
         val_lbl.setStyleSheet(f"color: {accent}; border: none;")
@@ -537,7 +537,7 @@ class LCCInsightsWidget(QWidget):
         }
         dominant = max(stage_totals_raw, key=stage_totals_raw.get)
         dom_pct = stage_totals_raw[dominant] / grand * 100
-        dom_val = fmt_currency(stage_totals_raw[dominant], c, decimals=0)
+        dom_val = fmt_currency(stage_totals_raw[dominant], c, decimals=0, fmt="both")
         findings.append((
             "●", "primary",
             f"<b>{stage_labels[dominant]}</b> is the largest cost stage at "
@@ -559,9 +559,9 @@ class LCCInsightsWidget(QWidget):
             ratio = ruc_init / construction
             findings.append((
                 "●", "danger",
-                f"Building this bridge costs road users <b>{c} {fmt_currency(ruc_init, c, decimals=0)}</b> "
+                f"Building this bridge costs road users <b>{c} {fmt_currency(ruc_init, c, decimals=0, fmt='both')}</b> "
                 f"in delays—that is <b>{ratio:.1f}× the construction contract value</b> "
-                f"({c} {fmt_currency(construction, c, decimals=0)}). Faster construction directly reduces this social burden.",
+                f"({c} {fmt_currency(construction, c, decimals=0, fmt='both')}). Faster construction directly reduces this social burden.",
             ))
 
         bej = _get("use_stage", "economic", "replacement_costs_for_bearing_and_expansion_joint")
@@ -571,7 +571,7 @@ class LCCInsightsWidget(QWidget):
             findings.append((
                 "●", "text",
                 f"Bearing & expansion joint replacements account for <b>{bej_pct:.0f}%</b> of all "
-                f"maintenance expenditure ({c} {fmt_currency(bej, c, decimals=0)}). "
+                f"maintenance expenditure ({c} {fmt_currency(bej, c, decimals=0, fmt='both')}). "
                 f"This is the single largest recurring maintenance cost item.",
             ))
 
@@ -582,8 +582,8 @@ class LCCInsightsWidget(QWidget):
             findings.append((
                 "●", "warning",
                 f"Mid-life reconstruction disrupts road users <b>{rd_ratio:.1f}× more</b> than "
-                f"final end-of-life demolition ({c} {fmt_currency(recon_soc, c, decimals=0)} vs "
-                f"{c} {fmt_currency(eol_soc, c, decimals=0)}). Minimising reconstruction frequency "
+                f"final end-of-life demolition ({c} {fmt_currency(recon_soc, c, decimals=0, fmt='both')} vs "
+                f"{c} {fmt_currency(eol_soc, c, decimals=0, fmt='both')}). Minimising reconstruction frequency "
                 f"has an outsized social benefit.",
             ))
 
@@ -619,7 +619,7 @@ class LCCInsightsWidget(QWidget):
             findings.append((
                 "●", "text",
                 f"Financing cost over the loan period is <b>{loan_pct:.1f}%</b> of construction value "
-                f"({c} {fmt_currency(loan_init, c, decimals=0)})- a relatively small component of total cost.",
+                f"({c} {fmt_currency(loan_init, c, decimals=0, fmt='both')})- a relatively small component of total cost.",
             ))
 
         return findings
@@ -1002,9 +1002,9 @@ class OutputsPage(ScrollableForm):
             lambda r: _section_heading("Summary"),
             lambda r: LCCSummaryCards(r, currency=self._currency),
             lambda r: _divider(),
-            lambda r: _section_heading("Life cycle cost distribution"),
+            lambda r: _section_heading("Distribution of LCC"),
             lambda r: _section_description(
-                "These charts illustrate the distribution of project costs. The Sustainability Matrix disaggregates costs across the Economic, Environmental, and Social Pillars. The aggregation chart compares the relative weight of three lifecycle phases: Initial Construction, the combined Use/Maintenance/Reconstruction stage, and the final End-of-Life phase."
+                "These charts illustrate the distribution of the total life cycle cost. The Sustainability Matrix disaggregates costs across the Economic, Environmental, and Social Pillars. The aggregation chart compares the relative weight of three lifecycle phases: Initial Construction, the combined Use/Maintenance/Reconstruction stage, and the final End-of-Life phase."
             ),
             lambda r: LCCPieWidget(r, currency=self._currency),
             lambda r: AggregateChartWidget(r, currency=self._currency),

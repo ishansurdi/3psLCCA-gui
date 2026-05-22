@@ -130,7 +130,7 @@ class HeatmapDelegate(QStyledItemDelegate):
             actual_val = val * 1_000_000
             QToolTip.showText(
                 event.globalPos(),
-                f"Actual Value: {self.currency} {fmt_currency(actual_val, self.currency, decimals=0)}",
+                f"Actual Value: {self.currency} {fmt_currency(actual_val, self.currency, decimals=0, fmt='both')}",
                 view
             )
             return True
@@ -139,19 +139,19 @@ class HeatmapDelegate(QStyledItemDelegate):
             if txt:
                 QToolTip.showText(event.globalPos(), str(txt), view)
                 return True
-                
+
         return super().helpEvent(event, view, option, index)
 
     def helpEvent(self, event, view, option, index):
         if not index.isValid():
             return False
-            
+
         val = index.data(Qt.UserRole)
         if val is not None:
             actual_val = val * 1_000_000
             QToolTip.showText(
                 event.globalPos(),
-                f"Actual Value: {self.currency} {fmt_currency(actual_val, self.currency, decimals=0)}",
+                f"Actual Value: {self.currency} {fmt_currency(actual_val, self.currency, decimals=0, fmt='both')}",
                 view
             )
             return True
@@ -990,7 +990,7 @@ class LCCChartWidget(QWidget):
                 sign = "−" if val < 0 else ""
                 self._annot.set_text(
                     f"{label}\n"
-                    f"{self._currency} {sign}{fmt_currency(abs(inr_val), self._currency, decimals=0)}\n"
+                    f"{self._currency} {sign}{fmt_currency(abs(inr_val), self._currency, decimals=0, fmt='both')}\n"
                     f"({sign}{fmt_currency(abs(val), self._currency, decimals=4)} Million {self._currency})"
                 )
                 self._set_annot_visible(True)

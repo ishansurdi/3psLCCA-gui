@@ -93,8 +93,7 @@ _TAB_META = [
         "desc": "Lifetime cost breakdown across the three sustainability pillars- Economic, Environmental, and Social- aggregated over all lifecycle stages.",
     },
     {
-        "title": "Sustainability Matrix",
-        "desc": "The ring maps cumulative cost per lifecycle stage, while the outer ring provides a disaggregated view of each stage across the Economic, Environmental, and Social pillars.",
+        "title": "Across 3 Pillars of Sustainability",
     },
 ]
 
@@ -421,12 +420,14 @@ class LCCPieWidget(QWidget):
         title_lbl.setStyleSheet(f"color: {get_token('text')}; border: none; letter-spacing: 0.5px;")
         left_v.addWidget(title_lbl)
 
-        desc_lbl = QLabel(_TAB_META[1]["desc"])
-        desc_lbl.setWordWrap(True)
-        desc_lbl.setAlignment(Qt.AlignCenter)
-        desc_lbl.setFont(_f(FS_BASE))
-        desc_lbl.setStyleSheet(f"color: {get_token('text_secondary')}; border: none;")
-        left_v.addWidget(desc_lbl)
+        _desc = _TAB_META[1].get("desc", "")
+        if _desc:
+            desc_lbl = QLabel(_desc)
+            desc_lbl.setWordWrap(True)
+            desc_lbl.setAlignment(Qt.AlignCenter)
+            desc_lbl.setFont(_f(FS_BASE))
+            desc_lbl.setStyleSheet(f"color: {get_token('text_secondary')}; border: none;")
+            left_v.addWidget(desc_lbl)
 
         summary = compute_all_summaries(self._results)
         pt = summary.get("pillar_totals", {})

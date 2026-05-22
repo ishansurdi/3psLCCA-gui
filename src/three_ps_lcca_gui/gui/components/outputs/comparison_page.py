@@ -399,7 +399,7 @@ class _KPITable(QWidget):
                     cell_h.addWidget(dot_wrap)
 
                 if is_cost:
-                    text = fmt_currency(val, currency, decimals=0)
+                    text = fmt_currency(val, currency, decimals=0, fmt="both")
                 elif isinstance(val, int):
                     text = f"{val} yrs"
                 else:
