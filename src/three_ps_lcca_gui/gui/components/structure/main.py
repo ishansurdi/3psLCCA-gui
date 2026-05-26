@@ -9,8 +9,9 @@
     QFileDialog,
     QMessageBox,
 )
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, Signal, QSize
 from PySide6.QtGui import QPalette, QColor
+from ..utils.icons import make_icon
 from three_ps_lcca_gui.gui.themes import get_token
 from ..utils.validation_helpers import LOCK_TOOLTIP, freeze_widgets
 from .excel_importer import parse_excel, verify_schema, ImportPreviewWindow
@@ -77,8 +78,13 @@ class StructureTabView(QWidget):
         top_layout.addStretch()
 
         # Action Buttons
-        self.excel_btn = QPushButton("Upload Excel")
-        self.download_btn = QPushButton("Download Excel")
+        self.excel_btn = QPushButton("  Import Excel")
+        self.excel_btn.setIcon(make_icon("download"))
+        self.excel_btn.setIconSize(QSize(18, 18))
+
+        self.download_btn = QPushButton("  Export Excel")
+        self.download_btn.setIcon(make_icon("upload"))
+        self.download_btn.setIconSize(QSize(18, 18))
         self.trash_btn = QPushButton("🗑️")
 
         top_layout.addWidget(self.excel_btn)
@@ -243,7 +249,7 @@ class StructureTabView(QWidget):
 
     def _on_excel_parsed(self, result: dict):
         self.excel_btn.setEnabled(True)
-        self.excel_btn.setText("Upload Excel")
+        self.excel_btn.setText("  Import Excel")
 
         materials = result["materials"]
         metadata = result.get("metadata", [])
@@ -269,7 +275,7 @@ class StructureTabView(QWidget):
 
     def _on_excel_error(self, msg: str):
         self.excel_btn.setEnabled(True)
-        self.excel_btn.setText("Upload Excel")
+        self.excel_btn.setText("  Import Excel")
         if msg == "empty":
             QMessageBox.warning(
                 self, "Empty File", "No data found in the selected file."
@@ -314,7 +320,7 @@ class StructureTabView(QWidget):
         try:
             total, sheets = export_all_chunks(self.controller.engine, path, fmt)
             self.download_btn.setEnabled(True)
-            self.download_btn.setText("Download Excel")
+            self.download_btn.setText("  Export Excel")
             QMessageBox.information(
                 self,
                 "Export Complete",
@@ -322,7 +328,7 @@ class StructureTabView(QWidget):
             )
         except Exception as exc:
             self.download_btn.setEnabled(True)
-            self.download_btn.setText("Download Excel")
+            self.download_btn.setText("  Export Excel")
             QMessageBox.critical(self, "Export Error", str(exc))
 
     def freeze(self, frozen: bool = True):
