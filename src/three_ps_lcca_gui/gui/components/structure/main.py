@@ -14,6 +14,7 @@ from PySide6.QtGui import QPalette, QColor
 from three_ps_lcca_gui.gui.themes import get_token
 from ..utils.validation_helpers import LOCK_TOOLTIP, freeze_widgets
 from .excel_importer import parse_excel, verify_schema, ImportPreviewWindow
+from .excel_exporter import EXPORT_FORMATS, format_available, export_all_chunks, count_active_all
 from .widgets.foundation import FoundationWidget
 from .widgets.super_structure import SuperStructureWidget
 from .widgets.substructure import SubStructureWidget
@@ -77,9 +78,11 @@ class StructureTabView(QWidget):
 
         # Action Buttons
         self.excel_btn = QPushButton("Upload Excel")
+        self.download_btn = QPushButton("Download Excel")
         self.trash_btn = QPushButton("🗑️")
 
         top_layout.addWidget(self.excel_btn)
+        top_layout.addWidget(self.download_btn)
         top_layout.addWidget(self.trash_btn)
 
         self.main_layout.addWidget(top_area)
@@ -116,6 +119,7 @@ class StructureTabView(QWidget):
 
         # --- CONNECTIONS ---
         self.excel_btn.clicked.connect(self._open_excel_import)
+        self.download_btn.clicked.connect(self._download_excel)
         self.trash_btn.clicked.connect(self.toggle_trash_view)
         self.tab_view.currentChanged.connect(self._on_tab_changed)
 
@@ -221,7 +225,10 @@ class StructureTabView(QWidget):
 
     def _open_excel_import(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "Select Excel File", "", "Excel Files (*.xlsx *.xls)"
+            self,
+            "Select File",
+            "",
+            "All Supported (*.xlsx *.xls *.ods);;Excel Files (*.xlsx *.xls);;OpenDocument Spreadsheet (*.ods)",
         )
         if not path:
             return
@@ -266,6 +273,48 @@ class StructureTabView(QWidget):
             )
         else:
             QMessageBox.critical(self, "Parse Error", msg)
+
+    def _download_excel(self):
+        if not self.controller or not self.controller.engine:
+            QMessageBox.warning(self, "No Project", "Open a project before exporting.")
+            return
+
+        if count_active_all(self.controller.engine) == 0:
+            QMessageBox.information(
+                self,
+                "Nothing to Export",
+                "No active materials found.\nAdd materials first, or restore items from Trash.",
+            )
+            return
+
+        available_fmts = [f for f in EXPORT_FORMATS if format_available(f)[0]]
+        file_filter = ";;".join(f["filter"] for f in available_fmts)
+
+        path, selected_filter = QFileDialog.getSaveFileName(
+            self, "Save Construction Works Data", "construction_works_data", file_filter
+        )
+        if not path:
+            return
+
+        fmt = next((f for f in available_fmts if f["filter"] == selected_filter), available_fmts[0])
+        if not path.endswith(fmt["ext"]):
+            path += fmt["ext"]
+
+        self.download_btn.setEnabled(False)
+        self.download_btn.setText("Exporting…")
+        try:
+            total, sheets = export_all_chunks(self.controller.engine, path, fmt)
+            self.download_btn.setEnabled(True)
+            self.download_btn.setText("Download Excel")
+            QMessageBox.information(
+                self,
+                "Export Complete",
+                f"{total} row(s) exported across {len(sheets)} sheet(s).\n\nFile saved to:\n{path}",
+            )
+        except Exception as exc:
+            self.download_btn.setEnabled(True)
+            self.download_btn.setText("Download Excel")
+            QMessageBox.critical(self, "Export Error", str(exc))
 
     def freeze(self, frozen: bool = True):
         freeze_widgets(frozen, self.excel_btn, self.trash_btn)

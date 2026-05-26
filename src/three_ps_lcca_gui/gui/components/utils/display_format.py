@@ -134,7 +134,7 @@ def fmt_currency(val, currency="INR", decimals=None, style="comma", use_short_su
     sign = "-" if f < 0 else ""
     abs_v = abs(f)
 
-    SKIP_ME = False
+    SKIP_ME = True
     if currency == "INR" and not SKIP_ME:
         comma_str = sign + _fmt_inr_comma(abs_v, d)
         short_str = fmt_short_india(f, use_short_suffix=use_short_suffix)

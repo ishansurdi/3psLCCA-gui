@@ -9,3 +9,4 @@ PyYAML
 pylatex
 platformdirs
 -e ./3psLCCA-core
+odfpy

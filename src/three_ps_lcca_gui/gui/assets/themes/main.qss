@@ -328,29 +328,39 @@ QCheckBox {
     color: $text;
 }
 
-QCheckBox::indicator {
+QCheckBox::indicator,
+QGroupBox::indicator,
+QAbstractItemView::indicator {
     width: 16px;
     height: 16px;
-    border: 1px solid $border;
+    border: 1px solid $text_secondary;
     border-radius: 4px;
     background-color: $base;
 }
 
-QCheckBox::indicator:hover {
-    border-color: $border;
+QCheckBox::indicator:hover,
+QGroupBox::indicator:hover,
+QAbstractItemView::indicator:hover {
+    border-color: $text;
 }
 
-QCheckBox::indicator:checked {
+QCheckBox::indicator:checked,
+QGroupBox::indicator:checked,
+QAbstractItemView::indicator:checked {
     background-color: $primary;
     border-color: $primary;
 }
 
-QCheckBox::indicator:checked:hover {
+QCheckBox::indicator:checked:hover,
+QGroupBox::indicator:checked:hover,
+QAbstractItemView::indicator:checked:hover {
     background-color: $primary-hover;
     border-color: $primary-hover;
 }
 
-QCheckBox::indicator:disabled {
+QCheckBox::indicator:disabled,
+QGroupBox::indicator:disabled,
+QAbstractItemView::indicator:disabled {
     background-color: $window;
     border-color: $border;
 }
@@ -368,13 +378,13 @@ QRadioButton {
 QRadioButton::indicator {
     width: 16px;
     height: 16px;
-    border: 1px solid $border;
+    border: 1px solid $text_secondary;
     border-radius: 8px;
     background-color: $base;
 }
 
 QRadioButton::indicator:hover {
-    border-color: $border;
+    border-color: $text;
 }
 
 QRadioButton::indicator:checked {

@@ -59,6 +59,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QStyledItemDelegate,
+    QStyleOptionViewItem,
     QTabWidget,
     QTableWidget,
     QTableWidgetItem,
@@ -104,8 +105,6 @@ CID_FIELDS: set[str] = {
     "Carbon_Emission_Src",
     "Scrap_Rate",
     "Recovery_Pct",
-    "Grade",
-    "Type",
     "Component",
 }
 
@@ -125,8 +124,6 @@ CID_TO_INTERNAL: dict[str, str] = {
     "carbon_emission_src": "carbon_emission_src",
     "scrap_rate": "scrap_rate",
     "recovery_pct": "recovery_pct",
-    "grade": "grade",
-    "type": "type",
     "component": "component",
 }
 
@@ -147,9 +144,9 @@ NUMERIC_FIELDS = {
 # Unrecognised sheets fall back to str_misc with the sheet name as component.
 SHEET_TO_CHUNK: dict[str, str] = {
     "foundation": "str_foundation",
-    "Sub-Structure": "str_sub_structure",
+    "sub-structure": "str_sub_structure",
     "substructure": "str_sub_structure",
-    "Super-Structure": "str_super_structure",
+    "super-structure": "str_super_structure",
     "superstructure": "str_super_structure",
     "misc": "str_misc",
     "miscellaneous": "str_misc",
@@ -158,11 +155,6 @@ SHEET_TO_CHUNK: dict[str, str] = {
 FALLBACK_CHUNK = "str_misc"
 
 
-ERROR_COLOR = QColor(get_token("danger"))
-WARN_COLOR = QColor(get_token("warning"))
-DUP_FG = QColor(
-    get_token("text_secondary")
-)  # dimmed text foreground for duplicate-name rows
 # No OK_COLOR - default background is left untouched (inherits theme)
 
 _DARK_TEXT = QColor("#000000")
@@ -421,7 +413,7 @@ def verify_schema(parsed: dict[str, list[dict]]) -> dict[str, list[dict]]:
                     if rate_val < 0:
                         warns.append("Rate is negative - please verify")
                     elif rate_val == 0:
-                        warns.append("Rate is zero - likely a data entry mistake")
+                        warns.append("Rate is zero - verify this is intentional")
                 except ValueError:
                     pass
 
@@ -518,8 +510,6 @@ def record_to_material_dict(record: dict) -> dict:
         "unit_to_si": unit_to_si,
         "rate": _float("rate"),
         "rate_source": record.get("rate_src", "").strip(),
-        "grade": record.get("grade", "").strip(),
-        "type": record.get("type", "").strip(),
         # ── Carbon ────────────────────────────────────────────────────────
         "carbon_emission": carbon_ef,
         "carbon_unit": f"kgCO₂e/{carbon_denom}" if carbon_denom else "",
@@ -601,10 +591,9 @@ def _validate_for_engine(
         rate = float(rate_raw) if rate_raw not in (None, "") else 0.0
     except (ValueError, TypeError):
         rate = 0.0
-    if rate <= 0:
+    if rate < 0:
         reasons.append(
-            f"rate must be > 0 (got {rate_raw!r}) - "
-            "zero, empty, or non-numeric rate is not allowed"
+            f"rate must be >= 0 (got {rate_raw!r}) - negative rate is not allowed"
         )
 
     # ── 3. duplicate name ────────────────────────────────────────────────────
@@ -674,14 +663,12 @@ IMPORT_COLUMNS: list[tuple[str, str, bool]] = [
     ("carbon_emission_src", "Carbon EF Source", False),
     ("scrap_rate", "Scrap Rate", True),
     ("recovery_pct", "Recovery %", True),
-    ("grade", "Grade", False),
-    ("type", "Type", False),
     ("_issues", "Issues", False),
 ]
 
 # Column widths - tuned to content, not header length
-#  ID   Name   Quantity   Unit  Rate  RateSrc  CEF  CUnit  CF  CESrc  Scrap  Rec%  Grade  Type  Issues
-_COL_WIDTHS = [55, 200, 55, 65, 80, 140, 80, 110, 90, 140, 75, 80, 70, 90, 200]
+#  ID   Name   Quantity   Unit  Rate  RateSrc  CEF  CUnit  CF  CESrc  Scrap  Rec%  Issues
+_COL_WIDTHS = [55, 200, 55, 65, 80, 140, 80, 110, 90, 140, 75, 80, 200]
 
 # Col 0 is the selection checkbox; all IMPORT_COLUMNS data starts at col 1
 _CB_COL = 0
@@ -699,18 +686,57 @@ _ISSUES_COL = (
 # ---------------------------------------------------------------------------
 
 
-class _NumericDelegate(QStyledItemDelegate):
+class _CellDelegate(QStyledItemDelegate):
     """
-    Attaches a QDoubleValidator to the editor for numeric columns.
-    Non-numeric input is rejected at the editor level, not just at keypress.
+    Paints the cell-editable-bg tint on editable cells.
+    When numeric=True, also attaches a QDoubleValidator to the editor.
     """
+
+    def __init__(self, numeric: bool = False, parent=None):
+        super().__init__(parent)
+        self._numeric = numeric
+        from three_ps_lcca_gui.gui.themes import theme_manager
+        theme_manager().theme_changed.connect(self._on_theme_changed)
+
+    def _on_theme_changed(self):
+        p = self.parent()
+        if p and hasattr(p, "viewport"):
+            p.viewport().update()
+
+    def paint(self, painter, option, index):
+        # Determine background color: explicit (error/warning) or tint (editable)
+        bg = index.data(Qt.BackgroundRole)
+        if isinstance(bg, QBrush):
+            bg = bg.color()
+            
+        if (bg is None or not bg.isValid()) and (index.flags() & Qt.ItemIsEditable):
+            bg = QColor(get_token("cell-editable-bg"))
+
+        if bg and bg.isValid():
+            painter.save()
+            painter.fillRect(option.rect, bg)
+            painter.restore()
+            
+        # To prevent QSS 'background-color' from painting over our manual fill,
+        # we pass a modified option with a transparent background brush.
+        new_option = QStyleOptionViewItem(option)
+        new_option.backgroundBrush = QBrush(Qt.NoBrush)
+        super().paint(painter, new_option, index)
 
     def createEditor(self, parent, option, index):
         editor = QLineEdit(parent)
-        validator = QDoubleValidator(editor)
-        validator.setNotation(QDoubleValidator.StandardNotation)
-        editor.setValidator(validator)
+        editor.setStyleSheet(
+            "QLineEdit { background: palette(base); border: 1px solid palette(highlight);"
+            " border-radius: 0; margin: 0; padding: 0 2px; min-height: 0; }"
+        )
+        if self._numeric:
+            validator = QDoubleValidator(editor)
+            validator.setNotation(QDoubleValidator.StandardNotation)
+            editor.setValidator(validator)
         return editor
+
+    def updateEditorGeometry(self, editor, option, index):
+        editor.setGeometry(option.rect)
 
 
 # ---------------------------------------------------------------------------
@@ -757,6 +783,9 @@ class ImportComponentTable(QTableWidget):
         self.horizontalHeader().setSectionResizeMode(_CB_COL, QHeaderView.Fixed)
         self.horizontalHeader().setStretchLastSection(False)
         self.verticalHeader().setDefaultSectionSize(32)
+        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.setWordWrap(True)
+        self.setTextElideMode(Qt.ElideNone)
         self.setAlternatingRowColors(True)
         self.setEditTriggers(QTableWidget.DoubleClicked | QTableWidget.SelectedClicked)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -766,11 +795,17 @@ class ImportComponentTable(QTableWidget):
         for col, w in enumerate(_COL_WIDTHS):
             self.setColumnWidth(col + _DATA_START, w)
 
-        # Install numeric delegate on every numeric column (data cols only)
-        self._numeric_delegate = _NumericDelegate(self)
+        # Install cell delegate on every editable data column:
+        # tints the cell with cell-editable-bg and enforces numeric input where needed.
+        _plain_delegate = _CellDelegate(numeric=False, parent=self)
+        _numeric_delegate = _CellDelegate(numeric=True, parent=self)
         for col, (field, _, numeric) in enumerate(IMPORT_COLUMNS):
-            if numeric:
-                self.setItemDelegateForColumn(col + _DATA_START, self._numeric_delegate)
+            if field == "_issues":
+                continue
+            actual_col = col + _DATA_START
+            self.setItemDelegateForColumn(
+                actual_col, _numeric_delegate if numeric else _plain_delegate
+            )
 
         self._valid_core_only: bool = False
         QTimer.singleShot(0, self._populate)
@@ -798,6 +833,7 @@ class ImportComponentTable(QTableWidget):
             self._append_record(record, rows_idx)
         self.blockSignals(False)
         self._update_height()
+        self.updateGeometry()
 
     def _append_record(self, record: dict, rows_idx: int):
         row = self.rowCount()
@@ -807,8 +843,10 @@ class ImportComponentTable(QTableWidget):
         warns = record.get("_warnings", [])
         is_dup = bool(record.get("_duplicate_name")) and not bool(errs)
         has_error = bool(errs)
-        has_warn = bool(warns) and not has_error
-        color = ERROR_COLOR if has_error else (WARN_COLOR if has_warn else None)
+        has_warn = (bool(warns) or is_dup) and not has_error
+        
+        # Use theme-aware alpha-blended backgrounds
+        color = QColor(get_token("cell-invalid-bg")) if has_error else (QColor(get_token("cell-warn-bg")) if has_warn else None)
 
         # Short label shown in the Issues cell
         if errs:
@@ -860,9 +898,6 @@ class ImportComponentTable(QTableWidget):
             if color is not None:
                 item.setBackground(QBrush(color))
                 item.setForeground(QBrush(_text_color(color)))
-            elif is_dup:
-                # Dim the text - no background change, just muted foreground
-                item.setForeground(QBrush(DUP_FG))
 
             if tooltip:
                 item.setToolTip(tooltip)
@@ -906,8 +941,9 @@ class ImportComponentTable(QTableWidget):
 
         errs = record.get("_errors", [])
         warns = record.get("_warnings", [])
+        is_dup = bool(record.get("_duplicate_name")) and not bool(errs)
         has_error = bool(errs)
-        has_warn = bool(warns) and not has_error
+        has_warn = (bool(warns) or is_dup) and not has_error
 
         if errs:
             issues_short = f"{len(errs)} error(s)" if len(errs) > 1 else errs[0][:60]
@@ -915,12 +951,16 @@ class ImportComponentTable(QTableWidget):
             issues_short = (
                 f"{len(warns)} warning(s)" if len(warns) > 1 else warns[0][:60]
             )
+        elif is_dup:
+            issues_short = "Name exists"
         else:
             issues_short = "OK"
 
         all_issues = errs + warns
         tooltip = "\n".join(f"• {m}" for m in all_issues) if all_issues else ""
-        color = ERROR_COLOR if has_error else (WARN_COLOR if has_warn else None)
+        
+        # Use theme-aware alpha-blended backgrounds
+        color = QColor(get_token("cell-invalid-bg")) if has_error else (QColor(get_token("cell-warn-bg")) if has_warn else None)
 
         self.blockSignals(True)
         for col in range(self.columnCount()):
@@ -963,8 +1003,9 @@ class ImportComponentTable(QTableWidget):
 
     def sizeHint(self):
         header_h = self.horizontalHeader().height() or 35
-        rows_h = self.rowCount() * self.verticalHeader().defaultSectionSize()
-        return QSize(super().sizeHint().width(), max(120, header_h + rows_h + 15))
+        # Sum actual row heights because they can wrap/resize
+        rows_h = sum(self.rowHeight(i) for i in range(self.rowCount()))
+        return QSize(super().sizeHint().width(), header_h + rows_h + 4)
 
     def minimumSizeHint(self):
         return self.sizeHint()
@@ -1410,9 +1451,11 @@ class ImportPreviewWindow(QDialog):
         self.setWindowTitle("Import Preview - Review & Correct")
         self.setMinimumSize(900, 500)
         self.setWindowFlags(
-            self.windowFlags()
+            Qt.Window
+            | Qt.WindowTitleHint
+            | Qt.WindowSystemMenuHint
+            | Qt.WindowCloseButtonHint
             | Qt.WindowMaximizeButtonHint
-            | Qt.WindowMinimizeButtonHint & ~Qt.WindowContextHelpButtonHint
         )
         self._parsed = parsed
         self._sheet_tables: dict[str, SheetPreviewWidget] = {}
@@ -1492,6 +1535,31 @@ class ImportPreviewWindow(QDialog):
                     if _name in _taken:
                         rec["_duplicate_name"] = True
 
+        # ── Overwrite warning banner (shown only when duplicates exist) ───────
+        _dup_count = sum(
+            1
+            for _rows in parsed.values()
+            for rec in _rows
+            if rec.get("_duplicate_name")
+        )
+        if _dup_count:
+            warn_frame = QFrame()
+            warn_frame.setFrameShape(QFrame.StyledPanel)
+            warn_frame.setStyleSheet(
+                f"background:{get_token('warning')}; border-radius:4px; padding:2px;"
+            )
+            warn_layout = QHBoxLayout(warn_frame)
+            warn_layout.setContentsMargins(10, 6, 10, 6)
+            warn_lbl = QLabel(
+                f"⚠  <b>{_dup_count} row(s)</b> in this file already exist in the "
+                f"project (matched by name &amp; component, case-insensitive). "
+                f"They are <b>unchecked by default</b> — check them to overwrite."
+            )
+            warn_lbl.setWordWrap(True)
+            warn_lbl.setStyleSheet(f"color:{_text_color(QColor(get_token('warning'))).name()}; background:transparent;")
+            warn_layout.addWidget(warn_lbl)
+            root.addWidget(warn_frame)
+
         # ── Tabs - one per sheet ─────────────────────────────────────────────
         self.tabs = QTabWidget()
         root.addWidget(self.tabs, stretch=1)
@@ -1520,13 +1588,8 @@ class ImportPreviewWindow(QDialog):
         )
         self._import_valid_btn.clicked.connect(self._on_import_valid)
 
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.setMinimumHeight(34)
-        cancel_btn.clicked.connect(self.reject)
-
-        btn_row.addWidget(self._import_valid_btn)
         btn_row.addStretch()
-        btn_row.addWidget(cancel_btn)
+        btn_row.addWidget(self._import_valid_btn)
         root.addLayout(btn_row)
 
     # -- helpers --------------------------------------------------------------

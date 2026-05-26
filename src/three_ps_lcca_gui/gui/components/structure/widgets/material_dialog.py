@@ -1088,54 +1088,6 @@ class MaterialDialog(QDialog):
 
         root.addWidget(self.recycle_container)
 
-        # ── Categorization ────────────────────────────────────────────────
-        root.addWidget(_divider())
-
-        cat_row = QHBoxLayout()
-        cat_row.setSpacing(12)
-
-        grade_col = QVBoxLayout()
-        grade_col.setSpacing(3)
-        grade_col.addWidget(_lbl("Grade", "grade"))
-        self.grade_in = QLineEdit(v.get("grade", ""))
-        self.grade_in.setPlaceholderText("e.g. M25, Fe500")
-        self.grade_in.setMinimumHeight(32)
-        grade_col.addWidget(self.grade_in)
-        cat_row.addLayout(grade_col, stretch=1)
-
-        type_col = QVBoxLayout()
-        type_col.setSpacing(3)
-        type_col.addWidget(_lbl("Type", "type"))
-        self.type_in = QComboBox()
-        self.type_in.setEditable(True)
-        self.type_in.setMinimumHeight(32)
-        self.type_in.wheelEvent = lambda event: event.ignore()
-        for t in [
-            "Concrete",
-            "Steel",
-            "Masonry",
-            "Timber",
-            "Finishing",
-            "Insulation",
-            "Glass",
-            "Aluminum",
-            "Other",
-        ]:
-            self.type_in.addItem(t)
-        existing_type = v.get("type", "")
-        if existing_type:
-            tidx = self.type_in.findText(existing_type)
-            if tidx >= 0:
-                self.type_in.setCurrentIndex(tidx)
-            else:
-                self.type_in.setCurrentText(existing_type)
-        else:
-            self.type_in.setCurrentIndex(-1)
-            self.type_in.lineEdit().setPlaceholderText("e.g. Concrete, Steel")
-        type_col.addWidget(self.type_in)
-        cat_row.addLayout(type_col, stretch=1)
-
-        root.addLayout(cat_row)
         root.addStretch()
 
         # ── Button bar ────────────────────────────────────────────────────
@@ -1199,7 +1151,6 @@ class MaterialDialog(QDialog):
                 self.conv_factor_in,
                 self.scrap_in,
                 self.recycling_perc_in,
-                self.grade_in,
             ):
                 _w.setReadOnly(True)
 
@@ -1207,7 +1158,6 @@ class MaterialDialog(QDialog):
             for _w in (
                 self.unit_in,
                 self.carbon_denom_cb,
-                self.type_in,
                 self._allow_edit_chk,
                 self.carbon_chk,
                 self.recycle_chk,
@@ -1229,12 +1179,10 @@ class MaterialDialog(QDialog):
                 self.src_in,
                 self.scrap_in,
                 self.recycling_perc_in,
-                self.grade_in,
             ):
                 w.setReadOnly(True)
             self.unit_in.setEnabled(False)
             self.recycle_chk.setEnabled(False)
-            self.type_in.setEnabled(False)
             self.save_btn.setText("Save Emission Data")
         elif recyclability_only:
             for w in (
@@ -1244,13 +1192,11 @@ class MaterialDialog(QDialog):
                 self.src_in,
                 self.carbon_em_in,
                 self.conv_factor_in,
-                self.grade_in,
             ):
                 w.setReadOnly(True)
             self.unit_in.setEnabled(False)
             self.carbon_chk.setEnabled(False)
             self.carbon_denom_cb.setEnabled(False)
-            self.type_in.setEnabled(False)
             self.save_btn.setText("Save Recyclability Data")
 
         # ── Wire signals ──────────────────────────────────────────────────
@@ -1275,14 +1221,12 @@ class MaterialDialog(QDialog):
             self.conv_factor_in,
             self.scrap_in,
             self.recycling_perc_in,
-            self.grade_in,
         ):
             _w.textChanged.connect(self._on_field_manually_changed)
         self.unit_in.currentIndexChanged.connect(self._on_field_manually_changed)
         self.carbon_denom_cb.currentIndexChanged.connect(
             self._on_field_manually_changed
         )
-        self.type_in.currentIndexChanged.connect(self._on_field_manually_changed)
 
         self._update_cf()
         self._ui_ready = True
@@ -2175,8 +2119,6 @@ class MaterialDialog(QDialog):
             "post_demolition_recovery_percentage": float(
                 self.recycling_perc_in.text() or 0
             ) if recycle_on else 0.0,
-            "grade": self.grade_in.text().strip(),
-            "type": self.type_in.currentText().strip(),
             # ── private keys consumed by manager (never reach item["values"]) ─
             "_included_in_carbon_emission": carbon_on,
             "_included_in_recyclability": recycle_on,
