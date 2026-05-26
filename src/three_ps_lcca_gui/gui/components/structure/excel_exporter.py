@@ -19,14 +19,17 @@ for it at runtime and show an install hint if missing.
 from __future__ import annotations
 
 import importlib
+import datetime as _dt
 import pandas as pd
 
 CHUNKS = [
-    ("Foundation",      "str_foundation"),
-    ("Sub-Structure",   "str_sub_structure"),
-    ("Super-Structure", "str_super_structure"),
-    ("Miscellaneous",   "str_misc"),
+    ("CAT#Foundation",      "str_foundation"),
+    ("CAT#Sub-Structure",   "str_sub_structure"),
+    ("CAT#Super-Structure", "str_super_structure"),
+    ("CAT#Misc",            "str_misc"),
 ]
+
+METADATA_KEYS = ["Date"]
 
 CID_COLUMNS = [
     "CID#ID",
@@ -147,15 +150,41 @@ def count_active_all(engine) -> int:
 
 def export_all_chunks(engine, path: str, fmt: dict) -> tuple[int, list[str]]:
     """
-    Export all 4 chunks to *path* as a multi-sheet spreadsheet.
+    Export all chunks to *path* as a multi-sheet spreadsheet.
+    Sheet names use the CAT# prefix (e.g. CAT#Foundation) to match the import format.
+    A Metadata sheet is always written first containing the export date.
     Returns (total_rows_written, [sheet_names_with_data]).
     """
     total = 0
     sheets_with_data: list[str] = []
 
+    # Pre-fetch all chunk rows so counts are available for the Metadata sheet
+    chunk_rows: list[tuple[str, list[dict]]] = [
+        (sheet_name, _chunk_to_rows(engine, chunk_key))
+        for sheet_name, chunk_key in CHUNKS
+    ]
+
+    # Pull project identity fields from general_info
+    gi = engine.fetch_chunk("general_info") or {}
+
+    # Build metadata: project info + date + per-sheet material counts
+    meta_rows = [
+        {"CID#Keys": "Project Name",     "CID#Values": gi.get("project_name", "")},
+        {"CID#Keys": "Project Code",     "CID#Values": gi.get("project_code", "")},
+        {"CID#Keys": "Country",          "CID#Values": gi.get("project_country", "")},
+        {"CID#Keys": "Currency",         "CID#Values": gi.get("project_currency", "")},
+        {"CID#Keys": "Date",             "CID#Values": _dt.date.today().isoformat()},
+    ]
+    for sheet_name, rows in chunk_rows:
+        meta_rows.append({"CID#Keys": f"{sheet_name} Total", "CID#Values": len(rows)})
+
     with pd.ExcelWriter(path, engine=fmt["engine"]) as writer:
-        for sheet_name, chunk_key in CHUNKS:
-            rows = _chunk_to_rows(engine, chunk_key)
+        # Metadata sheet first
+        pd.DataFrame(meta_rows, columns=["CID#Keys", "CID#Values"]).to_excel(
+            writer, sheet_name="Metadata", index=False
+        )
+
+        for sheet_name, rows in chunk_rows:
             df = pd.DataFrame(rows if rows else [], columns=CID_COLUMNS)
             df.to_excel(writer, sheet_name=sheet_name, index=False)
             if rows:

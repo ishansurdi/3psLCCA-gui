@@ -215,11 +215,15 @@ def _build_column_map(
     return col_map, unrecognised, duplicates
 
 
-def parse_excel(path: str) -> dict[str, list[dict]]:
+def parse_excel(path: str) -> dict:
     """
     Read all sheets.  Returns:
-        { sheet_name: [ {raw_fields…, _row_num, _errors: [], _warnings: []} ] }
-    Sheets with no CID# headers are silently skipped.
+        {
+            "materials": { sheet_name: [ {raw_fields…, _row_num, _errors: [], _warnings: []} ] },
+            "metadata":  [ {"key": ..., "value": ...}, ... ]   # empty if no Metadata sheet
+        }
+    Only CAT# sheets are processed as material sheets; all others are skipped.
+    A sheet named "Metadata" (case-insensitive) is parsed separately into the metadata list.
     """
     try:
         all_sheets: dict[str, pd.DataFrame] = pd.read_excel(
@@ -233,16 +237,25 @@ def parse_excel(path: str) -> dict[str, list[dict]]:
     except Exception as exc:
         raise ValueError(f"Could not open file: {exc}") from exc
 
-    result: dict[str, list[dict]] = {}
+    materials: dict[str, list[dict]] = {}
+    metadata: list[dict] = []
 
     for sheet_name, df in all_sheets.items():
         if df.empty:
             continue
 
+        # Metadata sheet - parse separately, never as materials
+        if sheet_name.strip().lower() == "metadata":
+            metadata = _parse_metadata_sheet(df)
+            continue
+
+        # Only process CAT# sheets as material sheets
+        if not sheet_name.strip().lower().startswith("cat#"):
+            continue
+
         # Find header row - first row that contains at least one CID# column
         header_row_idx = _find_header_row(df)
         if header_row_idx is None:
-            # No CID# headers found - not a material sheet, skip silently
             continue
 
         headers = [str(c) for c in df.iloc[header_row_idx].tolist()]
@@ -251,7 +264,7 @@ def parse_excel(path: str) -> dict[str, list[dict]]:
 
         # EC2: header-only sheet - add a placeholder so the tab still appears
         if data_rows.empty or data_rows.shape[0] == 0:
-            result[sheet_name] = []
+            materials[sheet_name] = []
             continue
 
         # Build per-sheet warnings that apply to every row
@@ -293,9 +306,9 @@ def parse_excel(path: str) -> dict[str, list[dict]]:
 
             rows.append(record)
 
-        result[sheet_name] = rows
+        materials[sheet_name] = rows
 
-    return result
+    return {"materials": materials, "metadata": metadata}
 
 
 def _find_header_row(df: pd.DataFrame) -> int | None:
@@ -318,6 +331,31 @@ def _clean_value(raw: Any) -> str:
     return "" if s.lower() == "nan" else s
 
 
+def _parse_metadata_sheet(df: pd.DataFrame) -> list[dict]:
+    """Parse a Metadata sheet (CID#Keys / CID#Values columns) into a list of dicts."""
+    key_col = val_col = header_row = None
+    for row_idx in range(min(10, len(df))):
+        row = [str(v).strip() for v in df.iloc[row_idx].tolist()]
+        for col_idx, cell in enumerate(row):
+            if cell.lower() == "cid#keys":
+                key_col = col_idx
+            elif cell.lower() == "cid#values":
+                val_col = col_idx
+        if key_col is not None and val_col is not None:
+            header_row = row_idx
+            break
+    if header_row is None:
+        return []
+    result = []
+    for i in range(header_row + 1, len(df)):
+        row_vals = df.iloc[i].tolist()
+        key = _clean_value(row_vals[key_col] if key_col < len(row_vals) else None)
+        val = _clean_value(row_vals[val_col] if val_col < len(row_vals) else None)
+        if key:
+            result.append({"key": key, "value": val})
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Step 2 - Schema verification
 # ---------------------------------------------------------------------------
@@ -336,10 +374,14 @@ def verify_schema(parsed: dict[str, list[dict]]) -> dict[str, list[dict]]:
     seen_chunk_comps: dict[tuple[str, str], str] = {}  # (chunk, comp) → sheet_name
 
     for sheet_name, rows in parsed.items():
-        chunk_key = SHEET_TO_CHUNK.get(sheet_name.strip().lower(), FALLBACK_CHUNK)
+        # Strip CAT# prefix before routing so "CAT#Foundation" → "foundation"
+        _bare = sheet_name.strip()
+        if _bare.lower().startswith("cat#"):
+            _bare = _bare[4:].strip()
+        chunk_key = SHEET_TO_CHUNK.get(_bare.lower(), FALLBACK_CHUNK)
         is_fallback = (
             chunk_key == FALLBACK_CHUNK
-            and sheet_name.strip().lower() not in SHEET_TO_CHUNK
+            and _bare.lower() not in SHEET_TO_CHUNK
         )
 
         for record in rows:
@@ -355,11 +397,11 @@ def verify_schema(parsed: dict[str, list[dict]]) -> dict[str, list[dict]]:
             if comp_val != comp_val.strip():
                 record["component"] = comp_val.strip()
 
-            # For unrecognised sheets routed to str_misc, prefix component with
-            # sheet name: "Bridge Furniture - Expansion Joint"
+            # For unrecognised CAT# sheets routed to str_misc, prefix component with
+            # the bare suffix: "ABC - Expansion Joint"
             if is_fallback:
                 comp = record.get("component", "").strip()
-                prefix = f"{sheet_name.strip()} - "
+                prefix = f"{_bare} - "
                 if not comp:
                     record["component"] = UNCATEGORISED
                 elif not comp.startswith(prefix):
@@ -1431,6 +1473,41 @@ class DuplicateComponentDialog(QDialog):
         return dict(self._choices)
 
 
+def _build_metadata_tab(metadata: list[dict]) -> QWidget:
+    """Read-only widget displaying Metadata sheet key→value pairs as label rows."""
+    w = QWidget()
+    outer = QVBoxLayout(w)
+    outer.setContentsMargins(16, 16, 16, 16)
+    outer.setSpacing(8)
+
+    if not metadata:
+        lbl = QLabel("No metadata entries.")
+        lbl.setStyleSheet(f"color: {get_token('text_disabled')}; font-style: italic;")
+        outer.addWidget(lbl)
+        outer.addStretch()
+        return w
+
+    for entry in metadata:
+        row_w = QWidget()
+        row_l = QHBoxLayout(row_w)
+        row_l.setContentsMargins(0, 0, 0, 0)
+        row_l.setSpacing(12)
+
+        key_lbl = QLabel(f"<b>{entry.get('key', '')}</b>")
+        key_lbl.setFixedWidth(160)
+        key_lbl.setStyleSheet("font-size: 12px;")
+
+        val_lbl = QLabel(entry.get("value", "") or "—")
+        val_lbl.setStyleSheet(f"font-size: 12px; color: {get_token('text_secondary')};")
+
+        row_l.addWidget(key_lbl)
+        row_l.addWidget(val_lbl, stretch=1)
+        outer.addWidget(row_w)
+
+    outer.addStretch()
+    return w
+
+
 class ImportPreviewWindow(QDialog):
     """
     Main preview dialog.
@@ -1445,6 +1522,7 @@ class ImportPreviewWindow(QDialog):
         parsed: dict[str, list[dict]],
         existing_components: dict[str, set[str]] | None = None,
         manager=None,
+        metadata: list[dict] | None = None,
         parent=None,
     ):
         super().__init__(parent)
@@ -1572,12 +1650,17 @@ class ImportPreviewWindow(QDialog):
             tab_label = self._tab_label(sheet_name, rows)
             self.tabs.addTab(widget, tab_label)
 
+        # Metadata tab - read-only, shown only when sheet was present
+        if metadata:
+            self.tabs.addTab(_build_metadata_tab(metadata), "Metadata")
+
         # ── Summary label ────────────────────────────────────────────────────
         self._summary_lbl = QLabel()
         self._summary_lbl.setStyleSheet("font-size: 11px;")
         root.addWidget(self._summary_lbl)
         self._refresh_summary()
 
+        print("[IPW] G. done")
         # ── Buttons ──────────────────────────────────────────────────────────
         btn_row = QHBoxLayout()
 
@@ -1997,8 +2080,9 @@ if __name__ == "__main__":
         None, "Select Excel File", "", "Excel Files (*.xlsx *.xls)"
     )
     if path:
-        parsed = verify_schema(parse_excel(path))
-        preview = ImportPreviewWindow(parsed)
+        result = parse_excel(path)
+        materials = verify_schema(result["materials"])
+        preview = ImportPreviewWindow(materials, metadata=result["metadata"])
         preview.showMaximized()
         preview.exec()
 

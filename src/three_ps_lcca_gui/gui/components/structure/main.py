@@ -42,12 +42,12 @@ class _ExcelParseWorker(QThread):
 
     def run(self):
         try:
-            parsed = parse_excel(self._path)
-            if not parsed:
+            result = parse_excel(self._path)
+            if not result["materials"]:
                 self.error.emit("empty")
                 return
-            parsed = verify_schema(parsed)
-            self.finished.emit(parsed)
+            result["materials"] = verify_schema(result["materials"])
+            self.finished.emit(result)
         except Exception as exc:
             self.error.emit(str(exc))
 
@@ -241,14 +241,17 @@ class StructureTabView(QWidget):
         self._excel_worker.error.connect(self._on_excel_error)
         self._excel_worker.start()
 
-    def _on_excel_parsed(self, parsed: dict):
+    def _on_excel_parsed(self, result: dict):
         self.excel_btn.setEnabled(True)
         self.excel_btn.setText("Upload Excel")
+
+        materials = result["materials"]
+        metadata = result.get("metadata", [])
 
         # Warn about sheets routed to Misc
         fallback_sheets = [
             s
-            for s, rows in parsed.items()
+            for s, rows in materials.items()
             if rows and rows[0].get("_is_fallback_chunk")
         ]
         if fallback_sheets:
@@ -259,7 +262,7 @@ class StructureTabView(QWidget):
                 f"These sheets didn't match a known category and will be added to <b>Misc</b>:<br><br>{names}",
             )
 
-        preview = ImportPreviewWindow(parsed, manager=self.foundation_tab, parent=self)
+        preview = ImportPreviewWindow(materials, manager=self.foundation_tab, metadata=metadata, parent=self)
         preview.showMaximized()
         if preview.exec():
             self.on_refresh()
@@ -290,8 +293,14 @@ class StructureTabView(QWidget):
         available_fmts = [f for f in EXPORT_FORMATS if format_available(f)[0]]
         file_filter = ";;".join(f["filter"] for f in available_fmts)
 
+        import datetime as _dt, re
+        gi = self.controller.engine.fetch_chunk("general_info") or {}
+        _proj = gi.get("project_name", "").strip()
+        _safe = re.sub(r'[\\/:*?"<>|]+', "_", _proj) if _proj else "construction_works"
+        _default_name = f"{_safe}_{_dt.date.today().isoformat()}"
+
         path, selected_filter = QFileDialog.getSaveFileName(
-            self, "Save Construction Works Data", "construction_works_data", file_filter
+            self, "Save Construction Works Data", _default_name, file_filter
         )
         if not path:
             return
