@@ -291,20 +291,13 @@ class StructureManagerWidget(QWidget):
         dialog.material_added.connect(_on_material_added)
         dialog.exec()
 
-    def open_edit_dialog(self, comp_name, table_row_index):
+    def open_edit_dialog(self, comp_name, original_index):
         try:
             current_data = self.controller.engine.fetch_chunk(self.chunk_name) or {}
             items = current_data.get(comp_name, [])
 
-            active_indices = [
-                i
-                for i, item in enumerate(items)
-                if not item.get("state", {}).get("in_trash", False)
-            ]
-
-            if table_row_index < len(active_indices):
-                original_idx = active_indices[table_row_index]
-                item_to_edit = items[original_idx]
+            if original_index < len(items):
+                item_to_edit = items[original_index]
 
                 dialog = MaterialDialog(
                     comp_name,
@@ -354,40 +347,51 @@ class StructureManagerWidget(QWidget):
                     def _do_edit():
                         self.data = current_data
                         table = getattr(self, "sections", {}).get(comp_name)
-                        if table and table_row_index < table.rowCount():
-                            v = new_values
-                            # Surgical update of cells 0-5
-                            cells_updated = 0
-                            for col, text in [
-                                (0, v.get("material_name", "New Item")),
-                                (1, fmt_comma(v.get("rate", 0))),
-                                (2, fmt(v.get("quantity", 0))),
-                                (3, UNIT_DISPLAY.get(v.get("unit", "").lower(), v.get("unit", ""))),
-                                (4, v.get("rate_source", "Manual")),
-                            ]:
-                                it = table.item(table_row_index, col)
-                                if it:
-                                    it.setText(text)
+                        if table:
+                            # Find the visual row whose col-6 UserRole matches original_index
+                            visual_row = None
+                            for r in range(table.rowCount()):
+                                cell = table.item(r, 6)
+                                if cell and cell.data(Qt.UserRole) == original_index:
+                                    visual_row = r
+                                    break
+
+                            if visual_row is not None:
+                                v = new_values
+                                # Surgical update of cells 0-5
+                                cells_updated = 0
+                                for col, text in [
+                                    (0, v.get("material_name", "New Item")),
+                                    (1, fmt(v.get("quantity", 0))),
+                                    (2, UNIT_DISPLAY.get(v.get("unit", "").lower(), v.get("unit", ""))),
+                                    (3, fmt_comma(v.get("rate", 0))),
+                                    (4, v.get("rate_source", "Manual")),
+                                ]:
+                                    it = table.item(visual_row, col)
+                                    if it:
+                                        it.setText(text)
+                                        cells_updated += 1
+
+                                try:
+                                    rate = float(v.get("rate", 0) or 0)
+                                    qty = float(v.get("quantity", 0) or 0)
+                                    total = rate * qty
+                                except (ValueError, TypeError):
+                                    total = 0.0
+
+                                it_total = table.item(visual_row, 5)
+                                if it_total:
+                                    it_total.setText(fmt_comma(total))
                                     cells_updated += 1
 
-                            try:
-                                rate = float(v.get("rate", 0) or 0)
-                                qty = float(v.get("quantity", 0) or 0)
-                                total = rate * qty
-                            except (ValueError, TypeError):
-                                total = 0.0
-
-                            it_total = table.item(table_row_index, 5)
-                            if it_total:
-                                it_total.setText(fmt_comma(total))
-                                cells_updated += 1
-
-                            # If cells are missing (None), fallback to full refresh for this table
-                            if cells_updated < 6:
-                                self.on_refresh()
+                                # If cells are missing (None), fallback to full refresh
+                                if cells_updated < 6:
+                                    self.on_refresh()
+                                else:
+                                    table.update_height()
+                                    self._update_summary()
                             else:
-                                table.update_height()
-                                self._update_summary()
+                                self.on_refresh()
                         else:
                             self.on_refresh()
 

@@ -829,7 +829,7 @@ class MaterialDialog(QDialog):
             sub_row = QHBoxLayout()
             sub_row.setContentsMargins(0, 0, 0, 0)
             sub_row.setSpacing(8)
-            sub_lbl = QLabel("Category:")
+            sub_lbl = QLabel("Search Category:")
             sub_lbl.setStyleSheet(f"font-size: 11px; color: {get_token('text_secondary')};")
             sub_row.addWidget(sub_lbl)
             self.type_filter_cb = QComboBox()
@@ -927,11 +927,6 @@ class MaterialDialog(QDialog):
         self.src_in = QLineEdit(self._original_source)
         self.src_in.setPlaceholderText("e.g. DSR 2023, Market Rate")
         self.src_in.setMinimumHeight(32)
-        # Clear the source field when editing an existing material;
-        # it is restored when the user unchecks "Allow editing DB-filled values"
-        # or selects a new DB suggestion.
-        if self.is_edit:
-            self.src_in.clear()
         src_col.addWidget(self.src_in)
         rate_row.addLayout(src_col, stretch=2)
 
@@ -998,8 +993,6 @@ class MaterialDialog(QDialog):
         self.carbon_src_in = QLineEdit(self._original_carbon_src)
         self.carbon_src_in.setPlaceholderText("e.g. ICE v3.0, IPCC")
         self.carbon_src_in.setMinimumHeight(32)
-        if self.is_edit:
-            self.carbon_src_in.clear()
         src_col.addWidget(self.carbon_src_in)
         ef_row.addLayout(src_col, stretch=1)
 

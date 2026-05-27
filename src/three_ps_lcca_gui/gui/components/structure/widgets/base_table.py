@@ -79,7 +79,7 @@ class _ActionDelegate(BaseActionDelegate):
             for i, (_, _, action, *__) in enumerate(self._btns):
                 if rects[i].contains(event.pos()):
                     if action == "edit":
-                        self._manager.open_edit_dialog(self._component, index.row())
+                        self._manager.open_edit_dialog(self._component, original_index)
                     elif action == "trash":
                         self._manager.toggle_trash_status(
                             self._component, original_index, True
@@ -287,7 +287,10 @@ class StructureTableWidget(TooltipTableMixin, QTableWidget):
     def _on_cell_double_clicked(self, row, column):
         if self._frozen:
             return
-        self.manager.open_edit_dialog(self.component_name, row)
+        cell = self.item(row, 6)
+        if cell is None:
+            return
+        self.manager.open_edit_dialog(self.component_name, cell.data(Qt.UserRole))
 
     def set_currency(self, code: str):
         suffix = f" ({code})" if code else ""
