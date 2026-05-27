@@ -408,6 +408,30 @@ class ProjectWindow(QMainWindow):
 
         self.menuFile.addSeparator()
 
+        # ── Export submenu ────────────────────────────────────────────────
+        self.menuExport = QMenu("Export", self.menuFile)
+        self.menuExport.setStyleSheet(
+            f"QMenu::item:disabled {{ color: {get_token('text_disabled')}; }}"
+        )
+
+        self.actionExportInputsJSON = QAction("Export Inputs as JSON", self)
+        self.actionExportInputsJSON.triggered.connect(self._export_inputs_json)
+        self.menuExport.addAction(self.actionExportInputsJSON)
+
+        self.actionExportResultsJSON = QAction("Export Results as JSON", self)
+        self.actionExportResultsJSON.setEnabled(False)
+        self.actionExportResultsJSON.triggered.connect(self._export_results_json)
+        self.menuExport.addAction(self.actionExportResultsJSON)
+
+        self.actionExportAllDataJSON = QAction("Export All Data as JSON", self)
+        self.actionExportAllDataJSON.setEnabled(False)
+        self.actionExportAllDataJSON.triggered.connect(self._export_all_data_json)
+        self.menuExport.addAction(self.actionExportAllDataJSON)
+
+        self.menuFile.addMenu(self.menuExport)
+
+        self.menuFile.addSeparator()
+
         action_rename = QAction("Rename", self)
         action_rename.triggered.connect(self._rename_project)
         self.menuFile.addAction(action_rename)
@@ -747,6 +771,8 @@ class ProjectWindow(QMainWindow):
         """Auto-lock the project after a successful calculation."""
         self.btn_lock.setChecked(True)
         self._on_lock_toggled(True)
+        self.actionExportResultsJSON.setEnabled(True)
+        self.actionExportAllDataJSON.setEnabled(True)
 
     def _on_lock_toggled(self, checked: bool):
         if not checked and self.outputs_page._has_results:
@@ -763,6 +789,8 @@ class ProjectWindow(QMainWindow):
                 self.btn_lock.blockSignals(False)
                 return
             self.outputs_page.reset_for_edit()
+            self.actionExportResultsJSON.setEnabled(False)
+            self.actionExportAllDataJSON.setEnabled(False)
 
         self._frozen = checked
         self.btn_lock.setIcon(make_icon("lock" if checked else "lock-open"))
@@ -898,6 +926,71 @@ class ProjectWindow(QMainWindow):
             shutil.copy2(str(src), dest)
             QMessageBox.information(
                 self, "Export Complete", f"Project exported to:\n{dest}")
+        except Exception as e:
+            QMessageBox.warning(self, "Export Failed", str(e))
+
+    def _export_inputs_json(self):
+        for name in self._page_names:
+            self._get_or_create_widget(name)
+        display = self.controller.active_display_name or self.project_id or "project"
+        default_dir = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
+        default_path = os.path.join(default_dir, f"{display}_inputs.json")
+        dest, _ = QFileDialog.getSaveFileName(
+            self, "Export Inputs as JSON", default_path, "JSON Files (*.json)"
+        )
+        if not dest:
+            return
+        try:
+            from three_ps_lcca_gui.gui.components.utils.export import export_inputs_json
+            count = export_inputs_json(self.widget_map, dest, project_name=display)
+            QMessageBox.information(
+                self, "Export Complete",
+                f"Exported {count} input section(s) to:\n{dest}",
+            )
+        except Exception as e:
+            QMessageBox.warning(self, "Export Failed", str(e))
+
+    def _export_results_json(self):
+        export_data = self.outputs_page.get_export_data()
+        if not export_data:
+            QMessageBox.warning(self, "No Results", "Run the analysis first.")
+            return
+        display = self.controller.active_display_name or self.project_id or "project"
+        default_dir = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
+        default_path = os.path.join(default_dir, f"{display}_results.json")
+        dest, _ = QFileDialog.getSaveFileName(
+            self, "Export Results as JSON", default_path, "JSON Files (*.json)"
+        )
+        if not dest:
+            return
+        try:
+            from three_ps_lcca_gui.gui.components.utils.export import export_results_json
+            export_results_json(export_data, dest, project_name=display)
+            QMessageBox.information(
+                self, "Export Complete", f"Results exported to:\n{dest}"
+            )
+        except Exception as e:
+            QMessageBox.warning(self, "Export Failed", str(e))
+
+    def _export_all_data_json(self):
+        export_data = self.outputs_page.get_export_data()
+        if not export_data:
+            QMessageBox.warning(self, "No Results", "Run the analysis first.")
+            return
+        display = self.controller.active_display_name or self.project_id or "project"
+        default_dir = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
+        default_path = os.path.join(default_dir, f"{display}_all_data.json")
+        dest, _ = QFileDialog.getSaveFileName(
+            self, "Export All Data as JSON", default_path, "JSON Files (*.json)"
+        )
+        if not dest:
+            return
+        try:
+            from three_ps_lcca_gui.gui.components.utils.export import export_all_data_json
+            export_all_data_json(export_data, dest, project_name=display)
+            QMessageBox.information(
+                self, "Export Complete", f"All data exported to:\n{dest}"
+            )
         except Exception as e:
             QMessageBox.warning(self, "Export Failed", str(e))
 

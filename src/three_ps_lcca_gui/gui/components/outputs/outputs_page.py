@@ -3,7 +3,6 @@ gui/components/outputs/outputs_page.py
 """
 
 import logging
-import traceback
 
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -18,7 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from PySide6.QtGui import QFont
-from PySide6.QtCore import Qt, QObject, QSize, QThread, QTimer, Signal
+from PySide6.QtCore import Qt, QSize, QThread, QTimer, Signal
 
 from three_ps_lcca_gui.gui.themes import get_token, theme_manager
 from three_ps_lcca_gui.gui.styles import font as _f, btn_primary, btn_ghost
@@ -57,8 +56,6 @@ from three_ps_lcca_gui.gui.components.utils.validation_helpers import (
     freeze_form,
     validate_form,
 )
-from three_ps_lcca_core.core.main import run_full_lcc_analysis
-
 from three_ps_lcca_gui.gui.components.utils.display_format import fmt_currency
 from .lcc_plot import LCCBreakdownTable, LCCDetailsTable
 from .plots_helper.Pie import LCCPieWidget
@@ -66,6 +63,7 @@ from .plots_helper.AggregateChart import AggregateChartWidget
 from .helper_functions.lifecycle_summary import compute_all_summaries
 from .data_preparer import DataPreparer
 from .report_section_dialog import ReportSectionDialog
+from .calc_logic import _LCCAWorker
 
 
 CHUNK = "outputs_data"
@@ -207,52 +205,6 @@ def _make_issue_card(page_name: str, issues: list, severity: str, navigate_cb) -
         layout.addLayout(row)
 
     return card
-
-
-# ──────────────────────────────────────────────────────────────
-# Background worker
-# ──────────────────────────────────────────────────────────────
-
-
-class _LCCAWorker(QObject):
-    """Runs the full LCC analysis on a background thread."""
-
-    finished = Signal(object, object, object)
-    errored = Signal(object, str)
-
-    def __init__(self, all_data: dict, analysis_period_years: int):
-        super().__init__()
-        self._all_data = all_data
-        self._analysis_period_years = analysis_period_years
-        self._cancel = False
-
-    def cancel(self):
-        self._cancel = True
-
-    def run(self):
-        try:
-            all_data = self._all_data
-            if self._cancel:
-                return
-            is_global, data_object = DataPreparer.prepare_data_object(
-                all_data, self._analysis_period_years
-            )
-            if self._cancel:
-                return
-            wpi_metadata = None
-            if not is_global:
-                wpi_metadata = DataPreparer.prepare_wpi_object(all_data)
-            if self._cancel:
-                return
-            lcc_breakdown = DataPreparer.prepare_life_cycle_construction_cost(all_data)
-            if self._cancel:
-                return
-            results = run_full_lcc_analysis(
-                data_object, lcc_breakdown, wpi=wpi_metadata, debug=True
-            )
-            self.finished.emit(results, all_data, lcc_breakdown)
-        except Exception as exc:
-            self.errored.emit(exc, traceback.format_exc())
 
 
 # ──────────────────────────────────────────────────────────────
@@ -1272,6 +1224,18 @@ class OutputsPage(ScrollableForm):
             if data and data != self._loaded_data:
                 self._loaded_data = data
                 self.load_data_dict(data)
+
+    def get_export_data(self) -> dict | None:
+        """Return all computed data for export, or None if no results exist yet."""
+        if not self._has_results:
+            return None
+        return {
+            "all_data": getattr(self, "_last_all_data", {}),
+            "results": getattr(self, "_last_results", {}),
+            "lcc_breakdown": getattr(self, "_last_lcc_breakdown", {}),
+            "analysis_period": int(self.analysis_period.value()),
+            "currency": self._currency,
+        }
 
     def _build_export_dict(self) -> dict:
         d = DataPreparer.build_export_dict(
