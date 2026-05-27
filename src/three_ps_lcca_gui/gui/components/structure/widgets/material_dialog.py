@@ -36,7 +36,7 @@ from ...utils.definitions import (
     SI_BASE_UNITS,
     UNIT_DISPLAY,
 )
-from ...utils.display_format import fmt, fmt_comma, DECIMAL_PLACES
+from ...utils.display_format import fmt, fmt_comma
 from ...utils.unit_resolver import (
     get_custom_units,
     load_custom_units,
@@ -61,6 +61,7 @@ except ImportError:
 # which is only added to sys.path at runtime by _ensure_registry_on_path().
 # These are therefore imported lazily inside each function that needs them.
 
+DECIMAL_PLACES_CUSTOM = 5
 
 # ---------------------------------------------------------------------------
 # Info Popup
@@ -784,7 +785,7 @@ class MaterialDialog(QDialog):
         dbl = QDoubleValidator()
         dbl.setBottom(0.0)
         dbl.setNotation(QDoubleValidator.StandardNotation)
-        dbl.setDecimals(DECIMAL_PLACES)
+        dbl.setDecimals(DECIMAL_PLACES_CUSTOM)
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -1076,7 +1077,7 @@ class MaterialDialog(QDialog):
         self.recycling_perc_in = QLineEdit("" if not recov_val else fmt(recov_val))
         self.recycling_perc_in.setPlaceholderText("e.g. 90")
         self.recycling_perc_in.setMinimumHeight(32)
-        perc_v = QDoubleValidator(0.0, 100.0, DECIMAL_PLACES)
+        perc_v = QDoubleValidator(0.0, 100.0, DECIMAL_PLACES_CUSTOM)
         perc_v.setNotation(QDoubleValidator.StandardNotation)
         self.recycling_perc_in.setValidator(perc_v)
         recov_col.addWidget(self.recycling_perc_in)
