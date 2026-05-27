@@ -15,12 +15,11 @@ from ..utils.validation_helpers import clear_field_styles, freeze_form, freeze_w
 
 
 FINANCIAL_FIELDS = [
-    Section("Economic Parameters"),
+    Section("Financial Data"),
     FieldDef(
         "discount_rate",
         "Discount Rate",
-        "The rate used to convert future cash flows into present value. "
-        "Reflects the time value of money and investment risk.",
+        "The average rate used to convert future cash flows into present value. Reflects the time value of money and investment risk (Real discount rate, not inflation adjusted).",
         "float",
         options=(0.0, 100.0, 2),
         unit="(%)",
@@ -32,7 +31,7 @@ FINANCIAL_FIELDS = [
     FieldDef(
         "inflation_rate",
         "Inflation Rate",
-        "Expected annual increase in general price levels over time.",
+        "Expected average annual increase in consumer price index or WPI over time.",
         "float",
         options=(0.0, 100.0, 2),
         unit="(%)",

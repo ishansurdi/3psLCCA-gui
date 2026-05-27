@@ -296,10 +296,10 @@ class CarbonTable(TooltipTableMixin, QTableWidget):
         ("Material", _L),  # 1
         ("Value", _C),  # 2  ┐ Quantity group (sub-col → center)
         ("Unit", _C),  # 3  ┘
-        ("Conv. Factor", _R),  # 4
+        ("Conversion Factor", _R),  # 4
         ("Value", _C),  # 5  ┐ Emission group (sub-col → center)
         ("Unit", _C),  # 6  ┘
-        ("Total kgCO₂e", _R),  # 7
+        ("Total Emissions \n (kgCO₂e)", _R),  # 7
         # ("Warning", _L),  # 8
         ("Action", _C),  # 9
         ("", _C),  # 10 placeholder - reserves space for frozen overlay
@@ -528,7 +528,7 @@ class MaterialEmissions(QWidget):
         main_layout.addWidget(self.details_widget)
         main_layout.addWidget(self._hline())
 
-        main_layout.addWidget(self._section_label("Included in Carbon Calculation"))
+        main_layout.addWidget(self._section_label("Included in Carbon Emissions Calculation"))
         self.included_table = CarbonTable(is_included=True)
         self._included_action = _CarbonActionDelegate(
             self.included_table._frozen_overlay, self
@@ -539,7 +539,7 @@ class MaterialEmissions(QWidget):
         main_layout.addWidget(self.included_table)
         main_layout.addWidget(self._hline())
 
-        main_layout.addWidget(self._section_label("Excluded from Carbon Calculation"))
+        main_layout.addWidget(self._section_label("Excluded from Carbon Emissions Calculation"))
         self.excluded_table = CarbonTable(is_included=False)
         self._excluded_action = _CarbonActionDelegate(
             self.excluded_table._frozen_overlay, self
