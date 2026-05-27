@@ -15,7 +15,6 @@ from matplotlib import font_manager as _fm
 
 from three_ps_lcca_gui.gui.theme import FONT_FAMILY
 from three_ps_lcca_gui.gui.themes import get_token
-from ..lcc_data import sci_label
 
 # ── Register Ubuntu fonts ────────────────────────────────────────────────────
 _UBUNTU_FONT_DIR = os.path.abspath(
@@ -42,13 +41,13 @@ def create_bar_chart(
 
     Parameters
     ----------
-    values     : list of float  – bar heights (in millions of currency)
-    labels     : list of str    – x-axis tick labels, one per bar
-    stage_info : list of dict   – each dict has keys:
+    values     : list of float  - bar heights (in millions of currency)
+    labels     : list of str    - x-axis tick labels, one per bar
+    stage_info : list of dict   - each dict has keys:
                                   start, end, color, tick_color, title
-    text_color : str            – hex color for axes text / labels
-    bg_color   : str            – hex color for figure / axes background
-    currency   : str            – currency code shown on y-axis label
+    text_color : str            - hex color for axes text / labels
+    bg_color   : str            - hex color for figure / axes background
+    currency   : str            - currency code shown on y-axis label
     """
     _N = len(labels)
     x = np.arange(_N)
@@ -133,8 +132,6 @@ def create_bar_chart(
     for bar, val in zip(bars, values):
         if abs(val) < 1e-9:
             lbl = "0"
-        elif 0 < abs(val) < 0.1:
-            lbl = sci_label(val)
         else:
             lbl = f"{val:.2f}"
 

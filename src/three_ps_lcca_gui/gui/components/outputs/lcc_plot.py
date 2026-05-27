@@ -19,7 +19,7 @@ from three_ps_lcca_gui.gui.components.utils.table_widgets import round_table_vie
 from .plots_helper.Pie import COLORS
 from .helper_functions.lcc_colors import COLORS as LCC_PALETTE
 from .lcc_data import (
-    M, sci_label, _get,
+    _get,
     build_chart_data,
     STAGE_DEFS, stage_totals,
     BREAKDOWN_STAGES,
