@@ -147,11 +147,11 @@ CHUNK = "traffic_and_road_data"
 # ── Field definitions ─────────────────────────────────────────────────────────
 
 TRAFFIC_FIELDS = [
-    Section("Alternate Road Configuration"),
+    Section("Rerouting Road Configuration"),
     FieldDef(
         "alternate_road_carriageway",
-        "Alternate Road Carriageway",
-        "Lane configuration of the alternate route - auto-fills capacity and width.",
+        "Rerouting Road Configuration",
+        "Lane configuration (auto-fills capacity and width).",
         "combo",
         options=_LANE_NAMES,
         required=True,
@@ -213,6 +213,7 @@ TRAFFIC_FIELDS = [
         "float",
         (2000, 1_00_000.0, 0),
         unit="(mm/km)",
+        required=True,
         doc_slug=["Traffic_data", "Road_roughness"],
     ),
     FieldDef(
@@ -247,8 +248,8 @@ TRAFFIC_FIELDS = [
     ),
     FieldDef(
         "additional_reroute_distance_km",
-        "Additional Reroute Distance",
-        "Additional travel distance incurred due to rerouting during construction.",
+        "Rerouting Distance",
+        "Distance travel by the road users due to rerouting during construction.",
         "float",
         (0.0, 9_999.0, 3),
         unit="(km)",
@@ -261,8 +262,8 @@ TRAFFIC_FIELDS = [
     ),
     FieldDef(
         "additional_travel_time_min",
-        "Additional Travel Time",
-        "Extra travel time incurred by road users due to rerouting during construction.",
+        "Rerouting Time",
+        "Travel time incurred by road users due to rerouting during construction.",
         "float",
         (0.0, 9_999.0, 3),
         unit="(min)",
@@ -275,7 +276,7 @@ TRAFFIC_FIELDS = [
     ),
     FieldDef(
         "crash_rate_accidents_per_million_km",
-        "Crash Rate",
+        "Crash Rate along Rerouting Route",
         "Number of accidents per million kilometers of road length per day.",
         "float",
         (0.0, 999_999.0, 2),
@@ -341,7 +342,7 @@ class _VehicleTrafficTable(TooltipTableMixin, QTableWidget):
         super().__init__(len(_VEHICLES), 4, parent)
         self.on_change = on_change
         self.setHorizontalHeaderLabels(
-            ["Vehicle Type", "Vehicles / Day", "Accident %", "PWR"]
+            ["Vehicle Type", "Vehicles / Day", "Accident (% of vehicles)", "Power to weight ratio (PWR)"]
         )
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.verticalHeader().setVisible(False)
@@ -662,7 +663,7 @@ class TrafficData(ScrollableForm):
         self._force_free_flow = QCheckBox("Force free-flow conditions off-peak")
         self._force_free_flow.setChecked(True)
         self._force_free_flow.stateChanged.connect(self._on_field_changed)
-        india_layout.addRow(self._force_free_flow)
+        # india_layout.addRow(self._force_free_flow)
 
         _temp_form = self.form
         self.form = india_layout
