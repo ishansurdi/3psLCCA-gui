@@ -18,7 +18,7 @@ from ...base_widget import ScrollableForm
 from ...utils.form_builder.form_definitions import FieldDef
 from ...utils.form_builder.form_builder import build_form
 from ...utils.remarks_editor import RemarksEditor
-from ...utils.display_format import fmt, DECIMAL_PLACES
+from ...utils.display_format import fmt
 from ...utils.table_widgets import TableDoubleSpinBox, TABLE_SPINBOX_BASE_QSS, mark_editable_column, TooltipTableMixin
 
 from ...utils.validation_helpers import confirm_clear_all
@@ -26,6 +26,7 @@ from PySide6.QtWidgets import QStyledItemDelegate
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
+DECIMAL_PLACES_CUSTOM = 3
 CHUNK = "diversion_emissions"
 GEN_CHUNK = "general_info"
 TRAFFIC_CHUNK = "traffic_and_road_data"
@@ -60,7 +61,7 @@ DIRECT_FIELDS = [
         "Total Diversion Emissions",
         "Enter the total carbon emissions from traffic diversion per day of construction.",
         "float",
-        (0.0, 1e12, DECIMAL_PLACES),
+        (0.0, 1e12, DECIMAL_PLACES_CUSTOM),
         unit="(kgCO₂e/day)",
     ),
 ]
@@ -134,7 +135,7 @@ class _EmissionsTable(TooltipTableMixin, QTableWidget):
 
             sb = TableDoubleSpinBox()
             sb.setRange(0.0, 9_999.0)
-            sb.setDecimals(DECIMAL_PLACES)
+            sb.setDecimals(DECIMAL_PLACES_CUSTOM)
             sb.setButtonSymbols(TableDoubleSpinBox.NoButtons)
             sb.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             sb.valueChanged.connect(self._on_factor_changed)
