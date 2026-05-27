@@ -274,8 +274,8 @@ class StructureManagerWidget(QWidget):
             country=self._get_project_country(),
             sor_db_key=self._get_project_sor_db(),
         )
-        if dialog.exec():
-            values = dialog.get_values()
+
+        def _on_material_added(values):
             name = values.get("material_name", "").strip()
             if name.lower() in self._existing_names(comp_name):
                 QMessageBox.warning(
@@ -286,6 +286,10 @@ class StructureManagerWidget(QWidget):
                 )
                 return
             self.add_material(comp_name, values)
+            dialog._reset_for_next(name)
+
+        dialog.material_added.connect(_on_material_added)
+        dialog.exec()
 
     def open_edit_dialog(self, comp_name, table_row_index):
         try:
@@ -425,7 +429,7 @@ class StructureManagerWidget(QWidget):
         if ok and name.strip():
             clean_name = name.strip()
             current_data = self.controller.engine.fetch_chunk(self.chunk_name) or {}
-            if clean_name in current_data:
+            if any(k.lower() == clean_name.lower() for k in current_data):
                 QMessageBox.warning(
                     self,
                     "Duplicate Component",

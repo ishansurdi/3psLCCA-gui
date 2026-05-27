@@ -160,6 +160,16 @@ BRIDGE_FIELDS = [
         doc_slug=["Bridge_data", "Design_life"],
     ),
     FieldDef(
+        "analysis_period",
+        "Analysis Period",
+        "[Total time horizon used for life cycle cost evaluation.]",
+        "int",
+        options=(0, 999),
+        unit="(years)",
+        required=True,
+        default=0,
+    ),
+    FieldDef(
         "year_of_construction",
         "Year of Construction",
         "[Year the bridge was (or is planned to be) constructed.]",
@@ -204,6 +214,12 @@ BRIDGE_FIELDS = [
 
 
 BRIDGE_WARN_RULES = {
+    "analysis_period": (
+        None,
+        500,
+        None,
+        "Analysis period exceeds 500 years - please verify",
+    ),
     "span": (None, 5000.0, None, "Span exceeds 5000 m - please verify"),
     "carriageway_width": (
         1.5,

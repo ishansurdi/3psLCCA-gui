@@ -67,31 +67,11 @@ from .calc_logic import _LCCAWorker
 
 
 CHUNK = "outputs_data"
-CHUNK_AP = "analysis_period"
 CHUNK_COMPARISON = "comparison_cache"
 
-OUTPUTS_FIELDS = [
-    FieldDef(
-        "analysis_period",
-        "Analysis Period",
-        "Total time horizon used for life cycle cost evaluation.",
-        "int",
-        options=(0, 999),
-        required=True,
-        unit="(years)",
-        doc_slug=["outputs", "analysis-period"],
-        default=50,
-    ),
-]
+OUTPUTS_FIELDS = []
 
-OUTPUTS_WARN_RULES = {
-    "analysis_period": (
-        None,
-        500,
-        None,
-        "Analysis period exceeds 500 years- please verify.",
-    ),
-}
+OUTPUTS_WARN_RULES = {}
 
 _log = logging.getLogger(__name__)
 
@@ -213,7 +193,8 @@ def _make_issue_card(page_name: str, issues: list, severity: str, navigate_cb) -
 
 
 class ResponsiveTotalCard(QFrame):
-    def __init__(self, total_value: float, results: dict, currency: str, parent=None):
+    def __init__(self, total_value: float, results: dict, currency: str,
+                 analysis_period: int = 0, year_of_construction: int = 0, parent=None):
         super().__init__(parent)
         self.setObjectName("kpiCard")
         self.setStyleSheet(
@@ -243,7 +224,7 @@ class ResponsiveTotalCard(QFrame):
         left_v.addWidget(title_lbl)
         left_v.addSpacing(SP2)
         
-        val_str = fmt_currency(total_value, currency, decimals=0, style="short").title()
+        val_str = fmt_currency(total_value, currency, decimals=0, style="short")
         val_lbl = QLabel(val_str)
         val_lbl.setFont(_f(FS_DISP, FW_BOLD))
         val_lbl.setStyleSheet(f"color: {get_token('primary')}; border: none; background: transparent;")
@@ -256,8 +237,11 @@ class ResponsiveTotalCard(QFrame):
         left_v.addStretch()
 
         # RIGHT SIDE: About this analysis
+        _ap_str = f"{analysis_period} years" if analysis_period else "—"
+        _yoc_str = str(year_of_construction) if year_of_construction else "—"
         _LOREM = (
-            "Total lifecycle cost (across the three pillars) evaluated over an analysis period of ____ years at the assessment year _____."
+            f"Total lifecycle cost (across the three pillars) evaluated over an "
+            f"analysis period of {_ap_str} at the assessment year {_yoc_str}."
         )
         
         self.right_widget = QWidget()
@@ -329,10 +313,13 @@ class LCCSummaryCards(QWidget):
       Row 3 – Initial / Use / End-of-Life        (stage totals)
     """
 
-    def __init__(self, results: dict, currency: str, parent=None):
+    def __init__(self, results: dict, currency: str,
+                 analysis_period: int = 0, year_of_construction: int = 0, parent=None):
         super().__init__(parent)
         self._results = results
         self._currency = currency
+        self._analysis_period = analysis_period
+        self._year_of_construction = year_of_construction
         self._setup_ui()
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
@@ -350,7 +337,11 @@ class LCCSummaryCards(QWidget):
         # ── Row 1: Grand Total + description ─────────────────────────────
         row1 = QHBoxLayout()
         row1.setSpacing(SP3)
-        row1.addWidget(ResponsiveTotalCard(grand_total, self._results, self._currency))
+        row1.addWidget(ResponsiveTotalCard(
+            grand_total, self._results, self._currency,
+            analysis_period=self._analysis_period,
+            year_of_construction=self._year_of_construction,
+        ))
         outer.addLayout(row1)
 
         # ── Row 2: Pillar totals ──────────────────────────────────────────
@@ -399,7 +390,7 @@ class LCCSummaryCards(QWidget):
         v.addWidget(title_lbl)
         v.addSpacing(SP2)
 
-        val_str = fmt_currency(value, self._currency, decimals=0, style="short").title()
+        val_str = fmt_currency(value, self._currency, decimals=0, style="short")
         val_lbl = QLabel(val_str)
         val_lbl.setFont(_f(FS_DISP if large else FS_XL, FW_BOLD))
         val_lbl.setStyleSheet(f"color: {accent}; border: none;")
@@ -728,7 +719,6 @@ class OutputsPage(ScrollableForm):
         f.addRow(self._header)
 
         self.required_keys = build_form(self, OUTPUTS_FIELDS)
-        self._ap_label = f.labelForField(self.analysis_period)
 
         self._btn_row = QWidget()
         btn_layout = QHBoxLayout(self._btn_row)
@@ -843,8 +833,8 @@ class OutputsPage(ScrollableForm):
         card_v.setContentsMargins(SP4, SP3, SP4, SP3)
 
         hint = QLabel(
-            "Set the analysis period above, then press Validate to check all "
-            "input pages before running the life-cycle cost calculation."
+            "Press Validate to check all input pages before running the "
+            "life-cycle cost calculation."
         )
         hint.setFont(_f(FS_BASE))
         hint.setWordWrap(True)
@@ -1060,9 +1050,14 @@ class OutputsPage(ScrollableForm):
         tl_h.addStretch()
         self._status_layout.addWidget(toolbar_row)
 
+        _bd = getattr(self, "_last_all_data", {}).get("bridge_data", {})
+        _ap = int(_bd.get("analysis_period", 0))
+        _yoc = int(_bd.get("year_of_construction", 0))
+
         sections = [
             lambda r: _section_heading("Summary"),
-            lambda r: LCCSummaryCards(r, currency=self._currency),
+            lambda r: LCCSummaryCards(r, currency=self._currency,
+                                      analysis_period=_ap, year_of_construction=_yoc),
             lambda r: _divider(),
             lambda r: _section_heading("Distribution of LCC"),
             lambda r: _section_description(
@@ -1118,17 +1113,6 @@ class OutputsPage(ScrollableForm):
     def run_validation(self):
         all_errors = {}
         all_warnings = {}
-        ap = self.analysis_period.value()
-
-        if ap <= 0:
-            self.analysis_period.setStyleSheet(
-                f"border: 1.5px solid {get_token('danger')};"
-            )
-            all_errors["Analysis Period"] = [
-                "Required field must be greater than zero."
-            ]
-        else:
-            self.analysis_period.setStyleSheet("")
 
         for name, page in self._pages.items():
             res = page.validate()
@@ -1162,7 +1146,8 @@ class OutputsPage(ScrollableForm):
         self._show_calculating()
 
         self._calc_thread = QThread(self)
-        self._calc_worker = _LCCAWorker(all_data, int(self.analysis_period.value()))
+        ap = int(all_data.get("bridge_data", {}).get("analysis_period", 0))
+        self._calc_worker = _LCCAWorker(all_data, ap)
         self._calc_worker.moveToThread(self._calc_thread)
 
         self._calc_thread.started.connect(self._calc_worker.run)
@@ -1208,23 +1193,6 @@ class OutputsPage(ScrollableForm):
     def validate(self):
         return validate_form(OUTPUTS_FIELDS, self, warn_rules=OUTPUTS_WARN_RULES)
 
-    def _on_field_changed(self):
-        if not self._loading:
-            self.data_changed.emit()
-            if self.controller:
-                self.controller.save_chunk_data(CHUNK_AP, self.get_data_dict())
-
-    def refresh_from_engine(self):
-        if (
-            self.controller
-            and self.controller.engine
-            and self.controller.engine.is_active()
-        ):
-            data = self.controller.get_chunk(CHUNK_AP) or {}
-            if data and data != self._loaded_data:
-                self._loaded_data = data
-                self.load_data_dict(data)
-
     def get_export_data(self) -> dict | None:
         """Return all computed data for export, or None if no results exist yet."""
         if not self._has_results:
@@ -1233,7 +1201,7 @@ class OutputsPage(ScrollableForm):
             "all_data": getattr(self, "_last_all_data", {}),
             "results": getattr(self, "_last_results", {}),
             "lcc_breakdown": getattr(self, "_last_lcc_breakdown", {}),
-            "analysis_period": int(self.analysis_period.value()),
+            "analysis_period": int(getattr(self, "_last_all_data", {}).get("bridge_data", {}).get("analysis_period", 0)),
             "currency": self._currency,
         }
 
@@ -1264,7 +1232,7 @@ class OutputsPage(ScrollableForm):
         if self.controller:
             self.controller.save_chunk_data(CHUNK_COMPARISON, {
                 "is_valid": True,
-                "analysis_period": int(self.analysis_period.value()),
+                "analysis_period": int(all_data.get("bridge_data", {}).get("analysis_period", 0)),
                 "currency": self._currency,
                 "all_data": all_data,
                 "lcc_breakdown": lcc_breakdown,
@@ -1287,7 +1255,6 @@ class OutputsPage(ScrollableForm):
 
     def on_refresh(self):
         if self.controller and self.controller.engine:
-            self.refresh_from_engine()
             state = self.controller.engine.fetch_chunk(CHUNK) or {}
             s = state.get("status", "idle")
             d = state.get("data", {})

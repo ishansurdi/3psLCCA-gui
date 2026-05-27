@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QCompleter,
     QScrollArea,
 )
-from PySide6.QtCore import Qt, QUrl, QStringListModel
+from PySide6.QtCore import Qt, QUrl, QStringListModel, Signal, QTimer
 from PySide6.QtGui import (
     QDoubleValidator,
     QDesktopServices,
@@ -49,6 +49,7 @@ import os
 import sys
 
 from three_ps_lcca_gui.gui.themes import get_token
+from three_ps_lcca_gui.gui.theme import FS_BASE
 
 try:
     from ..registry.custom_material_db import CustomMaterialDB, CUSTOM_PREFIX
@@ -729,6 +730,8 @@ class MaterialDialog(QDialog):
     _CUSTOM_CODE = "__custom__"
     _NO_SUGGESTIONS_CODE = "__no_suggestions__"
 
+    material_added = Signal(dict)
+
     def __init__(
         self,
         comp_name: str,
@@ -957,7 +960,7 @@ class MaterialDialog(QDialog):
 
         ef_col = QVBoxLayout()
         ef_col.setSpacing(3)
-        ef_col.addWidget(_lbl("Emission Factor", "carbon_emission"))
+        ef_col.addWidget(_lbl("Emission (kgCO₂e)", "carbon_emission"))
         ef_val = v.get("carbon_emission", "")
         self.carbon_em_in = QLineEdit("" if not ef_val else str(ef_val))
         self.carbon_em_in.setPlaceholderText("e.g. 0.179")
@@ -968,7 +971,7 @@ class MaterialDialog(QDialog):
 
         denom_col = QVBoxLayout()
         denom_col.setSpacing(3)
-        denom_col.addWidget(_lbl("Per Unit  (kgCO₂e / ...)", "carbon_unit"))
+        denom_col.addWidget(_lbl("Per Unit", "carbon_unit"))
         self.carbon_denom_cb = QComboBox()
         self.carbon_denom_cb.setMinimumHeight(32)
         self.carbon_denom_cb.wheelEvent = lambda event: event.ignore()
@@ -2059,7 +2062,32 @@ class MaterialDialog(QDialog):
                     return
                 self.recycle_chk.setChecked(False)
 
-        self.accept()
+        if self.is_edit:
+            self.accept()
+        else:
+            self.material_added.emit(self.get_values())
+
+    def _reset_for_next(self, added_name: str = ""):
+        success_color = get_token("success")
+        self.save_btn.setText("✓ Added")
+        self.save_btn.setEnabled(False)
+        self.save_btn.setStyleSheet(
+            f"QPushButton {{ background: {success_color}; color: #ffffff;}}"
+        )
+
+        def _restore():
+            self.save_btn.setText("Add to Table")
+            self.save_btn.setStyleSheet("")
+            self.save_btn.setEnabled(True)
+            self._skip_suggestions = True
+            self.name_in.clear()
+            self.qty_in.clear()
+            self.rate_in.clear()
+            self.src_in.clear()
+            self._skip_suggestions = False
+            self.name_in.setFocus()
+
+        QTimer.singleShot(800, _restore)
 
     # ── Output ────────────────────────────────────────────────────────────
 
