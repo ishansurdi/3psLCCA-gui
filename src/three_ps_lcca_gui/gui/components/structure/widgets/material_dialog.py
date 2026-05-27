@@ -44,9 +44,11 @@ from ...utils.unit_resolver import (
 )
 from ...utils.input_fields.add_material import FIELD_DEFINITIONS
 from ...utils.unit_resolver import get_unit_info as _get_unit_info_impl
+from ...utils.doc_link import doc_inline, doc_label
+from ..registry.material_catalog import list_databases
+from ..registry.search_engine import MaterialSearchEngine, AdvancedSearchEngine
 
 import os
-import sys
 
 from three_ps_lcca_gui.gui.themes import get_token
 from three_ps_lcca_gui.gui.theme import FS_BASE
@@ -56,10 +58,6 @@ try:
 except ImportError:
     CustomMaterialDB = None
     CUSTOM_PREFIX = "custom::"
-
-# NOTE: material_catalog and search_engine live inside the registry directory
-# which is only added to sys.path at runtime by _ensure_registry_on_path().
-# These are therefore imported lazily inside each function that needs them.
 
 DECIMAL_PLACES_CUSTOM = 5
 
@@ -91,7 +89,6 @@ class InfoPopup(QDialog):
         line.setFrameShadow(QFrame.Sunken)
         layout.addWidget(line)
 
-        from ...utils.doc_link import doc_inline, doc_label
         doc_slug = defn.get("doc_slug", [])
         expl = defn.get("explanation", "No description available.")
         html = expl + (" " + doc_inline(doc_slug, "Read More →") if doc_slug else "")
@@ -121,7 +118,6 @@ def _section_header(title: str) -> QLabel:
 
 
 def _lbl(text: str, key: str = "") -> QLabel:
-    from ...utils.doc_link import doc_inline, doc_label
     slug = FIELD_DEFINITIONS.get(key, {}).get("doc_slug", []) if key else []
     if slug:
         lbl = doc_label(f'<span style="font-weight:600;font-size:11px;">{text}</span> {doc_inline(slug)}')
@@ -418,24 +414,9 @@ def _resolve_unit_code(sor_unit: str, combo: "QComboBox") -> int:
     return combo.count() - 1
 
 
-def _registry_dir() -> str:
-    return os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "registry")
-    )
-
-
-def _ensure_registry_on_path():
-    d = _registry_dir()
-    if d not in sys.path:
-        sys.path.insert(0, d)
-
-
 def _list_sor_options(country: str = None) -> list[dict]:
-    _ensure_registry_on_path()
     result = []
     try:
-        from material_catalog import list_databases
-
         raw = list_databases(country=country.strip() if country else None)
         for e in raw:
             if e.get("status") != "OK":
@@ -465,19 +446,14 @@ def _list_sor_options(country: str = None) -> list[dict]:
 
 
 def _list_sor_types(db_keys: list = None) -> list[str]:
-    _ensure_registry_on_path()
     try:
-        from material_catalog import list_databases as _list_dbs
-
         available = [
             e["db_key"]
-            for e in _list_dbs()
+            for e in list_databases()
             if e.get("status") == "OK" and (db_keys is None or e["db_key"] in db_keys)
         ]
         if not available:
             return []
-        from search_engine import MaterialSearchEngine
-
         engine = MaterialSearchEngine(db_keys=db_keys)
         return sorted(
             {
@@ -538,8 +514,6 @@ def build_excel_snapshot(values_dict: dict) -> dict:
 
 
 def _load_material_suggestions(db_keys: list = None, comp_name: str = None) -> dict:
-    _ensure_registry_on_path()
-
     if db_keys is not None:
         regular_keys = [k for k in db_keys if not k.startswith("custom::")]
         custom_names = [
@@ -557,11 +531,9 @@ def _load_material_suggestions(db_keys: list = None, comp_name: str = None) -> d
     skip_regular = db_keys is not None and not regular_keys
     if not skip_regular:
         try:
-            from material_catalog import list_databases as _list_dbs
-
             _available = [
                 e["db_key"]
-                for e in _list_dbs()
+                for e in list_databases()
                 if e.get("status") == "OK"
                 and (regular_keys is None or e["db_key"] in regular_keys)
             ]
@@ -572,8 +544,6 @@ def _load_material_suggestions(db_keys: list = None, comp_name: str = None) -> d
 
     if not skip_regular:
         try:
-            from search_engine import MaterialSearchEngine
-
             engine = MaterialSearchEngine(db_keys=regular_keys)
 
             if comp_lower:
@@ -610,8 +580,6 @@ def _load_material_suggestions(db_keys: list = None, comp_name: str = None) -> d
 
     if load_all_custom or custom_names:
         try:
-            from ..registry.custom_material_db import CustomMaterialDB
-
             cdb = CustomMaterialDB()
             names_to_load = cdb.list_db_names() if load_all_custom else custom_names
             for db_name in names_to_load:
@@ -1336,11 +1304,6 @@ class MaterialDialog(QDialog):
         if self._ui_ready and self._sor_item is not None and q != self._sor_filled_name:
             self._reset_sor_state()
         if self._active_completer is None:
-            return
-        _ensure_registry_on_path()
-        try:
-            from search_engine import AdvancedSearchEngine
-        except ImportError:
             return
         if not q or q == "?":
             filtered = sorted(self._suggestions.keys())
