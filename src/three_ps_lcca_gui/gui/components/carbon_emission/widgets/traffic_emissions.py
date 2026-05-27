@@ -333,7 +333,7 @@ class TrafficEmissions(ScrollableForm):
         calc_layout.addRow(table_container)
 
         self._total_label = QLabel("0.0000")
-        calc_layout.addRow("<b>Total Emissions (kgCO₂e/day):</b>", self._total_label)
+        calc_layout.addRow("<b>Total Daily Emissions (kgCO₂e/day):</b>", self._total_label)
 
         self.btn_defaults = QPushButton("Load Default Factors")
         self.btn_defaults.setFixedWidth(160)
@@ -365,7 +365,7 @@ class TrafficEmissions(ScrollableForm):
 
         # Remarks
         self._remarks = RemarksEditor(
-            title="Remarks / Notes", on_change=self._on_field_changed
+            title="Notes", on_change=self._on_field_changed
         )
         main_form.addRow(self._remarks)
 
@@ -461,7 +461,7 @@ class TrafficEmissions(ScrollableForm):
 
         if show_warning:
             self._warning_label.setText(
-                "⚠ Reroute distance is 0 km - please fill in the Traffic Data tab first."
+                "⚠ Reroute distance is 0 km. Please fill in the Traffic Data tab first."
             )
             self._warning_label.setVisible(True)
         else:

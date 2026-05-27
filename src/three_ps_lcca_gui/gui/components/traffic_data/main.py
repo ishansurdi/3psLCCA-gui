@@ -753,7 +753,7 @@ class TrafficData(ScrollableForm):
         main_form.addRow(self._stack)
 
         self._remarks = RemarksEditor(
-            title="Remarks / Notes", on_change=self._on_field_changed
+            title="Notes", on_change=self._on_field_changed
         )
         main_form.addRow(self._remarks)
 

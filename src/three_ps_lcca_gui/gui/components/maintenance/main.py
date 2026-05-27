@@ -106,7 +106,7 @@ MAINTENANCE_FIELDS = [
         doc_slug=["Maintenance_repair", "Periodic_maintenance_frequency"],
     ),
     # ── Major Works ──────────────────────────────────────────────────────
-    Section("Major Works"),
+    Section("Major Inspection"),
     FieldDef(
         "major_inspection_cost",
         "Major Inspection Cost",
@@ -135,6 +135,7 @@ MAINTENANCE_FIELDS = [
         ),
         doc_slug=["Maintenance_repair", "Major_inspection_frequency"],
     ),
+    Section("Major Repair"),
     FieldDef(
         "major_repair_cost",
         "Major Repair Cost",

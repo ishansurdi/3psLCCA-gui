@@ -13,6 +13,7 @@ Currency label pulled from general_info chunk.
 
 from three_ps_lcca_gui.gui.themes import get_token
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QButtonGroup,
     QComboBox,
     QDialog,
@@ -35,7 +36,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt, QEvent, QRect, QSize
+from PySide6.QtCore import Qt, QEvent, QRect, QSize, QTimer
 from PySide6.QtGui import QFont
 
 from ...base_widget import ScrollableForm
@@ -203,16 +204,6 @@ _LUMPSUM_KEYS = [
     # ("fuel_ef", 2.69),
 ]
 
-DETAILED_FIELDS = [
-    FieldDef(
-        "default_days",
-        "Default No. of Days",
-        "Set a default number of working days then click Apply to All Rows.",
-        "int",
-        options=(0, 9999),
-        unit="(days)",
-    ),
-]
 
 
 # ── Action delegate - paints edit + delete icon buttons ───────────────────────
@@ -230,6 +221,22 @@ class _ActionDelegate(BaseActionDelegate):
             (make_icon("edit"), (46, 204, 113), "edit", "Edit"),
             (make_icon("trash", color=get_token("danger")), (231, 76, 60), "delete", "Remove row"),
         ]
+        # Also watch the frozen table widget itself so Leave clears hover
+        # even when the cursor exits via the frame/header rather than the viewport.
+        table.setMouseTracking(True)
+        table.installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        # Clear hover when the mouse leaves the entire frozen column widget.
+        try:
+            vp = self._table.viewport()
+        except RuntimeError:
+            return False
+        if obj is self._table and event.type() == QEvent.Leave:
+            self._set_hovered(-1, -1)
+            return False
+        # Delegate standard viewport hover tracking to the base class.
+        return super().eventFilter(obj, event)
 
     def _get_btns_for_row(self, row) -> list[tuple]:
         return [(icon, hover_rgb, tooltip) for icon, hover_rgb, _, tooltip in self._btns]
@@ -359,13 +366,13 @@ class _FrozenActionCol(QTableWidget):
         self.setFocusPolicy(Qt.NoFocus)
         self.setSelectionMode(QTableWidget.NoSelection)
         self.setFrameShape(QTableWidget.NoFrame)
+        self.setMouseTracking(True)
         self.setStyleSheet(
             "QTableWidget { background-color: palette(base); border-top-left-radius: 0px;"
             " border-bottom-left-radius: 0px; border-bottom-right-radius: 7px; }"
         )
-        self.viewport().setStyleSheet(
-            "border-bottom-right-radius: 7px; background-color: transparent;"
-        )
+        self.viewport().setStyleSheet("border-bottom-right-radius: 7px;")
+        self.viewport().setMouseTracking(True)
 
         self.verticalHeader().setVisible(False)
         self.verticalHeader().setDefaultSectionSize(row_h)
@@ -397,10 +404,14 @@ class _FrozenActionCol(QTableWidget):
         hdr_h = p.horizontalHeader().height()
         self.horizontalHeader().setFixedHeight(hdr_h)
         vp = p.viewport()
+        
+        # Position at absolute right edge of the table widget
         x = p.width() - _ACTION_W
         y = vp.y() - hdr_h
+        
         self.move(x, y)
-        self.setFixedHeight(p.viewport().height() + hdr_h)
+        self.setFixedHeight(vp.height() + hdr_h)
+        self.raise_()
 
 
 # ── Detailed equipment table ──────────────────────────────────────────────────
@@ -426,10 +437,9 @@ class _DetailedTable(QWidget):
     _ROW_H = 36
     _HEADER_H = 38  # fallback if header not yet painted
 
-    def __init__(self, on_change, default_days: QSpinBox, parent=None):
+    def __init__(self, on_change, parent=None):
         super().__init__(parent)
         self._on_change = on_change
-        self._default_days = default_days
         self._cached_total: float = 0.0  # updated by _recalculate, read by get_total
 
         layout = QVBoxLayout(self)
@@ -458,8 +468,14 @@ class _DetailedTable(QWidget):
         self._table.setSelectionMode(QTableWidget.SingleSelection)
         self._table.setSelectionBehavior(QTableWidget.SelectRows)
         self._table.verticalHeader().setDefaultSectionSize(self._ROW_H)
+        self._table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self._table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._table.cellChanged.connect(self._on_cell_changed)
         self._table.cellDoubleClicked.connect(self._open_edit_dialog)
+        self._geometry_timer = QTimer(self)
+        self._geometry_timer.setSingleShot(True)
+        self._geometry_timer.setInterval(0)
+        self._geometry_timer.timeout.connect(self._do_geometry_update)
         self._table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self._table.setMinimumWidth(0)
         self._table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -470,6 +486,7 @@ class _DetailedTable(QWidget):
         self._action_delegate = _ActionDelegate(self._frozen_col, self)
         self._frozen_col.setItemDelegateForColumn(0, self._action_delegate)
         self._frozen_col.show()
+        self._frozen_col.raise_()
 
         # Subtotals
         sub_layout = QHBoxLayout()
@@ -497,13 +514,13 @@ class _DetailedTable(QWidget):
         self.btn_clear = QPushButton("Clear All")
         self.btn_clear.setMinimumHeight(35)
         self.btn_clear.clicked.connect(self._clear_all)
-        self.btn_apply = QPushButton("Apply Days to All Rows")
-        self.btn_apply.setMinimumHeight(35)
-        self.btn_apply.clicked.connect(self._apply_default_days)
+        # self.btn_apply = QPushButton("Apply Days to All Rows")
+        # self.btn_apply.setMinimumHeight(35)
+        # self.btn_apply.clicked.connect(self._apply_default_days)
         btn_layout.addWidget(self.btn_add)
         btn_layout.addWidget(self.btn_defaults)
         btn_layout.addWidget(self.btn_clear)
-        btn_layout.addWidget(self.btn_apply)
+        # btn_layout.addWidget(self.btn_apply)
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
         self._frozen = False
@@ -526,6 +543,12 @@ class _DetailedTable(QWidget):
         h = self._table_content_height()
         self._table.setMinimumHeight(h)
         self._table.setMaximumHeight(h)
+        if hasattr(self, "_geometry_timer"):
+            self._geometry_timer.start()
+        else:
+            self._do_geometry_update()
+
+    def _do_geometry_update(self):
         self._table.updateGeometry()
         self.updateGeometry()
         if hasattr(self, "_frozen_col"):
@@ -592,15 +615,15 @@ class _DetailedTable(QWidget):
 
     # ── Row management ────────────────────────────────────────────────────
 
-    def _apply_default_days(self):
-        days_val = str(self._default_days.value())
-        self._table.blockSignals(True)
-        for row in range(self._table.rowCount()):
-            item = self._table.item(row, 4)
-            if item:
-                item.setText(days_val)
-        self._table.blockSignals(False)
-        self._recalculate()
+    # def _apply_default_days(self):
+    #     days_val = str(self._default_days.value())
+    #     self._table.blockSignals(True)
+    #     for row in range(self._table.rowCount()):
+    #         item = self._table.item(row, 4)
+    #         if item:
+    #             item.setText(days_val)
+    #     self._table.blockSignals(False)
+    #     self._recalculate()
 
     def _add_blank_row(self, d: dict | None = None):
         self._table.blockSignals(True)
@@ -740,7 +763,8 @@ class _DetailedTable(QWidget):
 
     def freeze(self, frozen: bool = True):
         self._frozen = frozen
-        freeze_widgets(frozen, self.btn_add, self.btn_defaults, self.btn_clear, self.btn_apply)
+        freeze_widgets(frozen, self.btn_add, self.btn_defaults, self.btn_clear)
+        # freeze_widgets(frozen, ..., self.btn_apply)
         flags_editable = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
         flags_frozen   = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         for row in range(self._table.rowCount()):
@@ -808,12 +832,12 @@ class MachineryEmissions(ScrollableForm):
         banner_layout.setContentsMargins(12, 8, 12, 8)
         self._lbl_grand_total = QLabel("Total Machinery/Equipment Emissions: - kg CO₂e")
         self._lbl_grand_total.setFont(bold)
-        note = QLabel(
-            "  ⓘ  Fill either Detailed Equipment List or Lump Sum - not both."
-        )
-        note.setStyleSheet("color: gray; font-style: italic;")
+        # note = QLabel(
+        #     "  ⓘ  Fill either Detailed Equipment List or Lump Sum - not both."
+        # )
+        # note.setStyleSheet("color: gray; font-style: italic;")
         banner_layout.addWidget(self._lbl_grand_total)
-        banner_layout.addWidget(note)
+        # banner_layout.addWidget(note)
         banner_layout.addStretch()
         f.addRow(banner)
 
@@ -847,28 +871,8 @@ class MachineryEmissions(ScrollableForm):
         detailed_vbox.setContentsMargins(0, 0, 0, 0)
         detailed_vbox.setSpacing(4)
 
-        # default_days row - small form layout for consistent label+field style
-        days_form_widget = QWidget()
-        days_form_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        days_form_layout = QFormLayout(days_form_widget)
-        days_form_layout.setContentsMargins(0, 0, 0, 0)
-        days_form_layout.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
-        days_form_layout.setLabelAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        days_form_layout.setFormAlignment(Qt.AlignTop | Qt.AlignLeft)
-        days_form_layout.setVerticalSpacing(4)
-        days_form_layout.setHorizontalSpacing(8)
-
-        _saved = self.form
-        self.form = days_form_layout
-        build_form(self, DETAILED_FIELDS)
-        self.form = _saved
-        self._field_map.pop("default_days", None)  # saved manually via collect_data
-
-        detailed_vbox.addWidget(days_form_widget)
-
         self._detailed_table = _DetailedTable(
             on_change=self._on_totals_changed,
-            default_days=self.default_days,
         )
         detailed_vbox.addWidget(self._detailed_table)
         self._stack.addWidget(detailed_widget)
@@ -930,7 +934,7 @@ class MachineryEmissions(ScrollableForm):
 
         # ── Remarks ───────────────────────────────────────────────────────
         self._remarks = RemarksEditor(
-            title="Remarks / Notes",
+            title="Notes",
             on_change=self._on_field_changed,
         )
         f.addRow(self._remarks)

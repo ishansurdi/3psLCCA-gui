@@ -251,7 +251,7 @@ class RecyclingTable(TooltipTableMixin, QTableWidget):
 
     INCLUDED_HEADERS = [
         ("Category", _L),  # 0
-        ("Material", _L),  # 1
+        ("Component", _L),  # 1
         ("Value", _C),  # 2  ┐ Quantity group
         ("Unit", _C),  # 3  ┘
         ("Recyclability %", _R),  # 4
@@ -265,7 +265,7 @@ class RecyclingTable(TooltipTableMixin, QTableWidget):
 
     EXCLUDED_HEADERS = [
         ("Category", _L),  # 0
-        ("Material", _L),  # 1
+        ("Component", _L),  # 1
         ("Value", _C),  # 2  ┐ Quantity group
         ("Unit", _C),  # 3  ┘
         ("Recyclability %", _R),  # 4
@@ -514,8 +514,8 @@ class Recycling(QWidget):
 
     def _get_currency(self) -> str:
         try:
-            data = self.controller.engine.fetch_chunk("financial_data") or {}
-            return data.get("currency", "")
+            data = self.controller.engine.fetch_chunk("general_info") or {}
+            return data.get("project_currency", "")
         except Exception:
             return ""
 
@@ -544,6 +544,7 @@ class Recycling(QWidget):
             for cat, chunk_id, comp, idx, item, value in result["included_items"]
         ]
 
+        self._update_currency_headers(result["currency"])
         self._populate_included(included_with_warn, result["currency"])
         self._populate_excluded(result["excluded_items"])
         self._update_summary(
@@ -552,6 +553,24 @@ class Recycling(QWidget):
             result["total_count"],
             result["cat_totals"],
             result["currency"],
+        )
+
+    def _update_currency_headers(self, currency: str):
+        cu = currency or ""
+        def _hdr(text):
+            it = QTableWidgetItem(text)
+            it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            return it
+        # Included table: col 6 = Scrap Rate, col 7 = Recovered Value
+        self.included_table.setHorizontalHeaderItem(
+            6, _hdr(f"Scrap Rate ({cu}/unit)" if cu else "Scrap Rate (per unit)")
+        )
+        self.included_table.setHorizontalHeaderItem(
+            7, _hdr(f"Recovered Value ({cu})" if cu else "Recovered Value")
+        )
+        # Excluded table: col 5 = Scrap Rate
+        self.excluded_table.setHorizontalHeaderItem(
+            5, _hdr(f"Scrap Rate ({cu}/unit)" if cu else "Scrap Rate (per unit)")
         )
 
     def _populate_included(self, items, currency: str):
@@ -565,7 +584,7 @@ class Recycling(QWidget):
 
             unit = _fmt_unit(v.get("unit", ""))
             recyclable_qty = f"{fmt(calc_recyclable_qty(item))} {unit}".strip()
-            value_str = f"{currency} {fmt_comma(value)}".strip()
+            value_str = fmt_comma(value)
 
             def _ri(text):
                 it = QTableWidgetItem(text)
@@ -612,7 +631,7 @@ class Recycling(QWidget):
 
         t.update_height()
 
-    def _populate_excluded(self, items):
+    def _populate_excluded(self, items, currency: str = ""):
         t = self.excluded_table
         t.clear_rows()
 

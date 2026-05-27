@@ -25,8 +25,8 @@ DEMOLITION_FIELDS = [
     Section("End of Life"),
     FieldDef(
         "demolition_cost_pct",
-        "Demolition & Disposal Cost (%)",
-        "Cost of demoilition cost expressed as percentage of initial construction cost.",
+        "Demolition & Disposal Costs (%)",
+        "Costs of demoilition expressed as percentage of initial construction cost.",
         "float",
         (0.0, 100.0, 1),
         unit="(%)",
@@ -55,13 +55,6 @@ DEMOLITION_FIELDS = [
         required=True,
         default=0,
         doc_slug=["Demolition", "Demolition_disposal_duration"],
-    ),
-    FieldDef(
-        "demolition_method",
-        "Demolition Method",
-        "Type of demolition method used.",
-        "combo",
-        options=["Conventional", "Implosion", "Deconstruction"],
     ),
 ]
 
