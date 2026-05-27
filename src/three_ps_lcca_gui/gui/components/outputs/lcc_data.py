@@ -35,48 +35,87 @@ _CREDIT_KEYS = {"total_scrap_value"}
 # (stage_key, category, result_key, label)
 _MASTER_ROWS = [
     # Initial Stage
-    ("initial_stage",  "economic",      "initial_construction_cost",                                            "Construction Cost"),
-    ("initial_stage",  "environmental", "initial_material_carbon_emission_cost",                                "Construction Carbon Emissions"),
-    ("initial_stage",  "economic",      "time_cost_of_loan",                                                    "Loan Interest"),
-    ("initial_stage",  "social",        "initial_road_user_cost",                                               "Road User Cost (Construction)"),
-    ("initial_stage",  "environmental", "initial_vehicular_emission_cost",                                      "Traffic Rerouting Emissions"),
+    ("initial_stage",  "economic",      "initial_construction_cost",
+     "Initial Construction Costs"),
+    ("initial_stage",  "economic",      "time_cost_of_loan",
+     "Time Costs"),
+    ("initial_stage",  "environmental", "initial_material_carbon_emission_cost",
+     "Initial Carbon Emissions"),
+    ("initial_stage",  "environmental", "initial_vehicular_emission_cost",
+     "Carbon Emissions due to Rerouting (Construction)"),
+    ("initial_stage",  "social",        "initial_road_user_cost",
+     "Road User Cost (Construction)"),
+
     # Use Stage
-    ("use_stage",      "economic",      "routine_inspection_costs",                                             "Routine Inspection"),
-    ("use_stage",      "economic",      "periodic_maintenance",                                                 "Periodic Maintenance"),
-    ("use_stage",      "environmental", "periodic_carbon_costs",                                                "Periodic Maintenance Emissions"),
-    ("use_stage",      "economic",      "major_inspection_costs",                                               "Major Inspection"),
-    ("use_stage",      "economic",      "major_repair_cost",                                                    "Major Repair"),
-    ("use_stage",      "environmental", "major_repair_material_carbon_emission_costs",                          "Major Repair Emissions"),
-    ("use_stage",      "environmental", "major_repair_vehicular_emission_costs",                                "Major Repair Traffic Rerouting Emissions"),
-    ("use_stage",      "social",        "major_repair_road_user_costs",                                         "Road User Cost (Major Repair)"),
-    ("use_stage",      "economic",      "replacement_costs_for_bearing_and_expansion_joint",                    "Bearing & Joint Replacement"),
-    ("use_stage",      "environmental", "vehicular_emission_costs_for_replacement_of_bearing_and_expansion_joint","Bearing Replacement Traffic Emissions"),
-    ("use_stage",      "social",        "road_user_costs_for_replacement_of_bearing_and_expansion_joint",       "Road User Cost (Replacement)"),
-    # Reconstruction Stage
-    ("reconstruction", "economic",      "cost_of_reconstruction_after_demolition",                             "Reconstruction Cost"),
-    ("reconstruction", "environmental", "carbon_cost_of_reconstruction_after_demolition",                      "Reconstruction Emissions"),
-    ("reconstruction", "economic",      "time_cost_of_loan",                                                    "Loan Interest"),
-    ("reconstruction", "economic",      "total_demolition_and_disposal_costs",                                  "Demolition & Disposal"),
-    ("reconstruction", "environmental", "carbon_costs_demolition_and_disposal",                                 "Demolition Material Emissions"),
-    ("reconstruction", "environmental", "demolition_vehicular_emission_cost",                                   "Demolition Traffic Emissions"),
-    ("reconstruction", "environmental", "reconstruction_vehicular_emission_cost",                               "Reconstruction Traffic Emissions"),
-    ("reconstruction", "social",        "ruc_demolition",                                                       "Road User Cost (Demolition)"),
-    ("reconstruction", "social",        "ruc_reconstruction",                                                   "Road User Cost (Reconstruction)"),
-    ("reconstruction", "economic",      "total_scrap_value",                                                    "Scrap Value Credit"),
-    # End-of-Life Stage
-    ("end_of_life",    "economic",      "total_demolition_and_disposal_costs",                                  "Demolition & Disposal"),
-    ("end_of_life",    "environmental", "carbon_costs_demolition_and_disposal",                                 "Demolition Material Emissions"),
-    ("end_of_life",    "environmental", "demolition_vehicular_emission_cost",                                   "Demolition Traffic Emissions"),
-    ("end_of_life",    "social",        "ruc_demolition",                                                       "Road User Cost (Demolition)"),
-    ("end_of_life",    "economic",      "total_scrap_value",                                                    "Scrap Value Credit"),
+    ("use_stage",      "economic",      "routine_inspection_costs",
+     "Routine Inspection Costs"),
+    ("use_stage",      "economic",      "periodic_maintenance",
+     "Periodic Maintenance Costs"),
+    ("use_stage",      "economic",      "major_inspection_costs",
+     "Major Inspection Costs"),
+    ("use_stage",      "economic",      "major_repair_cost",
+     "Major Repair Costs"),
+    ("use_stage",      "environmental", "vehicular_emission_costs_for_replacement_of_bearing_and_expansion_joint",
+     "Carbon Emissions due to Rerouting during Demolition and Disposal"),
+
+    ("use_stage",      "environmental", "periodic_carbon_costs",
+     "Periodic Maintenance related Carbon Emissions"),
+    ("use_stage",      "environmental", "major_repair_material_carbon_emission_costs",
+     "Major Repair related Carbon Emissions"),
+    ("use_stage",      "environmental", "major_repair_vehicular_emission_costs",
+     "Carbon Emissions due to Rerouting during Major Repairs"),
+    ("use_stage",      "economic",      "replacement_costs_for_bearing_and_expansion_joint",
+     "Carbon Emissions due to Rerouting during Replacement of Bearings and Expansion joints"),
+
+
+
+    ("use_stage",      "social",        "major_repair_road_user_costs",
+     "Road User Costs during Major Repair"),
+    ("use_stage",      "social",        "road_user_costs_for_replacement_of_bearing_and_expansion_joint",
+     "Road User Costs during Replacement of Bearings and Expansion joints"),
+    ("end_of_life",    "economic",      "total_demolition_and_disposal_costs",
+     "Demolition & Disposal Costs"),
+    ("reconstruction", "economic",      "total_scrap_value",
+     "Recycling Costs"),
+    ("reconstruction", "economic",      "cost_of_reconstruction_after_demolition",
+     "Reconstruction Costs"),
+    ("reconstruction", "economic",      "time_cost_of_loan",
+     "Time Costs"),
+    ("reconstruction", "environmental", "demolition_vehicular_emission_cost",
+     "Demolition and Disposal related Carbon Emissions"),
+    ("end_of_life",    "environmental", "demolition_vehicular_emission_cost",
+     "Carbon Emissions due to Rerouting during Demolition and Disposal"),
+    ("reconstruction", "environmental", "carbon_cost_of_reconstruction_after_demolition",
+     "Reconstruction related Carbon Emissions"),
+    ("reconstruction", "environmental", "reconstruction_vehicular_emission_cost",
+     "Carbon Emissions due to Rerouting during Reconstruction"),
+    ("reconstruction", "social",        "ruc_demolition",
+     "Road User Costs related to Demolition and Disposal during Reconstruction"),
+    ("reconstruction", "social",        "ruc_reconstruction",
+     "Road User Costs during Reconstruction"),
+    ("reconstruction", "economic",      "total_demolition_and_disposal_costs",
+     "Demolition & Disposal Costs"),
+    ("end_of_life",    "economic",      "total_scrap_value",
+     "Recycling Costs"),
+    ("end_of_life",    "environmental", "carbon_costs_demolition_and_disposal",
+     "Demolition and Disposal related Carbon Emissions"),
+    ("reconstruction", "environmental", "carbon_costs_demolition_and_disposal",
+     "Carbon Emissions due to Rerouting during Demolition and Disposal"),
+    ("end_of_life",    "social",        "ruc_demolition",
+     "Road User Costs due to Demolition and Disposal"),
+
 ]
 
 # (stage_key, chart_title, breakdown_label, color, tick_color, stage_color, optional)
 _STAGE_META = [
-    ("initial_stage",  "Initial Stage",        "Initial Stage\nCosts",    "#cfd9e8", "#2c4a75", _LC["init_color"],               False),
-    ("use_stage",      "Use Stage",            "Use Stage\nCosts",        "#cfe8e2", "#1f6f66", _LC["use_color"],                False),
-    ("reconstruction", "Reconstruction Stage", "Reconstruction\nStage",   "#e8d5f0", "#5a3270", _LC.get("recon_color","#B0BEC5"),True),
-    ("end_of_life",    "End-of-Life Stage",    "End-of-Life\nStage",      "#edd5d5", "#7a3b3b", _LC["end_color"],               False),
+    ("initial_stage",  "Initial Stage",        "Initial Stage\nCosts",
+     "#cfd9e8", "#2c4a75", _LC["init_color"],               False),
+    ("use_stage",      "Use Stage",            "Use Stage\nCosts",
+     "#cfe8e2", "#1f6f66", _LC["use_color"],                False),
+    ("reconstruction", "Reconstruction Stage", "Reconstruction\nStage",
+     "#e8d5f0", "#5a3270", _LC.get("recon_color", "#B0BEC5"), True),
+    ("end_of_life",    "End-of-Life Stage",    "End-of-Life\nStage",
+     "#edd5d5", "#7a3b3b", _LC["end_color"],               False),
 ]
 
 
@@ -90,6 +129,7 @@ def _build_chart_rows():
         out.setdefault(sk, []).append((cat, key, label))
     return out
 
+
 def _build_breakdown_stages():
     rows_by_stage = {}
     for sk, cat, key, label in _MASTER_ROWS:
@@ -99,6 +139,7 @@ def _build_breakdown_stages():
          "optional": optional, "rows": rows_by_stage.get(sk, [])}
         for sk, _, bd_lbl, _, _, s_color, optional in _STAGE_META
     ]
+
 
 def _build_stage_defs():
     out = []
@@ -113,9 +154,9 @@ def _build_stage_defs():
     return out
 
 
-_CHART_ROWS      = _build_chart_rows()
+_CHART_ROWS = _build_chart_rows()
 BREAKDOWN_STAGES = _build_breakdown_stages()
-STAGE_DEFS       = _build_stage_defs()
+STAGE_DEFS = _build_stage_defs()
 
 
 # ---------------------------------------------------------------------------
