@@ -291,7 +291,7 @@ def _plot_stage_bars(results: dict, currency: str) -> plt.Figure:
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontweight="bold", color=_TC, fontsize=9)
-    ax.set_ylabel("Total Cost",
+    ax.set_ylabel("Cost",
                   fontweight="bold", color=_TC, fontsize=9)
     ax.tick_params(axis="both", colors=_TC, labelsize=8)
     ax.yaxis.grid(True, linestyle="--", alpha=0.3, color=_GC)
@@ -393,7 +393,7 @@ def _plot_pillar_bars(results: dict, currency: str) -> plt.Figure:
 
     ax.set_xticks(x)
     ax.set_xticklabels(stages, fontweight="bold", color=_TC, fontsize=9)
-    ax.set_ylabel("Total Cost",
+    ax.set_ylabel("Cost",
                   fontweight="bold", color=_TC, fontsize=9)
     ax.tick_params(axis="both", colors=_TC, labelsize=8)
     ax.yaxis.grid(True, linestyle="--", alpha=0.3, color=_GC)
