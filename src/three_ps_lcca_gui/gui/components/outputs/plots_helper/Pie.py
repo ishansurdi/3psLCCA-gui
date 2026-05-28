@@ -16,14 +16,9 @@ from matplotlib import font_manager as _fm
 matplotlib.use("QtAgg")
 
 try:
-    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 except ImportError:
-    from matplotlib.backends.backend_qt import FigureCanvasQTAgg, NavigationToolbar2QT
-
-class _ChartToolbar(NavigationToolbar2QT):
-    toolitems = [t for t in NavigationToolbar2QT.toolitems
-                 if t[0] not in ("Subplots", "Customize")]
-    def set_message(self, s): pass
+    from matplotlib.backends.backend_qt import FigureCanvasQTAgg
 
 from PySide6.QtCore import QEvent, QObject, QSize, Qt
 from PySide6.QtGui import QFont
@@ -56,18 +51,11 @@ from ..helper_functions.lcc_colors import COLORS as LCC_COLORS
 from .AggregateChart import (
     StageBarPlotter, SustainabilityBarPlotter, PillarBreakdownBarPlotter,
     _build_pillar_total_data, _build_pillar_data as _build_pillar_bar_data,
-    _currency_note,
 )
+from .plot_utils import register_ubuntu_fonts, WheelForwarder, ChartToolbar, currency_note
 
 # ── Register Ubuntu fonts ────────────────────────────────────────────────────
-_UBUNTU_FONT_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets", "themes", "Ubuntu_font")
-)
-for _ttf in ["Ubuntu-Light.ttf", "Ubuntu-Regular.ttf", "Ubuntu-Medium.ttf", "Ubuntu-Bold.ttf"]:
-    _path = os.path.join(_UBUNTU_FONT_DIR, _ttf)
-    if os.path.exists(_path):
-        _fm.fontManager.addfont(_path)
-
+register_ubuntu_fonts()
 matplotlib.rcParams["font.family"] = FONT_FAMILY
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,14 +64,14 @@ matplotlib.rcParams["font.family"] = FONT_FAMILY
 
 COLORS = {
     "stages": {
-        "Initial":     "#CCCCCC",
-        "Use":         "#00C49A",
-        "End-of-Life": "#EA9E9E",
+        "Initial":     LCC_COLORS["init_color"],
+        "Use":         LCC_COLORS["use_color"],
+        "End-of-Life": LCC_COLORS["end_color"],
     },
     "pillars": {
-        "Economic":      "#9e9eff",
-        "Environmental": "#8ad400",
-        "Social":        "#ff5a2a",
+        "Economic":      LCC_COLORS["eco_color"],
+        "Environmental": LCC_COLORS["env_color"],
+        "Social":        LCC_COLORS["soc_color"],
     },
 }
 
@@ -100,21 +88,6 @@ _TAB_META = [
         "title": "Across 3 Pillars of Sustainability",
     },
 ]
-
-# ─────────────────────────────────────────────────────────────────────────────
-# WHEEL FORWARDER
-# ─────────────────────────────────────────────────────────────────────────────
-
-class WheelForwarder(QObject):
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Wheel:
-            parent = obj.parent()
-            while parent is not None:
-                if isinstance(parent, QScrollArea):
-                    QApplication.sendEvent(parent.verticalScrollBar(), event)
-                    return True
-                parent = parent.parent()
-        return False
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DATA & CHART HELPERS
@@ -348,7 +321,7 @@ class SimplePillarPlotter:
         self.ax.axis("off")
         self.ax.set_xlim(-1.85, 1.85)
         self.ax.set_ylim(-1.85, 1.85)
-        self.fig.text(0.98, 0.97, _currency_note(self.currency),
+        self.fig.text(0.98, 0.97, currency_note(self.currency),
                       ha="right", va="top", fontsize=8,
                       color=get_token("text"), alpha=0.85)
         return self.fig
@@ -533,7 +506,7 @@ class SustainabilityCircularPlotter:
         self.ax.axis("off")
         self.ax.set_xlim(-2.1, 2.1)
         self.ax.set_ylim(-2.1, 2.1)
-        self.fig.text(0.98, 0.97, _currency_note(self.currency),
+        self.fig.text(0.98, 0.97, currency_note(self.currency),
                       ha="right", va="top", fontsize=8,
                       color=get_token("text"), alpha=0.85)
         return self.fig
@@ -678,7 +651,7 @@ class LCCPieWidget(QWidget):
                 cv.setContentsMargins(0, 0, 0, 0)
                 cv.setSpacing(0)
                 cv.addWidget(c_bar)
-                cv.addWidget(_ChartToolbar(c_bar, chart_cont))
+                cv.addWidget(ChartToolbar(c_bar, chart_cont))
                 self._content_h.addWidget(chart_cont, 2)
             else:
                 _no_data = QLabel("No data available.")
@@ -699,7 +672,7 @@ class LCCPieWidget(QWidget):
             c0.setStyleSheet("background: transparent; border: none;")
             c0.installEventFilter(scroller)
             self._chart_stack.addWidget(c0)
-            self._toolbar_stack.addWidget(_ChartToolbar(c0, self))
+            self._toolbar_stack.addWidget(ChartToolbar(c0, self))
             self._plotters.append(p0)
 
             if _nested_ok:
@@ -712,7 +685,7 @@ class LCCPieWidget(QWidget):
                     c1.setStyleSheet("background: transparent; border: none;")
                     c1.installEventFilter(scroller)
                     self._chart_stack.addWidget(c1)
-                    self._toolbar_stack.addWidget(_ChartToolbar(c1, self))
+                    self._toolbar_stack.addWidget(ChartToolbar(c1, self))
                     self._plotters.append(p1)
 
             # Pillar totals bar chart (bar + no stage)
@@ -727,7 +700,7 @@ class LCCPieWidget(QWidget):
                 c_bar.installEventFilter(scroller)
                 self._bar_chart_idx = self._chart_stack.count()
                 self._chart_stack.addWidget(c_bar)
-                self._toolbar_stack.addWidget(_ChartToolbar(c_bar, self))
+                self._toolbar_stack.addWidget(ChartToolbar(c_bar, self))
 
             # Pillar-x breakdown bar chart (bar + stage): Eco/Env/Soc on x, stacked by stage
             stage_bar_data = _build_pillar_bar_data(self._results)
@@ -741,7 +714,7 @@ class LCCPieWidget(QWidget):
                 c_sbar.installEventFilter(scroller)
                 self._stage_bar_chart_idx = self._chart_stack.count()
                 self._chart_stack.addWidget(c_sbar)
-                self._toolbar_stack.addWidget(_ChartToolbar(c_sbar, self))
+                self._toolbar_stack.addWidget(ChartToolbar(c_sbar, self))
 
             self._bar_cb = QCheckBox("Change to bar chart")
             self._bar_cb.setFont(_f(FS_BASE))
