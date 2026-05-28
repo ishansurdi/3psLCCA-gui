@@ -261,7 +261,7 @@ class SimplePillarPlotter:
         self.fig.patch.set_alpha(0.0)
         self.ax = self.fig.add_subplot(111)
         self.ax.set_facecolor("none")
-        self.fig.subplots_adjust(left=0.02, right=0.98, bottom=0.12, top=0.98)
+        self.fig.subplots_adjust(left=0.12, right=0.88, bottom=0.12, top=0.98)
         self.fig.canvas.mpl_connect("motion_notify_event", self._hover)
 
     def _fmt(self, val: float) -> str:
@@ -352,7 +352,7 @@ class SustainabilityCircularPlotter:
         self.fig.patch.set_alpha(0.0)
         self.ax = self.fig.add_subplot(111)
         self.ax.set_facecolor("none")
-        self.fig.subplots_adjust(left=0.02, right=0.98, bottom=0.12, top=0.98)
+        self.fig.subplots_adjust(left=0.14, right=0.86, bottom=0.12, top=0.98)
         self.fig.canvas.mpl_connect("motion_notify_event", self._hover)
         self._prepare_data()
 
