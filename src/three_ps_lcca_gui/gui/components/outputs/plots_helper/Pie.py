@@ -154,7 +154,8 @@ def _add_smart_labels(ax, wedges, labels, threshold=None, leader_radius=1.3):
 
     artists = {}  # wedge_index → [matplotlib artists]
 
-    MIN_GAP = 0.32
+    max_lines = max(len(e["label"].split("\n")) for e in entries)
+    MIN_GAP = 0.62 if max_lines >= 3 else 0.32
 
     def _resolve(group):
         group = sorted(group, key=lambda e: -e["y_nat"])
@@ -184,13 +185,23 @@ def _add_smart_labels(ax, wedges, labels, threshold=None, leader_radius=1.3):
             dot, = ax.plot(e["x0"], e["y0"], "o", color=line_color,
                     markersize=2.5, alpha=0.9, zorder=10, clip_on=False)
 
-            parts = e["label"].split("\n", 1)
-            name  = parts[0]
-            value = parts[1] if len(parts) > 1 else ""
+            parts = e["label"].split("\n")
             x_txt = x_col + tick
             entry_artists = [line, dot]
 
-            if value:
+            if len(parts) == 3:
+                stage, name, value = parts
+                entry_artists.append(ax.text(x_txt, y_lbl + 0.16, stage, ha=ha, va="center",
+                        color=text_color, fontsize=8.0, alpha=0.65,
+                        clip_on=False, zorder=11))
+                entry_artists.append(ax.text(x_txt, y_lbl, name, ha=ha, va="center",
+                        color=text_color, fontsize=9.5, fontweight="bold",
+                        clip_on=False, zorder=11))
+                entry_artists.append(ax.text(x_txt, y_lbl - 0.16, value, ha=ha, va="center",
+                        color=text_color, fontsize=8.5, alpha=0.65,
+                        clip_on=False, zorder=11))
+            elif len(parts) == 2:
+                name, value = parts
                 entry_artists.append(ax.text(x_txt, y_lbl + 0.09, name, ha=ha, va="center",
                         color=text_color, fontsize=9.5, fontweight="bold",
                         clip_on=False, zorder=11))
@@ -198,7 +209,7 @@ def _add_smart_labels(ax, wedges, labels, threshold=None, leader_radius=1.3):
                         color=text_color, fontsize=8.5, alpha=0.65,
                         clip_on=False, zorder=11))
             else:
-                entry_artists.append(ax.text(x_txt, y_lbl, name, ha=ha, va="center",
+                entry_artists.append(ax.text(x_txt, y_lbl, parts[0], ha=ha, va="center",
                         color=text_color, fontsize=9.5, fontweight="bold",
                         clip_on=False, zorder=11))
 
@@ -447,28 +458,32 @@ class SustainabilityCircularPlotter:
                         for a in artists: a.set_visible(visible)
         self.fig.canvas.draw_idle()
 
+    # Legend layout (interleaved, ncol=3): even indices = pillars, odd = stages
+    # Columns: (Economic, Initial) | (Environmental, Use) | (Social, End-of-Life)
+    _LEGEND_PILLAR_ORDER = ["Economic", "Environmental", "Social"]
+    _LEGEND_STAGE_ORDER  = ["Initial", "Use", "End-of-Life"]
+
     def _set_legend_alpha(self, hit_outer: int, hit_inner: int = -1):
         leg = self.ax.get_legend()
         if not leg:
             return
         handles, texts = leg.legend_handles, leg.get_texts()
-        n_stages = len(self.inner_labels)
         for i, (handle, text) in enumerate(zip(handles, texts)):
             if hit_outer == -1 and hit_inner == -1:
                 a = 1.0
             elif hit_outer >= 0:
-                # Outer hover: dim pillar entries that don't match, keep stages visible
-                if i < n_stages:
+                # Outer hover: highlight matching pillar, keep stages fully visible
+                if i % 2 == 1:  # stage entry (odd index)
                     a = 1.0
-                else:
+                else:           # pillar entry (even index)
                     hit_pillar = self.outer_labels[hit_outer].split(" - ")[1]
                     a = 1.0 if text.get_text() == hit_pillar else 0.25
             else:
-                # Inner hover: dim stage entries that don't match, keep pillars visible
-                if i < n_stages:
-                    a = 1.0 if i == hit_inner else 0.25
-                else:
+                # Inner hover: highlight matching stage, keep pillars fully visible
+                if i % 2 == 0:  # pillar entry (even index)
                     a = 1.0
+                else:           # stage entry (odd index)
+                    a = 1.0 if self._LEGEND_STAGE_ORDER[i // 2] == self.inner_labels[hit_inner] else 0.25
             handle.set_alpha(a)
             text.set_alpha(a)
 
@@ -487,7 +502,7 @@ class SustainabilityCircularPlotter:
         self.inner_wedges, _ = self.ax.pie(self.inner_vals, radius=self._base_inner_radius, colors=self.inner_colors, wedgeprops=_WEDGE)
         self.outer_wedges, _ = self.ax.pie(self.outer_vals, radius=self._base_outer_radius, colors=self.outer_colors, wedgeprops=_WEDGE)
 
-        outer_disp = [f"{l.split(' - ')[1]}\n{self._fmt(v)}" for l, v in zip(self.outer_labels, self.outer_vals)]
+        outer_disp = [f"{l.split(' - ')[0]}\n{l.split(' - ')[1]}\n{self._fmt(v)}" for l, v in zip(self.outer_labels, self.outer_vals)]
         self._label_artists = _add_smart_labels(self.ax, self.outer_wedges, outer_disp, threshold=15.0, leader_radius=1.45)
 
         if self.total_value > 0:
@@ -499,8 +514,14 @@ class SustainabilityCircularPlotter:
 
         self._center_text = self.ax.text(0, 0, f"Total\n{self._fmt(self.total_value)}", ha="center", va="center", fontsize=10, fontweight="bold", color=tc)
 
-        legend_els = [Patch(facecolor=c, label=l) for l, c in COLORS["pillars"].items()]
-        legend_els += [Patch(facecolor=COLORS["stages"].get(l, "#AAA"), label=l) for l in self.inner_labels]
+        # ncol=3 fills column-by-column, so interleave pillar/stage pairs so each
+        # column holds one of each → row 1: pillars, row 2: stages.
+        _PILLAR_ORDER = ["Economic", "Environmental", "Social"]
+        _STAGE_ORDER  = ["Initial", "Use", "End-of-Life"]
+        legend_els = []
+        for pillar, stage in zip(_PILLAR_ORDER, _STAGE_ORDER):
+            legend_els.append(Patch(facecolor=COLORS["pillars"][pillar], label=pillar))
+            legend_els.append(Patch(facecolor=COLORS["stages"].get(stage, "#AAA"), label=stage))
         self.ax.legend(handles=legend_els, loc="upper center", bbox_to_anchor=(0.5, -0.05), ncol=3, frameon=False, fontsize=8, labelcolor=tc)
 
         self.ax.axis("off")
