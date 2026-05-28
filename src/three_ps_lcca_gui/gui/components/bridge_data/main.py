@@ -322,7 +322,7 @@ class BridgeData(ScrollableForm):
         result = validate_form(
             BRIDGE_FIELDS, self, warn_rules=BRIDGE_WARN_RULES, skip_keys=self._LOCKED
         )
-        # days_per_month must be 29–31
+        # days_per_month must be 29-31
         dm = getattr(self, "days_per_month", None)
         if dm is not None and not (29 <= dm.value() <= 31):
             result["errors"].append("Days per Month must be between 29 and 31")

@@ -562,7 +562,7 @@ class _DetailedTable(QWidget):
         vp_w = self._table.viewport().width()
         if vp_w <= 0:
             return
-        # Col 7 (Emissions) is Stretch - only size cols 0–6
+        # Col 7 (Emissions) is Stretch - only size cols 0-6
         ratios = {0: 0.22, 1: 0.14, 2: 0.12, 3: 0.10, 4: 0.10, 5: 0.12, 6: 0.14}
         mins   = {0: 150,   1: 150,   2: 150,   3: 120,   4: 120,   5: 180,   6: 120}
         col_widths = {c: max(mins[c], int(vp_w * r)) for c, r in ratios.items()}
@@ -768,7 +768,7 @@ class _DetailedTable(QWidget):
         flags_editable = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
         flags_frozen   = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         for row in range(self._table.rowCount()):
-            for col in range(6):  # cols 0–5 are user-editable
+            for col in range(6):  # cols 0-5 are user-editable
                 item = self._table.item(row, col)
                 if item:
                     item.setFlags(flags_frozen if frozen else flags_editable)

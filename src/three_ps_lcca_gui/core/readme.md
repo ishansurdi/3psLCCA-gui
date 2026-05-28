@@ -285,7 +285,7 @@ Blobs are for binary files that cannot be stored as JSON - images, PDFs, ZIP arc
 |---|---|---|
 | Data type | Python dict | Raw bytes / file path |
 | Write path | Staged in memory → WAL → disk | Streamed directly to disk |
-| Auto-save | Debounced (1–2s delay) | Immediate, synchronous |
+| Auto-save | Debounced (1-2s delay) | Immediate, synchronous |
 | Backup copies | 3 (`.lcca`, `.bak`, `.ebak`) | None - re-upload if lost |
 | Crash recovery | WAL replay + backup restore | SHA256 check → re-upload prompt |
 | In checkpoints | Always included | Optional (`include_blobs=True`) |

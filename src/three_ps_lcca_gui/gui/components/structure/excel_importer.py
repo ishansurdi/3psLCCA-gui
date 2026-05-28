@@ -163,7 +163,7 @@ _LIGHT_TEXT = QColor("#ffffff")
 
 def _text_color(bg: QColor) -> QColor:
     """Return dark or light text so it contrasts against *bg*."""
-    # Perceived luminance (0–255)
+    # Perceived luminance (0-255)
     lum = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()
     if lum > 128:
         return QColor(_DARK_TEXT)

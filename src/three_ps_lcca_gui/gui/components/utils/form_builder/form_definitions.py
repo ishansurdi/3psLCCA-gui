@@ -20,12 +20,12 @@ Usage
 
 Field types
 -----------
-    "text"       – QLineEdit (single line)
-    "textarea"   – QTextEdit (multi-line)
-    "int"        – QSpinBox;       options = (min, max)
-    "float"      – QDoubleSpinBox; options = (min, max, decimals)
-    "combo"      – QComboBox;      options = [str, ...]
-    "upload_img" – image picker;   options = preset string or dict
+    "text"       - QLineEdit (single line)
+    "textarea"   - QTextEdit (multi-line)
+    "int"        - QSpinBox;       options = (min, max)
+    "float"      - QDoubleSpinBox; options = (min, max, decimals)
+    "combo"      - QComboBox;      options = [str, ...]
+    "upload_img" - image picker;   options = preset string or dict
                    (see gui.utils.image_utils.resolve_img_settings)
 """
 
@@ -67,11 +67,11 @@ class FieldDef:
         One of: "text", "textarea", "int", "float", "combo", "upload_img".
     options : Any
         Type-specific configuration:
-            text / textarea  – None (unused)
-            int              – (min: int, max: int)
-            float            – (min: float, max: float, decimals: int)
-            combo            – list[str]
-            upload_img       – "default" | "no_compression" | dict
+            text / textarea  - None (unused)
+            int              - (min: int, max: int)
+            float            - (min: float, max: float, decimals: int)
+            combo            - list[str]
+            upload_img       - "default" | "no_compression" | dict
     unit : str
         Optional unit suffix appended to spinbox widgets, e.g. ``"(m)"``.
         Empty string if not applicable.

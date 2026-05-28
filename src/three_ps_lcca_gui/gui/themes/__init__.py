@@ -189,7 +189,7 @@ def get_token(name: str, state: str = "") -> str:
 def get_state(name: str, fallback: float = 0.0) -> float:
     """Return a state opacity multiplier by name ('hover', 'pressed', 'focus', 'disabled').
 
-    Values are 0–1 floats used to blend a tint over a base surface colour.
+    Values are 0-1 floats used to blend a tint over a base surface colour.
     Example: hover = 0.06 → overlay text colour at 6 % alpha on the surface.
     """
     _ensure_tokens()

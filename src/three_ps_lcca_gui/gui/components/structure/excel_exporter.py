@@ -50,11 +50,11 @@ CID_COLUMNS = [
 # ---------------------------------------------------------------------------
 # Format registry
 # Each entry:
-#   label    – shown in the dropdown menu
-#   ext      – file extension (with dot)
-#   filter   – QFileDialog filter string
-#   engine   – pandas ExcelWriter engine, or None for CSV
-#   requires – pip package to check at runtime, or None
+#   label    - shown in the dropdown menu
+#   ext      - file extension (with dot)
+#   filter   - QFileDialog filter string
+#   engine   - pandas ExcelWriter engine, or None for CSV
+#   requires - pip package to check at runtime, or None
 # ---------------------------------------------------------------------------
 EXPORT_FORMATS: list[dict] = [
     {

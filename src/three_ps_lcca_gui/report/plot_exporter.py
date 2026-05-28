@@ -103,7 +103,7 @@ def _annotate_wedge(ax, wedge, label: str, val: float, total: float,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plot 1 – Pillar distribution donut
+# Plot 1 - Pillar distribution donut
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_pillar_donut(results: dict, currency: str) -> plt.Figure:
@@ -153,7 +153,7 @@ def _plot_pillar_donut(results: dict, currency: str) -> plt.Figure:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plot 2 – Sustainability matrix (nested stage+pillar donut)
+# Plot 2 - Sustainability matrix (nested stage+pillar donut)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_sustainability_matrix(results: dict, currency: str) -> plt.Figure:
@@ -252,7 +252,7 @@ def _plot_sustainability_matrix(results: dict, currency: str) -> plt.Figure:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plot 3 – Stage-wise bars
+# Plot 3 - Stage-wise bars
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_stage_bars(results: dict, currency: str) -> plt.Figure:
@@ -318,7 +318,7 @@ def _plot_stage_bars(results: dict, currency: str) -> plt.Figure:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plot 4 – Pillar-wise stacked bars
+# Plot 4 - Pillar-wise stacked bars
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_pillar_bars(results: dict, currency: str) -> plt.Figure:

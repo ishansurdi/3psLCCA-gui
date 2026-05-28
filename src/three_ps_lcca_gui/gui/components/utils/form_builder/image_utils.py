@@ -23,7 +23,7 @@ IMG_SETTING_RULES: dict[str, tuple[type, int, int | None, str]] = {
     "max_px": (int, 1, 9999, "Maximum dimension (width or height) in pixels"),
     "max_width": (int, 1, 9999, "Maximum width in pixels"),
     "max_height": (int, 1, 9999, "Maximum height in pixels"),
-    "quality": (int, 1, 95, "JPEG quality (1–95)"),
+    "quality": (int, 1, 95, "JPEG quality (1-95)"),
     "max_size_bytes": (int, 1, None, "Maximum output file size in bytes"),
 }
 
@@ -132,11 +132,11 @@ def compress_image(file_path: str, settings: dict[str, Any] | None) -> bytes:
     read and re-encoded as PNG or JPEG without any size changes.
 
     Settings keys used:
-        max_px        – uniform cap on both width and height
-        max_width     – cap on width only
-        max_height    – cap on height only
-        quality       – JPEG quality (1–95); ignored for PNG
-        max_size_bytes – currently informational; not enforced via sweep
+        max_px        - uniform cap on both width and height
+        max_width     - cap on width only
+        max_height    - cap on height only
+        quality       - JPEG quality (1-95); ignored for PNG
+        max_size_bytes - currently informational; not enforced via sweep
     """
     with Image.open(file_path) as img:
         img = img.convert("RGBA")

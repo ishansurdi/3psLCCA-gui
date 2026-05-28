@@ -149,14 +149,14 @@ DEFAULT_VEHICLES = {
         "gross_weight": 3.5,
         "emission_factor": 1.2,
     },
-    "HDV Small (4.5–9T)": {
-        "name": "HDV Small (4.5–9T)",
+    "HDV Small (4.5-9T)": {
+        "name": "HDV Small (4.5-9T)",
         "capacity": 7.0,
         "gross_weight": 9.5,
         "emission_factor": 0.7,
     },
-    "HDV Medium (9–12T)": {
-        "name": "HDV Medium (9–12T)",
+    "HDV Medium (9-12T)": {
+        "name": "HDV Medium (9-12T)",
         "capacity": 10.5,
         "gross_weight": 14.0,
         "emission_factor": 0.55,
