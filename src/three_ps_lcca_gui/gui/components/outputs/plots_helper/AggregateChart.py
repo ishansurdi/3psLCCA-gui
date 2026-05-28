@@ -242,7 +242,7 @@ class StageBarPlotter(_BasePlotter):
                     fmt_currency(raw, self.currency, decimals=0, style="short"),
                     ha="center", va="top", fontsize=8, fontweight="bold", color=tc)
 
-        self._setup_axes_style(tc, gc, x, self.labels, "Total Cost")
+        self._setup_axes_style(tc, gc, x, self.labels, "Cost")
         self._setup_y_formatter()
         if self.values:
             self.ax.set_ylim(min(0, min_v) - pad, max(0, max_v) + pad)
@@ -373,7 +373,7 @@ class SustainabilityBarPlotter(_BasePlotter):
                     fmt_currency(neg_bottom[i], self.currency, decimals=0, style="short"),
                     ha="center", va="top", fontsize=8, fontweight="bold", color=tc)
 
-        self._setup_axes_style(tc, gc, x, self.stages, "Total Cost")
+        self._setup_axes_style(tc, gc, x, self.stages, "Cost")
         self._setup_y_formatter()
         self.ax.set_ylim(min(0, y_min) - pad * 0.3, max(0, y_max) + pad)
 
@@ -529,7 +529,7 @@ class PillarBreakdownBarPlotter(_BasePlotter):
                 clip_on=False,
             )
 
-        self._setup_axes_style(tc, gc, x, self.categories, "Total Cost")
+        self._setup_axes_style(tc, gc, x, self.categories, "Cost")
         self._setup_y_formatter()
         self.ax.set_ylim(min(0, y_min) - pad, max(0, y_max) + pad)
         self._setup_spines(tc)
