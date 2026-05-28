@@ -59,7 +59,7 @@ class AdvancedSearchEngine:
         """
         tok  = AdvancedSearchEngine.normalize(tok)
         item = AdvancedSearchEngine.normalize(item)
-        # Fast path – direct substring
+        # Fast path - direct substring
         if tok in item:
             return True
         # Split on digit↔letter boundaries (e.g. "500mm" → ["500","mm"],
@@ -247,7 +247,7 @@ class MaterialSearchEngine:
         """Print a human-readable category summary of loaded databases."""
         cats = self.list_categories()
         print("\n" + "═" * 64)
-        print("  MATERIAL DATABASE – CATEGORY SUMMARY")
+        print("  MATERIAL DATABASE - CATEGORY SUMMARY")
         print("═" * 64)
         for db_key, cat_map in cats.items():
             meta   = self._registry.get(db_key, {})
@@ -261,7 +261,7 @@ class MaterialSearchEngine:
 
 
 # # ─────────────────────────────────────────────────────────────────────────────
-# #  CLI demo  – python search_engine.py
+# #  CLI demo  - python search_engine.py
 # # ─────────────────────────────────────────────────────────────────────────────
 
 # if __name__ == "__main__":
@@ -269,7 +269,7 @@ class MaterialSearchEngine:
 #     engine.summary()
 
 #     print("\n" + "═" * 64)
-#     print("  CATEGORY LISTING – Foundation (all regions)")
+#     print("  CATEGORY LISTING - Foundation (all regions)")
 #     print("═" * 64)
 #     items = engine.list_by_category("Foundation")
 #     for it in items:
@@ -277,7 +277,7 @@ class MaterialSearchEngine:
 #               f"{it['name']:<40} {it['unit']:6} {it['rate']}")
 
 #     print("\n" + "═" * 64)
-#     print("  SEARCH – 'steel rebar'")
+#     print("  SEARCH - 'steel rebar'")
 #     print("═" * 64)
 #     results = engine.search("steel rebar")
 #     for r in results:
@@ -285,7 +285,7 @@ class MaterialSearchEngine:
 #               f"{r['name']:<35} {r['rate']}")
 
 #     print("\n" + "═" * 64)
-#     print("  SEARCH – 'PVC' in Maharashtra only")
+#     print("  SEARCH - 'PVC' in Maharashtra only")
 #     print("═" * 64)
 #     results = engine.search("PVC", region="Maharashtra")
 #     if results:

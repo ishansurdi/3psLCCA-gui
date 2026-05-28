@@ -113,7 +113,7 @@ SUBSECTION_TABLE_MAP = {
         ("Table 2-15: Material emission factors", KEY_SHOW_MATERIAL_EMISSION),
         ("Table 2-16: Use stage emissions", KEY_SHOW_USE_EMISSION),
         ("Table 2-17: Vehicle emission factors", KEY_SHOW_VEHICLE_EMISSION),
-        ("Table 2-18: On-site emissions", KEY_SHOW_ONSITE_EMISSION),
-        ("Table 2-19: Transport emissions", KEY_SHOW_TRANSPORT_EMISSION),
+        ("Table 2-18: Transport emissions", KEY_SHOW_TRANSPORT_EMISSION),
+        ("Table 2-19: On-site emissions", KEY_SHOW_ONSITE_EMISSION),
     ],
 }

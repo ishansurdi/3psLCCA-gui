@@ -2,8 +2,8 @@
 gui/components/outputs/plots_helper/Pie.py
 
 Two-tab pie widget:
-  Tab 0 – Simple pillar donut  (Eco / Env / Social, lifetime totals)
-  Tab 1 – Nested stage+pillar donut (existing Sustainability Matrix)
+  Tab 0 - Simple pillar donut  (Eco / Env / Social, lifetime totals)
+  Tab 1 - Nested stage+pillar donut (existing Sustainability Matrix)
 """
 
 import os
@@ -262,7 +262,7 @@ def _add_inner_band_labels(ax, wedges, labels):
         )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CHART 0 – Simple pillar donut
+# CHART 0 - Simple pillar donut
 # ─────────────────────────────────────────────────────────────────────────────
 
 class SimplePillarPlotter:
@@ -354,7 +354,7 @@ class SimplePillarPlotter:
         return self.fig
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CHART 1 – Nested stage+pillar donut
+# CHART 1 - Nested stage+pillar donut
 # ─────────────────────────────────────────────────────────────────────────────
 
 class SustainabilityCircularPlotter:

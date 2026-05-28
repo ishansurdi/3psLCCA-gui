@@ -65,7 +65,6 @@ from .data_preparer import DataPreparer
 from .report_section_dialog import ReportSectionDialog
 from .calc_logic import _LCCAWorker
 
-
 CHUNK = "outputs_data"
 CHUNK_COMPARISON = "comparison_cache"
 
@@ -308,9 +307,9 @@ class ResponsiveTotalCard(QFrame):
 class LCCSummaryCards(QWidget):
     """
     Three-row KPI layout:
-      Row 1 – Grand Total (full width)
-      Row 2 – Economic / Environmental / Social  (pillar totals)
-      Row 3 – Initial / Use / End-of-Life        (stage totals)
+      Row 1 - Grand Total (full width)
+      Row 2 - Economic / Environmental / Social  (pillar totals)
+      Row 3 - Initial / Use / End-of-Life        (stage totals)
     """
 
     def __init__(self, results: dict, currency: str,
@@ -1039,6 +1038,13 @@ class OutputsPage(ScrollableForm):
         pdf_btn.clicked.connect(self._generate_pdf_report)
         tl_h.addWidget(pdf_btn)
 
+        prov_btn = QPushButton("Generate Report V2")
+        prov_btn.setFixedHeight(BTN_MD)
+        prov_btn.setFont(_f(FS_BASE, FW_MEDIUM))
+        prov_btn.setStyleSheet(btn_primary())
+        prov_btn.clicked.connect(self._generate_provenance_report)
+        tl_h.addWidget(prov_btn)
+
         comp_btn = QPushButton("Add to Comparison ↗")
         comp_btn.setFixedHeight(BTN_MD)
         comp_btn.setFont(_f(FS_BASE, FW_MEDIUM))
@@ -1142,7 +1148,21 @@ class OutputsPage(ScrollableForm):
                 res = page.get_data()
                 all_data[res["chunk"]] = res["data"]
 
-        self._currency = all_data.get("general_info", {}).get("project_currency")
+        # ── DEBUG: dump all_data to JSON file ──────────────────
+        # import json, os, datetime as _dt
+        # _dump_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "debug_dumps")
+        # os.makedirs(_dump_dir, exist_ok=True)
+        # _ts = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+        # _dump_path = os.path.join(_dump_dir, f"all_data_{_ts}.json")
+        # try:
+        #     with open(_dump_path, "w", encoding="utf-8") as _fp:
+        #         json.dump(all_data, _fp, indent=2, default=str)
+        #     _log.info("DEBUG: all_data dumped to %s", _dump_path)
+        # except Exception as _e:
+        #     _log.warning("DEBUG: failed to dump all_data: %s", _e)
+        # ── END DEBUG ──────────────────────────────────────────
+
+        self._currency = all_data.get("general_info", {}).get("project_currency", "INR")
         self._show_calculating()
 
         self._calc_thread = QThread(self)
@@ -1218,7 +1238,12 @@ class OutputsPage(ScrollableForm):
         return d
 
     def _generate_pdf_report(self):
-        dlg = ReportSectionDialog(export_dict=self._build_export_dict(), parent=self)
+        dlg = ReportSectionDialog(export_dict=self._build_export_dict(), mode="standard", parent=self)
+        dlg.exec()
+
+    def _generate_provenance_report(self):
+        """Triggers the modular V2 report generation using the tree-based dialog."""
+        dlg = ReportSectionDialog(export_dict=self._build_export_dict(), mode="provenance", parent=self)
         dlg.exec()
 
     def _on_proceed(self):

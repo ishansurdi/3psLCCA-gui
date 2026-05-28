@@ -2,8 +2,8 @@
 gui/components/outputs/plots_helper/AggregateChart.py
 
 Two-view bar chart widget:
-  Default  – Stage-wise bars  (Initial / Use+Rec / End-of-Life, solid colours)
-  Checkbox – Pillar-wise bars (stacked Economic / Environmental / Social per stage)
+  Default  - Stage-wise bars  (Initial / Use+Rec / End-of-Life, solid colours)
+  Checkbox - Pillar-wise bars (stacked Economic / Environmental / Social per stage)
 """
 
 import os
@@ -212,7 +212,7 @@ class _BasePlotter:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CHART 0 – Stage-wise bars  (default)
+# CHART 0 - Stage-wise bars  (default)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class StageBarPlotter(_BasePlotter):
@@ -282,7 +282,7 @@ class StageBarPlotter(_BasePlotter):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CHART 1 – Pillar-wise stacked bars
+# CHART 1 - Pillar-wise stacked bars
 # ─────────────────────────────────────────────────────────────────────────────
 
 class SustainabilityBarPlotter(_BasePlotter):
@@ -422,7 +422,7 @@ class SustainabilityBarPlotter(_BasePlotter):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CHART 2 – Pillar x-axis, stage-stacked bars  (Pie.py breakdown view)
+# CHART 2 - Pillar x-axis, stage-stacked bars  (Pie.py breakdown view)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _lbl_color(hex_color: str) -> str:
