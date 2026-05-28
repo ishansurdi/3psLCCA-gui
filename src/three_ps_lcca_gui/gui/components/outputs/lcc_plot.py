@@ -38,14 +38,11 @@ from PySide6.QtWidgets import (
 )
 
 try:
-    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 except ImportError:
-    from matplotlib.backends.backend_qt import FigureCanvasQTAgg, NavigationToolbar2QT
+    from matplotlib.backends.backend_qt import FigureCanvasQTAgg
 
-class _ChartToolbar(NavigationToolbar2QT):
-    toolitems = [t for t in NavigationToolbar2QT.toolitems
-                 if t[0] not in ("Subplots", "Customize")]
-    def set_message(self, s): pass
+from .plots_helper.plot_utils import ChartToolbar, WheelForwarder as _ScrollForwarder
 
 
 
