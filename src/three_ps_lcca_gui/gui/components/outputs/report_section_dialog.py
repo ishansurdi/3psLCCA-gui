@@ -321,12 +321,13 @@ class _PdfGenWorker(QThread):
     finished = Signal(str)        # emitted with final PDF path on success
     errored = Signal(str, str)    # (error_msg, tex_path_or_empty)- work dir kept alive when tex_path set
 
-    def __init__(self, export_dict, config, output_dir, filename="LCCA_Report"):
+    def __init__(self, export_dict, config, output_dir, filename="LCCA_Report", mode="standard"):
         super().__init__()
         self._export_dict = export_dict
         self._config = config
         self._output_dir = output_dir
         self._filename = filename
+        self._mode = mode
 
     def run(self):
         work_dir = tempfile.mkdtemp(prefix="3psLCCA_")
@@ -334,16 +335,24 @@ class _PdfGenWorker(QThread):
             stem = self._filename
             work_stem = os.path.join(work_dir, stem)
 
-            from three_ps_lcca_gui.report.lcca_generate import generate_report
-            generate_report(
-                work_stem, export_dict=self._export_dict, config_override=self._config,
-                output_dir=work_dir,
-            )
+            if self._mode == "provenance":
+                from ....report.v2_report.mod_provenance_generate import generate_report as gen_provenance
+                gen_provenance(
+                    work_stem, export_dict=self._export_dict, config_override=self._config,
+                    output_dir=work_dir,
+                )
+            else:
+                from three_ps_lcca_gui.report.lcca_generate import generate_report
+                generate_report(
+                    work_stem, export_dict=self._export_dict, config_override=self._config,
+                    output_dir=work_dir,
+                )
 
             work_pdf = work_stem + ".pdf"
             if os.path.exists(work_pdf):
                 final_pdf = os.path.join(self._output_dir, stem + ".pdf")
                 shutil.copy2(work_pdf, final_pdf)
+                
                 shutil.rmtree(work_dir, ignore_errors=True)
                 self.finished.emit(final_pdf)
             else:
@@ -378,9 +387,12 @@ class ReportSectionDialog(QDialog):
     in the PDF report, then generates it via generate_report().
     """
 
-    def __init__(self, export_dict: dict, parent=None):
+
+    def __init__(self, export_dict: dict, mode="standard", parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Customize Report")
+        self._mode = mode
+        title_text = "Report Customization" if mode == "standard" else "Data Provenance Report V2"
+        self.setWindowTitle(title_text)
         self.setObjectName("report_section_dialog")
         self.resize(600, 700)
         self._export_dict = export_dict
@@ -394,13 +406,19 @@ class ReportSectionDialog(QDialog):
         main_layout.setSpacing(16)
 
         # Title
-        self.lbl_title = QLabel("Report Customization")
+        title_text = "Report Customization" if self._mode == "standard" else "Data Provenance Report V2"
+        self.lbl_title = QLabel(title_text)
         self.lbl_title.setFont(_f(FS_DISP, FW_BOLD))
         self.lbl_title.setStyleSheet(f"color: {get_token('primary')};")
         self.lbl_title.setAlignment(Qt.AlignLeft)
         main_layout.addWidget(self.lbl_title)
 
-        self.lbl_subtitle = QLabel("Select the sections and data tables to include in your final LCCA PDF report.")
+        subtitle_text = (
+            "Select the sections and data tables to include in your final LCCA PDF report."
+            if self._mode == "standard"
+            else "Select the sections and data tables to include in your final modular LCCA PDF report."
+        )
+        self.lbl_subtitle = QLabel(subtitle_text)
         self.lbl_subtitle.setFont(_f(FS_BASE, FW_NORMAL))
         self.lbl_subtitle.setStyleSheet(f"color: {get_token('text_secondary')};")
         self.lbl_subtitle.setWordWrap(True)
@@ -512,7 +530,7 @@ class ReportSectionDialog(QDialog):
         self._set_ui_enabled(False)
         QApplication.processEvents()
 
-        self._worker = _PdfGenWorker(export, config, output_dir, filename=filename)
+        self._worker = _PdfGenWorker(export, config, output_dir, filename=filename, mode=self._mode)
         self._worker.finished.connect(self._on_pdf_success)
         self._worker.errored.connect(self._on_pdf_error)
         self._worker.finished.connect(self._worker.deleteLater)
