@@ -10,9 +10,9 @@ Qt widgets, registers them on the host via host.field(), wires up
 style-reset signals, and returns the list of required field keys.
 
 The host must expose:
-    host.form          – QFormLayout to add rows to
-    host.field(key, w) – registers widget and returns it (ScrollableForm API)
-    host._on_field_changed() – called after upload_img interactions
+    host.form          - QFormLayout to add rows to
+    host.field(key, w) - registers widget and returns it (ScrollableForm API)
+    host._on_field_changed() - called after upload_img interactions
 """
 
 from __future__ import annotations
@@ -76,9 +76,9 @@ def _make_upload_img_widget(
 
     Returns
     -------
-    container  : QWidget  – the outer widget added to the form layout
-    preview    : QLabel   – the image preview label (caller may store a ref)
-    logo_input : QLineEdit – hidden input holding the base64 string
+    container  : QWidget  - the outer widget added to the form layout
+    preview    : QLabel   - the image preview label (caller may store a ref)
+    logo_input : QLineEdit - hidden input holding the base64 string
     """
     # Validate the preset early so misconfigured field defs fail at startup,
     # not at runtime when the user actually clicks Browse.

@@ -121,7 +121,7 @@ class SocialCost(ScrollableForm):
     
     References:
     - Ricke, K., Drouet, L., Caldeira, K. et al. Country-level social cost of carbon. 
-      Nature Clim Change 8, 895–900 (2018). https://doi.org/10.1038/s41558-018-0282-y
+      Nature Clim Change 8, 895-900 (2018). https://doi.org/10.1038/s41558-018-0282-y
     """
     def __init__(self, controller=None):
         super().__init__(controller=controller, chunk_name=CHUNK)

@@ -129,7 +129,7 @@ def _validate_data(data, db_key: str) -> tuple[list[str], list[str]]:
         return errors, warnings
 
     if len(data) == 0:
-        warnings.append("File contains an empty array – no records found.")
+        warnings.append("File contains an empty array - no records found.")
         return errors, warnings
 
     required_top  = EXPECTED_SCHEMA["required_top_keys"]
@@ -178,7 +178,7 @@ def _validate_data(data, db_key: str) -> tuple[list[str], list[str]]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  PUBLIC – INTEGRITY CHECK (single file, by path OR db_key)
+#  PUBLIC - INTEGRITY CHECK (single file, by path OR db_key)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def check_integrity_by_path(file_path: str) -> dict:
@@ -245,7 +245,7 @@ def check_integrity(db_key: str) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  PUBLIC – REGISTRY MANIFEST BUILD  (the core crawler)
+#  PUBLIC - REGISTRY MANIFEST BUILD  (the core crawler)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def build_registry(root: str = MATERIAL_DB_ROOT,
@@ -340,7 +340,7 @@ def build_registry(root: str = MATERIAL_DB_ROOT,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  PUBLIC – REGISTRY ACCESSORS
+#  PUBLIC - REGISTRY ACCESSORS
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_registry(manifest_path: str = CATALOG_MANIFEST_PATH) -> dict:
@@ -349,7 +349,7 @@ def get_registry(manifest_path: str = CATALOG_MANIFEST_PATH) -> dict:
     Auto-builds if the manifest is missing or on a schema version mismatch.
     """
     if not os.path.isfile(manifest_path):
-        print("[material_catalog] Manifest not found – building now …")
+        print("[material_catalog] Manifest not found - building now …")
         build_registry(manifest_path=manifest_path)
 
     with open(manifest_path, "r", encoding="utf-8") as f:
@@ -359,7 +359,7 @@ def get_registry(manifest_path: str = CATALOG_MANIFEST_PATH) -> dict:
     if stored_version != SCHEMA_VERSION:
         print(
             f"[material_catalog] Schema version mismatch "
-            f"(manifest={stored_version}, current={SCHEMA_VERSION}) – rebuilding …"
+            f"(manifest={stored_version}, current={SCHEMA_VERSION}) - rebuilding …"
         )
         build_registry(manifest_path=manifest_path)
         with open(manifest_path, "r", encoding="utf-8") as f:
@@ -420,12 +420,12 @@ def load(db_key: str, strict: bool = True) -> list[dict]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  CLI  – python material_catalog.py
+#  CLI  - python material_catalog.py
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     print("\n" + "═" * 64)
-    print("  DB REGISTRY – BUILD & INTEGRITY REPORT")
+    print("  DB REGISTRY - BUILD & INTEGRITY REPORT")
     print("═" * 64)
 
     manifest = build_registry()

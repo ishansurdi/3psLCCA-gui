@@ -308,9 +308,9 @@ class ResponsiveTotalCard(QFrame):
 class LCCSummaryCards(QWidget):
     """
     Three-row KPI layout:
-      Row 1 – Grand Total (full width)
-      Row 2 – Economic / Environmental / Social  (pillar totals)
-      Row 3 – Initial / Use / End-of-Life        (stage totals)
+      Row 1 - Grand Total (full width)
+      Row 2 - Economic / Environmental / Social  (pillar totals)
+      Row 3 - Initial / Use / End-of-Life        (stage totals)
     """
 
     def __init__(self, results: dict, currency: str,
