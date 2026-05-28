@@ -370,10 +370,11 @@ class LCCBreakdownTable(QWidget):
     _STAGE_W   = 64    # fixed- stage column never resizes
     _PAD_X     = 6
     _VAL_PAD_X = 8   # horizontal padding for the Value column (col 3)
-    _VAL_PAD_Y = 4   # vertical padding for the Value column (col 3)
+    _VAL_PAD_Y = 10  # vertical padding for the Value column (col 3)
+    _ITEM_PAD_Y = 8  # vertical padding for the Cost Item column (col 2)
     _LEGEND_H  = 28    # height reserved for legend at top
     _PAD_TOP   = 32    # legend (28) + 4px gap before header
-    _MIN_ROW_H = 32
+    _MIN_ROW_H = 40
     _DRAG_HIT  = 5     # px tolerance for divider hit-test
 
     # column ratio/width defaults  (flex_w = W - _STAGE_W)
@@ -687,7 +688,7 @@ class LCCBreakdownTable(QWidget):
         x_val, x_bar, bar_w = self._col_x(W)
         item_w = x_val - self._STAGE_W
         _bar_pad  = 3
-        bar_w_max = bar_w - _bar_pad - 5
+        bar_w_max = int(bar_w * 0.95)
 
         # ── legend (top) ──────────────────────────────────────────────────────
         legend_y = (self._LEGEND_H - 16) // 2   # vertically center in legend band
@@ -711,8 +712,8 @@ class LCCBreakdownTable(QWidget):
         p.setPen(color_text)
         p.drawText(QRect(self._PAD_X, hdr_y, self._STAGE_W - self._PAD_X * 2, self._MIN_ROW_H),
                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, "Stage")
-        p.drawText(QRect(self._STAGE_W + self._PAD_X, hdr_y,
-                         item_w - self._PAD_X * 2, self._MIN_ROW_H),
+        p.drawText(QRect(self._STAGE_W + self._PAD_X, hdr_y + self._ITEM_PAD_Y,
+                         item_w - self._PAD_X * 2, self._MIN_ROW_H - self._ITEM_PAD_Y * 2),
                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, "Cost Item")
         p.drawText(QRect(x_val + self._VAL_PAD_X, hdr_y + self._VAL_PAD_Y,
                          x_bar - x_val - self._VAL_PAD_X * 2, self._MIN_ROW_H - self._VAL_PAD_Y * 2),
@@ -762,8 +763,8 @@ class LCCBreakdownTable(QWidget):
             p.setFont(row_font)
             p.setPen(QColor("#1a1a1a"))
             p.drawText(
-                QRect(self._STAGE_W + self._PAD_X, ry,
-                      item_w - self._PAD_X * 2, rh),
+                QRect(self._STAGE_W + self._PAD_X, ry + self._ITEM_PAD_Y,
+                      item_w - self._PAD_X * 2, rh - self._ITEM_PAD_Y * 2),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter | Qt.TextWordWrap,
                 label,
             )
