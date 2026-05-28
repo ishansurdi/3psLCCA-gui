@@ -545,6 +545,8 @@ QTableView QWidget {
 QHeaderView {
     background-color: $window;
     border: none;
+    font-weight: bold;
+    qproperty-defaultAlignment: AlignCenter;
 }
 
 QHeaderView::section {
@@ -554,7 +556,6 @@ QHeaderView::section {
     border-bottom: 2px solid $border-subtle;
     border-right: 1px solid $border-subtle;
     padding: 8px 12px;
-    font-weight: $weight-semibold;
     font-size: 11px;
 }
 
