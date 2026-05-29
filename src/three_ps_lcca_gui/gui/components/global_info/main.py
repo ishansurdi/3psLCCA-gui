@@ -225,7 +225,7 @@ class GeneralInfo(ScrollableForm):
             item = self.form.itemAt(i, QFormLayout.SpanningRole)
             if item and item.widget():
                 w = item.widget()
-                if isinstance(w, QLabel) and "Assessing Organization" in w.text():
+                if isinstance(w, QLabel) and "Assessing Organisation" in w.text():
                     self.form.takeRow(i)
                     header_row = QWidget()
                     lay = QHBoxLayout(header_row)
