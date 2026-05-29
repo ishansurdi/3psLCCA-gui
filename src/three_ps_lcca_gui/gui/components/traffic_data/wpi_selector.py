@@ -41,14 +41,14 @@ from PySide6.QtWidgets import (
 )
 from ..utils.wpi_manager import (
     WPIManager, WPIProfile, IntegrityState, empty_data,
-    save_to_user_library,
+    save_to_user_library, delete_from_user_library,
 )
 import datetime
 import json
 
 # ── Dev mode ──────────────────────────────────────────────────────────────────
 
-DEV = True # Set to True to print JSON data on add/edit
+DEV = False # Set to True to print JSON data on add/edit
 
 # ── Integrity badge ───────────────────────────────────────────────────────────
 # Store token keys, not resolved colors- colors are fetched live in _update_badge
@@ -292,9 +292,8 @@ class _WPISelector(QWidget):
         if profile:
             self._current = profile
             self._update_badge(profile)
-            # Edit is always enabled (shortcut to Clone for DB profiles)
-            self._btn_edit.setEnabled(True)
-            # Delete only for custom
+            # Edit and Delete are only enabled for custom profiles
+            self._btn_edit.setEnabled(profile.is_custom)
             self._btn_delete.setEnabled(profile.is_custom)
             self.profile_selected.emit(profile)
 
