@@ -29,6 +29,7 @@ from three_ps_lcca_gui.gui.theme import (
     SP5,
     SP6,
     RADIUS_LG,
+    RADIUS_MD,
     FS_XS,
     FS_SM,
     FS_BASE,
@@ -129,29 +130,13 @@ def _make_issue_card(page_name: str, issues: list, severity: str, navigate_cb) -
     layout.setContentsMargins(SP3, SP3, SP3, SP3)
     layout.setSpacing(SP3)
 
-    # header row
-    h_row = QWidget()
-    h_row.setStyleSheet("background: transparent;")
-    h_lay = QHBoxLayout(h_row)
-    h_lay.setContentsMargins(0, 0, 0, 0)
-
+    # header: page name only
     name_lbl = QLabel(page_name.upper())
     name_lbl.setFont(_f(FS_SM, FW_MEDIUM))
     name_lbl.setStyleSheet(
         f"color: {get_token('text_secondary')}; letter-spacing: 1px; background: transparent;"
     )
-    h_lay.addWidget(name_lbl, 0, Qt.AlignVCenter)
-    h_lay.addStretch()
-
-    go_btn = QPushButton("Fix Issues →" if severity == "error" else "Fix Warnings →")
-    go_btn.setFixedHeight(BTN_MD)
-    go_btn.setFont(_f(FS_SM, FW_SEMIBOLD))
-    go_btn.setStyleSheet(btn_primary() if severity == "error" else btn_ghost())
-    go_btn.setCursor(Qt.PointingHandCursor)
-    go_btn.clicked.connect(lambda checked=False, p=page_name: navigate_cb(p))
-    h_lay.addWidget(go_btn, 0, Qt.AlignVCenter)
-
-    layout.addWidget(h_row)
+    layout.addWidget(name_lbl)
 
     # issue rows
     for issue in issues:
@@ -174,7 +159,7 @@ def _make_issue_card(page_name: str, issues: list, severity: str, navigate_cb) -
         )
         dw_v.addWidget(dot)
         dw_v.addStretch()
-        row.addWidget(dot_wrapper)
+        row.addWidget(dot_wrapper, 0, Qt.AlignTop)
 
         txt_lbl = QLabel(msg)
         txt_lbl.setFont(_f(FS_BASE))
@@ -183,6 +168,32 @@ def _make_issue_card(page_name: str, issues: list, severity: str, navigate_cb) -
         row.addWidget(txt_lbl, 1)
 
         layout.addLayout(row)
+
+    # footer: button right-aligned below all issues
+    footer = QWidget()
+    footer.setStyleSheet("background: transparent;")
+    f_lay = QHBoxLayout(footer)
+    f_lay.setContentsMargins(0, 0, 0, SP2)
+    f_lay.addStretch()
+
+    go_btn = QPushButton("Fix Issues →" if severity == "error" else "Fix Warnings →")
+    go_btn.setFixedHeight(BTN_MD)
+    go_btn.setFixedWidth(140)
+    go_btn.setFont(_f(FS_SM, FW_SEMIBOLD))
+    if severity == "error":
+        go_btn.setStyleSheet(btn_primary())
+    else:
+        go_btn.setStyleSheet(
+            f"QPushButton {{ border: 1px solid {get_token('warning')}; border-radius: {RADIUS_MD}px;"
+            f"  padding: 0 16px; background: transparent; color: {get_token('warning')};"
+            f"  font-weight: {get_token('weight-semibold')}; }}"
+            f"QPushButton:hover {{ background: transparent; color: {get_token('warning')}; border-width: 1.5px; }}"
+        )
+    go_btn.setCursor(Qt.PointingHandCursor)
+    go_btn.clicked.connect(lambda checked=False, p=page_name: navigate_cb(p))
+    f_lay.addWidget(go_btn)
+
+    layout.addWidget(footer)
 
     return card
 
@@ -928,7 +939,7 @@ class OutputsPage(ScrollableForm):
 
         if all_errors:
             self._status_layout.addWidget(
-                self._inline_banner("Calculation blocked - fix the errors below", "danger")
+                self._inline_banner("Insufficient or Incorrect information; Fix the errors below", "danger")
             )
             for page, issues in all_errors.items():
                 self._status_layout.addWidget(
@@ -937,7 +948,7 @@ class OutputsPage(ScrollableForm):
 
         if all_warnings:
             self._status_layout.addWidget(
-                self._inline_banner("Warnings - review before proceeding", "warning")
+                self._inline_banner("Warnings - Review before proceeding", "warning")
             )
             for page, issues in all_warnings.items():
                 self._status_layout.addWidget(
