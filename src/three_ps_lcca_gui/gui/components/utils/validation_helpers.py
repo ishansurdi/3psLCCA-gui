@@ -170,12 +170,12 @@ def validate_form(
             continue
         widget = getattr(widget_owner, f.key, None)
         if widget is None:
-            errors.append(f"Missing: {f.title}")
+            errors.append(f"'{f.title}' is required but the input field was not found")
             error_keys.add(f.key)
             continue
         if isinstance(widget, QLineEdit) and not widget.text().strip():
             _apply_border_style(widget, get_token("danger"))
-            errors.append(f"Missing: {f.title}")
+            errors.append(f"'{f.title}' is required - the field cannot be left empty")
             error_keys.add(f.key)
         elif (isinstance(widget, QAbstractSpinBox)
               and f.default is not None
@@ -183,7 +183,7 @@ def validate_form(
             # Spinbox with an explicit default uses the minimum as the "blank" sentinel.
             # If still at minimum it has never been filled - treat as a required error.
             _apply_border_style(widget, get_token("danger"))
-            errors.append(f"Required: {f.title}")
+            errors.append(f"'{f.title}' is required - enter a value above the minimum")
             error_keys.add(f.key)
         # QSpinBox/QDoubleSpinBox without default: 0 is a valid value - use warn_rules
         # QComboBox: always has a selection - no check needed
@@ -224,11 +224,11 @@ def validate_form(
         too_high = high is not None and val > high
 
         if too_low:
-            label = low_msg if low_msg else f"{field_title(key, fields)} looks unusual ({val})"
+            label = low_msg if low_msg else f"{field_title(key, fields)} has an unusual value of {val} - please verify"
             warnings.append(label)
             _apply_border_style(widget, get_token("warning"))
         elif too_high:
-            label = high_msg if high_msg else f"{field_title(key, fields)} looks unusual ({val})"
+            label = high_msg if high_msg else f"{field_title(key, fields)} has an unusual value of {val} - please verify"
             warnings.append(label)
             _apply_border_style(widget, get_token("warning"))
         else:

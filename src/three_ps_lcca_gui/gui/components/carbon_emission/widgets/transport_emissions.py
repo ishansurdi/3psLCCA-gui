@@ -708,12 +708,12 @@ class TransportEmissions(QWidget):
 
         if result["active_count"] == 0:
             warnings.append(
-                "No active vehicle entries - add a vehicle in the Transportation/Equipment Emissions tab."
+                "No active vehicle entries found - add at least one vehicle and its transport details in the Transportation/Equipment Emissions tab to calculate transport carbon emissions"
             )
         elif result["total_emission"] == 0.0:
             warnings.append(
-                "Total transport emission is 0 kgCO₂e - "
-                "check vehicle distance, payload, and emission factor."
+                "Total transport carbon emission is 0 kgCO₂e - "
+                "one or more required inputs (distance, payload, or emission factor) may be zero; review each vehicle entry to ensure all values are complete"
             )
 
         if result["all_warnings"]:

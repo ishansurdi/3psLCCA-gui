@@ -237,8 +237,8 @@ class ResponsiveTotalCard(QFrame):
         left_v.addStretch()
 
         # RIGHT SIDE: About this analysis
-        _ap_str = f"{analysis_period} years" if analysis_period else "—"
-        _yoc_str = str(year_of_construction) if year_of_construction else "—"
+        _ap_str = f"{analysis_period} years" if analysis_period else "-"
+        _yoc_str = str(year_of_construction) if year_of_construction else "-"
         _LOREM = (
             f"Total life cycle cost (across the three pillars) evaluated over an "
             f"analysis period of {_ap_str} at the assessment year {_yoc_str}."
@@ -594,7 +594,7 @@ class LCCInsightsWidget(QWidget):
         findings.append((
             "●", "primary",
             f"<b>{stage_labels[dominant]}</b> is the largest cost stage at "
-            f"<b>{dom_pct:.0f}%</b> of total life cycle cost — {c} {dom_val}.",
+            f"<b>{dom_pct:.0f}%</b> of total life cycle cost - {c} {dom_val}.",
         ))
 
         soc_pct = soc_total / grand * 100
@@ -613,7 +613,7 @@ class LCCInsightsWidget(QWidget):
             findings.append((
                 "●", "danger",
                 f"Building this bridge costs road users <b>{c} {fmt_currency(ruc_init, c, decimals=0, style='both')}</b> "
-                f"in delays—that is <b>{ratio:.1f}× the construction contract value</b> "
+                f"in delays-that is <b>{ratio:.1f}× the construction contract value</b> "
                 f"{c} {fmt_currency(construction, c, decimals=0, style='both')}. Faster construction directly reduces this social burden.",
             ))
 
@@ -624,7 +624,7 @@ class LCCInsightsWidget(QWidget):
             findings.append((
                 "●", "text",
                 f"Bearing & expansion joint replacements account for <b>{bej_pct:.0f}%</b> of all "
-                f"maintenance expenditure — {c} {fmt_currency(bej, c, decimals=0, style='both')}. "
+                f"maintenance expenditure - {c} {fmt_currency(bej, c, decimals=0, style='both')}. "
                 f"This is the single largest recurring maintenance cost item.",
             ))
 
@@ -635,7 +635,7 @@ class LCCInsightsWidget(QWidget):
             findings.append((
                 "●", "warning",
                 f"Mid-life reconstruction disrupts road users <b>{rd_ratio:.1f}× more</b> than "
-                f"final end-of-life demolition — {c} {fmt_currency(recon_soc, c, decimals=0, style='both')} vs "
+                f"final end-of-life demolition - {c} {fmt_currency(recon_soc, c, decimals=0, style='both')} vs "
                 f"{c} {fmt_currency(eol_soc, c, decimals=0, style='both')}. Minimising reconstruction frequency "
                 f"has an outsized social benefit.",
             ))
@@ -672,7 +672,7 @@ class LCCInsightsWidget(QWidget):
             findings.append((
                 "●", "text",
                 f"Financing cost over the loan period is <b>{loan_pct:.1f}%</b> of construction value "
-                f"{c} {fmt_currency(loan_init, c, decimals=0, style='both')} — a relatively small component of total cost.",
+                f"{c} {fmt_currency(loan_init, c, decimals=0, style='both')} - a relatively small component of total cost.",
             ))
 
         return findings
@@ -928,7 +928,7 @@ class OutputsPage(ScrollableForm):
 
         if all_errors:
             self._status_layout.addWidget(
-                self._inline_banner("Calculation blocked — fix the errors below", "danger")
+                self._inline_banner("Calculation blocked - fix the errors below", "danger")
             )
             for page, issues in all_errors.items():
                 self._status_layout.addWidget(
@@ -937,7 +937,7 @@ class OutputsPage(ScrollableForm):
 
         if all_warnings:
             self._status_layout.addWidget(
-                self._inline_banner("Warnings — review before proceeding", "warning")
+                self._inline_banner("Warnings - review before proceeding", "warning")
             )
             for page, issues in all_warnings.items():
                 self._status_layout.addWidget(
@@ -962,7 +962,7 @@ class OutputsPage(ScrollableForm):
         self._save_state("success", {})
         self._status_layout.addWidget(
             self._inline_banner(
-                "All checks passed — calculation will start automatically", "success"
+                "All checks passed - calculation will start automatically", "success"
             )
         )
         self._status_layout.addStretch()

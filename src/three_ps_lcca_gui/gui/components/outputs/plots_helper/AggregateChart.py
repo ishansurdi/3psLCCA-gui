@@ -446,7 +446,7 @@ class PillarBreakdownBarPlotter(_BasePlotter):
         est_range   = max(total_pos_per_cat) if total_pos_per_cat else 1.0
         min_label_h = est_range * 0.06
 
-        # missed[i] = [(abbrev, formatted_value, color), ...] — only used if no inside labels at all
+        # missed[i] = [(abbrev, formatted_value, color), ...] - only used if no inside labels at all
         missed:        dict[int, list] = {i: [] for i in range(len(self.categories))}
         inside_count:  dict[int, int]  = {i: 0  for i in range(len(self.categories))}
 

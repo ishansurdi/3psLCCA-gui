@@ -229,7 +229,7 @@ def _add_smart_labels(ax, wedges, labels, threshold=None, leader_radius=1.3):
     return artists
 
 def _add_inner_band_labels(ax, wedges, labels):
-    """Stage names rendered inside the inner donut band — no leader lines needed."""
+    """Stage names rendered inside the inner donut band - no leader lines needed."""
     text_color = get_token("text")
     for i, p in enumerate(wedges):
         if p.theta2 - p.theta1 <= 5.0:

@@ -89,7 +89,7 @@ conda env remove -n 3pslcca
 
 ## 🛠️ Development Setup
 
-### Option A — Conda (Recommended)
+### Option A - Conda (Recommended)
 
 If you are contributing to the source code, please **first follow the [Installation (via Conda)](#⚙️-installation-via-conda) steps above**, then complete these additional steps:
 
@@ -109,9 +109,9 @@ If you are contributing to the source code, please **first follow the [Installat
    conda env create -f environment.yml -n 3pslcca
    ```
 
-### Option B — Python venv (Lightweight)
+### Option B - Python venv (Lightweight)
 
-A minimal setup using only Python and `pip` — no Conda required. Note: PDF report generation will require a separately installed LaTeX distribution (see [PDF Report Generation](#-pdf-report-generation)).
+A minimal setup using only Python and `pip` - no Conda required. Note: PDF report generation will require a separately installed LaTeX distribution (see [PDF Report Generation](#-pdf-report-generation)).
 
 1. **Create a virtual environment**:
    This isolates the project's dependencies from your global Python installation:

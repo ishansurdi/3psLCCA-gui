@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-doc_preview.dev.py  —  dev file-picker that drives the real doc_handler viewer.
+doc_preview.dev.py  -  dev file-picker that drives the real doc_handler viewer.
 
 Run from anywhere:
     python src/three_ps_lcca_gui/gui/components/utils/doc_handler/doc_preview.dev.py
@@ -30,7 +30,7 @@ import three_ps_lcca_gui.gui.components.utils.doc_handler as _dh
 class _PickerWindow(QMainWindow):
     def __init__(self, start_dir: Path) -> None:
         super().__init__()
-        self.setWindowTitle("Doc Preview — file picker")
+        self.setWindowTitle("Doc Preview - file picker")
         self.resize(340, 640)
 
         # ── toolbar ──────────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ class _PickerWindow(QMainWindow):
         h1 = re.search(r'^#\s+(.+)', content, re.MULTILINE)
         title = h1.group(1).strip() if h1 else path.stem.replace("_", " ").replace("-", " ").title()
 
-        # drive the real singleton viewer — same path as open_doc()
+        # drive the real singleton viewer - same path as open_doc()
         _dh._content = content
         _dh._show(title, parent=None)
 
