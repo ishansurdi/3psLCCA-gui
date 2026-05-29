@@ -92,6 +92,7 @@ RICKE_FIELDS = [
         "Assumptions on future population, GDP, and energy use.",
         "combo",
         options=_SSP_OPTIONS,
+        combo_placeholder="-- Select --",
     ),
     FieldDef(
         "rcp_scenario",
@@ -99,6 +100,7 @@ RICKE_FIELDS = [
         "Representative Concentration Pathway for greenhouse gases.",
         "combo",
         options=_RCP_OPTIONS,
+        combo_placeholder="-- Select --",
     ),
 ]
 CUSTOM_FIELDS = [
