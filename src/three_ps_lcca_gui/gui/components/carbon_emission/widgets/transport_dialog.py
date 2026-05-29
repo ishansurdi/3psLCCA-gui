@@ -258,7 +258,7 @@ class TransportDialog(QDialog):
         self.gross_in.setDecimals(2)
         self.gross_in.setMinimumHeight(34)
         self.gross_in.valueChanged.connect(self._update_summary)
-        vg.addWidget(_field("GROSS WEIGHT — LOADED (t)", self.gross_in), 1, 0)
+        vg.addWidget(_field("GROSS WEIGHT - LOADED (t)", self.gross_in), 1, 0)
 
         self.ef_in = QDoubleSpinBox()
         self.ef_in.setRange(0, 10)

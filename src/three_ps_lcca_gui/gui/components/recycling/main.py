@@ -823,12 +823,12 @@ class Recycling(QWidget):
 
         if result["total_count"] == 0:
             warnings.append(
-                "No materials found - add items in the Construction Works Data section."
+                "No materials are available for recycling calculations - add material entries in the Construction Works Data section first"
             )
         elif result["total_recovered_value"] == 0.0:
             warnings.append(
-                f"Total recovered value is 0 - "
-                f"{result['included_count']} of {result['total_count']} items are included."
+                f"Total recovered (salvage) value is 0 - "
+                f"{result['included_count']} of {result['total_count']} materials are included but none yield a positive recycled value; check recyclability percentage and scrap rate entries"
             )
 
         missing = sum(
@@ -836,8 +836,8 @@ class Recycling(QWidget):
         )
         if missing:
             warnings.append(
-                f"{missing} item{'s' if missing != 1 else ''} excluded - "
-                f"missing recyclability % or scrap rate data."
+                f"{missing} material item{'s' if missing != 1 else ''} excluded from recycling calculations - "
+                f"recyclability percentage or scrap rate data is missing; complete these fields in the Construction Works Data section"
             )
 
         return {"errors": [], "warnings": warnings}

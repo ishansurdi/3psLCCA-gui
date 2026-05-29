@@ -109,7 +109,7 @@ class GroupedHeaderView(QHeaderView):
 
 
 # ---------------------------------------------------------------------------
-# Word-wrap header (no groups) — installed globally on plain QTableWidget/View
+# Word-wrap header (no groups) - installed globally on plain QTableWidget/View
 # ---------------------------------------------------------------------------
 
 def contrast_color(bg: QColor) -> QColor:

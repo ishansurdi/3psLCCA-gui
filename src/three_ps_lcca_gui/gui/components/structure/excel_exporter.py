@@ -12,7 +12,7 @@ Supported formats
 Adding a new format
 -------------------
 Add an entry to EXPORT_FORMATS.  If the format requires an optional
-dependency, set "requires" to the pip package name — the UI will check
+dependency, set "requires" to the pip package name - the UI will check
 for it at runtime and show an install hint if missing.
 """
 

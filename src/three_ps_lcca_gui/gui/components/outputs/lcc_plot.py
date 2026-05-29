@@ -769,7 +769,7 @@ class LCCBreakdownTable(QWidget):
                 label,
             )
 
-            # Value & bar — diverging at x_bar.
+            # Value & bar - diverging at x_bar.
             # Positive: value text left of x_bar, bar grows RIGHT from x_bar.
             # Negative: bar grows LEFT from x_bar, value text right of x_bar.
             val_text = fmt_currency(value, self._currency, decimals=2)
@@ -780,7 +780,7 @@ class LCCBreakdownTable(QWidget):
 
             p.setFont(QFont(FONT_FAMILY, FS_BASE, FW_SEMIBOLD))
             if value < 0:
-                # Bar grows left from x_bar — same width scale as positive bars
+                # Bar grows left from x_bar - same width scale as positive bars
                 p.fillRect(
                     x_bar - filled, ry + _bar_pad,
                     filled, bar_h,
@@ -795,13 +795,13 @@ class LCCBreakdownTable(QWidget):
                     val_text,
                 )
             else:
-                # Bar grows right — original behaviour
+                # Bar grows right - original behaviour
                 p.fillRect(
                     x_bar + _bar_pad, ry + _bar_pad,
                     filled, bar_h,
                     QColor(pillar_color),
                 )
-                # Value text in the left (Value) column — original behaviour
+                # Value text in the left (Value) column - original behaviour
                 p.setPen(QColor("#1a1a1a"))
                 p.drawText(
                     QRect(x_val + self._VAL_PAD_X, ry + self._VAL_PAD_Y,

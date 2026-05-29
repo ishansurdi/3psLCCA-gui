@@ -545,14 +545,14 @@ class TrafficEmissions(ScrollableForm):
         if mode == "Calculate by Vehicle":
             if data.get("total_calculated_emissions", 0.0) == 0.0:
                 warnings.append(
-                    "Total diversion emissions is 0 kgCO₂e/day - "
-                    "check reroute distance and vehicle counts in Traffic Data."
+                    "Total traffic diversion emissions is 0 kgCO₂e/day - "
+                    "the reroute distance or vehicle counts may be zero; check the detour distance and vehicle data in the Traffic Data section"
                 )
         else:
             if data.get("total_direct_emissions", 0.0) == 0.0:
                 warnings.append(
                     "Total direct diversion emissions is 0 kgCO₂e/day - "
-                    "enter the per-day emission value in the field."
+                    "enter the estimated per-day carbon emission for traffic rerouting in the field above"
                 )
         return {"errors": [], "warnings": warnings}
 

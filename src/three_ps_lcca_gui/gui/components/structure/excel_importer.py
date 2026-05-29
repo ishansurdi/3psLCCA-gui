@@ -1497,7 +1497,7 @@ def _build_metadata_tab(metadata: list[dict]) -> QWidget:
         key_lbl.setFixedWidth(160)
         key_lbl.setStyleSheet("font-size: 12px;")
 
-        val_lbl = QLabel(entry.get("value", "") or "—")
+        val_lbl = QLabel(entry.get("value", "") or "-")
         val_lbl.setStyleSheet(f"font-size: 12px; color: {get_token('text_secondary')};")
 
         row_l.addWidget(key_lbl)
@@ -1631,7 +1631,7 @@ class ImportPreviewWindow(QDialog):
             warn_lbl = QLabel(
                 f"⚠  <b>{_dup_count} row(s)</b> in this file already exist in the "
                 f"project (matched by name &amp; component, case-insensitive). "
-                f"They are <b>unchecked by default</b> — check them to overwrite."
+                f"They are <b>unchecked by default</b> - check them to overwrite."
             )
             warn_lbl.setWordWrap(True)
             warn_lbl.setStyleSheet(f"color:{_text_color(QColor(get_token('warning'))).name()}; background:transparent;")

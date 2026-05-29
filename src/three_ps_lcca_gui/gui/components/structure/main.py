@@ -382,23 +382,24 @@ class StructureTabView(QWidget):
         if grand_total == 0.0:
             breakdown = "  |  ".join(f"{name}: 0" for name, _ in _PAGES)
             warnings.append(
-                f"Total construction cost is 0 - no materials have been entered "
-                f"or all are in Trash. ({breakdown})"
+                f"Total construction cost is 0 - no material quantities or rates have been entered, "
+                f"or all items are in the Trash and excluded from the analysis. Tab breakdown: {breakdown}"
             )
         else:
             # Show page-wise breakdown only when total is suspicious (any page is zero)
             zero_pages = [name for name, total in page_totals.items() if total == 0.0]
             if zero_pages:
                 warnings.append(
-                    "The following tabs have no materials (0): "
+                    "No materials entered in the following structure tabs (cost is 0): "
                     + ", ".join(zero_pages)
+                    + " - add items or check if entries are in the Trash"
                 )
 
         if trash_count > 0:
             warnings.append(
                 f"{trash_count} item{'s' if trash_count != 1 else ''} "
-                f"in Trash - excluded from all calculations. "
-                f"Open the Trash view to restore them."
+                f"in the Trash - excluded from all cost calculations. "
+                f"Open the Trash view to review and restore them if needed."
             )
 
         return {"errors": [], "warnings": warnings}

@@ -1141,7 +1141,7 @@ class TrafficData(ScrollableForm):
             # Carriageway must be selected
             if hasattr(self, "alternate_road_carriageway"):
                 if self.alternate_road_carriageway.currentText() == _NONE_LANE:
-                    errors.append("Alternate Road Carriageway must be selected")
+                    errors.append("Alternate Road Carriageway type is not selected - choose the carriageway configuration available for traffic diversion during construction")
                     self.alternate_road_carriageway.setProperty("validationState", "error")
                 else:
                     self.alternate_road_carriageway.setProperty("validationState", "")
@@ -1150,7 +1150,7 @@ class TrafficData(ScrollableForm):
                 self.alternate_road_carriageway.style().polish(self.alternate_road_carriageway)
 
                 if hasattr(self, "carriage_width_in_m") and self.carriage_width_in_m.value() == 0.0:
-                    errors.append("Carriageway Width cannot be 0")
+                    errors.append("Carriageway Width of the Alternate Road cannot be 0 - enter the usable width of the diversion road in metres")
                     self.carriage_width_in_m.setProperty("validationState", "error")
                 else:
                     self.carriage_width_in_m.setProperty("validationState", "")
@@ -1164,7 +1164,7 @@ class TrafficData(ScrollableForm):
             if total_vpd == 0:
                 # ADT = 0 - user opts out of road user cost; skip all transport checks
                 warnings.append(
-                    "No vehicle traffic data - all vehicles per day are 0"
+                    "All Vehicles per Day values are 0 - road user cost calculations will be skipped; enter vehicle counts if road user costs should be included in the analysis"
                 )
                 self._vehicle_table.set_validation_state("")
             else:
@@ -1172,7 +1172,7 @@ class TrafficData(ScrollableForm):
                 total_acc = sum(v["accident_percentage"] for v in vehicle_data.values())
                 if abs(total_acc - 100.0) > 0.1:
                     errors.append(
-                        f"Vehicle accident percentages must sum to 100% - currently {total_acc:.1f}%"
+                        f"Vehicle accident percentages must sum to 100% - current total is {total_acc:.1f}%; adjust the per-vehicle percentages so all rows together add up to 100%"
                     )
                     self._vehicle_table.set_validation_state("error")
                 else:
@@ -1186,7 +1186,7 @@ class TrafficData(ScrollableForm):
                 )
                 if abs(total_sev - 100.0) > 1e-4:
                     errors.append(
-                        f"Accident severity must sum to 100% - currently {total_sev:.1f}%"
+                        f"Accident severity proportions (Minor + Major + Fatal) must sum to 100% - current total is {total_sev:.1f}%; adjust the three severity fields to add up to exactly 100%"
                     )
 
                 # PWR must be > 0 for hcv/mcv when their VPD > 0
@@ -1195,12 +1195,12 @@ class TrafficData(ScrollableForm):
                     veh = vehicle_data.get(key, {})
                     if veh.get("vehicles_per_day", 0) > 0 and veh.get("pwr", 0.0) <= 0:
                         errors.append(
-                            f"PWR must be > 0 for {_veh_label.get(key, key)} when vehicles per day > 0"
+                            f"Passenger Weight Ratio (PWR) for {_veh_label.get(key, key)} must be greater than 0 when that vehicle type has traffic - enter a valid PWR value or set its Vehicles per Day to 0"
                         )
 
                 # Hourly capacity must be > 0
                 if hasattr(self, "hourly_capacity") and self.hourly_capacity.value() == 0:
-                    errors.append("Hourly Capacity cannot be 0")
+                    errors.append("Hourly Road Capacity cannot be 0 - enter the maximum number of vehicles the road can carry per hour")
                     self.hourly_capacity.setProperty("validationState", "error")
                 else:
                     self.hourly_capacity.setProperty("validationState", "")
@@ -1216,11 +1216,11 @@ class TrafficData(ScrollableForm):
                     zero_peaks = [i + 1 for i, v in enumerate(peak_fractions) if v == 0.0]
                     if zero_peaks:
                         hrs = ", ".join(f"Peak Hour {h}" for h in zero_peaks)
-                        errors.append(f"Peak hour proportion cannot be 0: {hrs}")
+                        errors.append(f"Peak hour traffic proportion cannot be 0 for: {hrs} - enter the fraction of daily traffic that occurs during each peak hour")
                     total_peak = sum(peak_fractions)
                     if total_peak > 1.0 + 1e-6:
                         errors.append(
-                            f"Peak hour proportions sum to {total_peak * 100:.1f}% - must be \u2264 100%"
+                            f"Peak hour proportions total {total_peak * 100:.1f}%, which exceeds 100% \u2014 reduce the peak hour values so their combined share does not exceed 100% of daily traffic"
                         )
 
             # WPI values must not be zero (checked regardless of ADT)
@@ -1233,7 +1233,7 @@ class TrafficData(ScrollableForm):
 
             if self.road_user_cost_per_day.value() <= 0:
                 warnings.append(
-                    "Road User Cost per Day is 0 - road user cost will not be included"
+                    "Road User Cost per Day is 0 - road user costs will not be included in the LCCA output; enter a positive value if road users bear costs during construction"
                 )
                 self.road_user_cost_per_day.setProperty("validationState", "warning")
             else:

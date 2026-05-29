@@ -61,14 +61,14 @@ DEMOLITION_FIELDS = [
 
 DEMOLITION_WARN_RULES = {
     "demolition_cost_pct": (0.1, 50.0,
-                            "Demolition cost is 0% - verify if intentional",
-                            "Demolition cost exceeds 50% - please verify"),
+                            "Demolition & Disposal Cost is 0% - if end-of-life demolition costs apply, enter a percentage of the initial construction cost",
+                            "Demolition & Disposal Cost exceeds 50% of construction cost - this is unusually high; confirm the value is correct"),
     "demolition_carbon_cost_pct": (0.1, 50.0,
-                                   "Demolition carbon cost is 0% - verify if intentional",
-                                   "Demolition carbon cost exceeds 50% - please verify"),
+                                   "Demolition & Disposal Carbon Cost is 0% - if carbon costs apply at end of life, enter a percentage of the initial carbon emission cost",
+                                   "Demolition & Disposal Carbon Cost exceeds 50% - this is unusually high; confirm this is the correct proportion of the initial carbon cost"),
     "demolition_duration": (1, 24,
-                            "Demolition duration is 0 months - verify",
-                            "Demolition duration exceeds 24 months - please verify"),
+                            "Demolition & Disposal Duration is 0 months - enter the expected time to complete demolition and disposal work",
+                            "Demolition & Disposal Duration exceeds 24 months - this is a long demolition period; confirm the value is in months, not years"),
 }
 
 
