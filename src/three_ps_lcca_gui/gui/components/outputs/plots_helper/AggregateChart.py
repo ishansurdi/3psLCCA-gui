@@ -251,7 +251,7 @@ class StageBarPlotter(_BasePlotter):
         self._setup_annotation(tc)
         self._make_legend(
             [Patch(facecolor=c, label=l) for l, c in zip(self.labels, self.colors)],
-            "Lifecycle Stages", tc,
+            "Life Cycle Stages", tc,
         )
         self.fig.text(0.98, 0.97, currency_note(self.currency),
                       ha="right", va="top", fontsize=8,
@@ -355,13 +355,13 @@ class SustainabilityBarPlotter(_BasePlotter):
             env_v = self.values["Environmental"][i] if self.values["Environmental"] else 0.0
             if pos_bottom[i] > 0:
                 if env_v > 0:
-                    # Env label in green just above bar top
-                    self.ax.text(x[i], pos_bottom[i] + pad * 0.06,
-                        f"Env: {fmt_currency(env_v, self.currency, decimals=0, style='short')}",
+                    # Env label just above bar top
+                    self.ax.text(x[i], pos_bottom[i] + pad * 0.05,
+                        f"Environmental: \n{fmt_currency(env_v, self.currency, decimals=0, style='short')}",
                         ha="center", va="bottom", fontsize=7.5, fontweight="bold",
                         color=env_color, clip_on=False)
-                    # Total with clear breathing room above env label
-                    self.ax.text(x[i], pos_bottom[i] + pad * 0.28,
+                    # Total well above env label (single line, no overlap)
+                    self.ax.text(x[i], pos_bottom[i] + pad * 0.42,
                         fmt_currency(pos_bottom[i], self.currency, decimals=0, style="short"),
                         ha="center", va="bottom", fontsize=8, fontweight="bold", color=tc)
                 else:
@@ -400,7 +400,7 @@ def _lbl_color(hex_color: str) -> str:
 
 
 class PillarBreakdownBarPlotter(_BasePlotter):
-    """Bars per pillar (Eco / Env / Soc) stacked by lifecycle stage."""
+    """Bars per pillar (Eco / Env / Soc) stacked by life cycle stage."""
 
     def __init__(self, data: list, currency: str = "INR"):
         super().__init__(currency)
@@ -536,7 +536,7 @@ class PillarBreakdownBarPlotter(_BasePlotter):
         self._setup_annotation(tc)
         self._make_legend(
             [Patch(facecolor=STAGE_COLORS.get(st, "#AAAAAA"), label=st) for st in self.stages],
-            "Lifecycle Stages", tc,
+            "Life Cycle Stages", tc,
         )
         self.fig.text(0.98, 0.97, currency_note(self.currency),
                       ha="right", va="top", fontsize=8,

@@ -436,7 +436,7 @@ class _KPITable(QWidget):
 
 class _ComparisonChart(QWidget):
     """
-    Grouped bar chart: x = lifecycle stage, bars within group = projects.
+    Grouped bar chart: x = life cycle stage, bars within group = projects.
     Each project gets a distinct color; stage groups are visually separated.
     """
 
@@ -455,7 +455,7 @@ class _ComparisonChart(QWidget):
         theme_manager().theme_changed.connect(self._rebuild)
 
     def update_stages(self, stages: list[str]):
-        """Update chart to show only selected lifecycle stages."""
+        """Update chart to show only selected life cycle stages."""
         self._visible_stages = stages
         self._rebuild()
 

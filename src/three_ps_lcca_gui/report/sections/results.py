@@ -162,9 +162,9 @@ r"{\parbox[t]{1.5cm}{\raggedright\footnotesize\textbf{\hspace{0pt}" + escape_lat
             (KEY_PLOT_SUSTAINABILITY_MATRIX,
              "Sustainability Matrix- stage and pillar decomposition"),
             (KEY_PLOT_STAGE_BARS,
-             "Lifecycle disaggregation- stage-wise cost bars"),
+             "Life Cycle disaggregation- stage-wise cost bars"),
             (KEY_PLOT_PILLAR_BARS,
-             "Lifecycle disaggregation- pillar-wise stacked bars"),
+             "Life Cycle disaggregation- pillar-wise stacked bars"),
         ]
         _available = [(k, cap) for k, cap in _charts if data.get(k)]
         if _available:

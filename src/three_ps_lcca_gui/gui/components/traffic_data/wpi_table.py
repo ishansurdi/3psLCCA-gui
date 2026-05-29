@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from PySide6.QtCore import Qt, QSize, Signal, QEvent, QTimer
+from PySide6.QtCore import Qt, Signal, QEvent, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QToolTip,
     QWidget,
     QHBoxLayout,
+    QAbstractScrollArea,
 )
 from ..utils.table_widgets import TableDoubleSpinBox, TABLE_SPINBOX_BASE_QSS, round_table_viewport
 
@@ -52,11 +53,11 @@ class _ColDef:
 
 
 _COLUMNS: list[_ColDef] = [
-    _ColDef("Fuel Cost\n(INR)", "Petrol Cost", ("fuel_cost", "petrol")),
-    _ColDef("Fuel Cost\n(INR)", "Diesel Cost", ("fuel_cost", "diesel")),
-    _ColDef("Fuel Cost\n(INR)", "Engine Oil Cost", ("fuel_cost", "engine_oil")),
-    _ColDef("Fuel Cost\n(INR)", "Other Oil Cost", ("fuel_cost", "other_oil")),
-    _ColDef("Fuel Cost\n(INR)", "Grease Cost", ("fuel_cost", "grease")),
+    _ColDef("Fuel Cost\n(INR)", "Petrol Cost", ("fuel_cost", "petrol", "{v}")),
+    _ColDef("Fuel Cost\n(INR)", "Diesel Cost", ("fuel_cost", "diesel", "{v}")),
+    _ColDef("Fuel Cost\n(INR)", "Engine Oil Cost", ("fuel_cost", "engine_oil", "{v}")),
+    _ColDef("Fuel Cost\n(INR)", "Other Oil Cost", ("fuel_cost", "other_oil", "{v}")),
+    _ColDef("Fuel Cost\n(INR)", "Grease Cost", ("fuel_cost", "grease", "{v}")),
 
     _ColDef("Vehicle Cost\n(INR)", "Property Damage Cost", ("vehicle_cost", "property_damage", "{v}")),
     _ColDef("Vehicle Cost\n(INR)", "Tyre Cost", ("vehicle_cost", "tyre_cost", "{v}")),
@@ -65,12 +66,12 @@ _COLUMNS: list[_ColDef] = [
 
     _ColDef("Commodity Cost\n(INR)", "Commodity Holding Cost", ("commodity_holding_cost", "{v}")),
 
-    _ColDef("Passenger and Crew Cost\n(INR)", "Passenger Cost", ("passenger_crew_cost", "passenger_cost")),
-    _ColDef("Passenger and Crew Cost\n(INR)", "Crew Cost", ("passenger_crew_cost", "crew_cost")),
+    _ColDef("Passenger and Crew Cost\n(INR)", "Passenger Cost", ("passenger_crew_cost", "passenger_cost", "{v}")),
+    _ColDef("Passenger and Crew Cost\n(INR)", "Crew Cost", ("passenger_crew_cost", "crew_cost", "{v}")),
 
-    _ColDef("Medical Cost\n(INR)", "Fatal Injury Cost", ("medical_cost", "fatal")),
-    _ColDef("Medical Cost\n(INR)", "Major Injury Cost", ("medical_cost", "major")),
-    _ColDef("Medical Cost\n(INR)", "Minor Injury Cost", ("medical_cost", "minor")),
+    _ColDef("Medical Cost\n(INR)", "Fatal Injury Cost", ("medical_cost", "fatal", "{v}")),
+    _ColDef("Medical Cost\n(INR)", "Major Injury Cost", ("medical_cost", "major", "{v}")),
+    _ColDef("Medical Cost\n(INR)", "Minor Injury Cost", ("medical_cost", "minor", "{v}")),
 
     _ColDef("Value of Time Cost\n(INR)", "Value of Time Cost", ("vot_cost", "{v}")),
 ]
@@ -98,7 +99,8 @@ def _set_value(data: dict, col: _ColDef, vehicle_key: str, value: float):
 
 
 def _is_vehicle_dim(col: _ColDef) -> bool:
-    return "{v}" in col.path
+    """All columns now support vehicle-specific overrides."""
+    return True
 
 
 # ── _WPITable ─────────────────────────────────────────────────────────────────
@@ -116,9 +118,10 @@ class _WPITable(QTableWidget):
 
     data_changed = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, strict_read_only: bool = False):
         super().__init__(_N_ROWS, _N_COLS, parent)
         round_table_viewport(self)
+        self._strict_read_only = strict_read_only
         self._editable: bool = False
         self._spinboxes: dict[tuple[int, int], QDoubleSpinBox] = {}
         self._checkboxes: dict[int, QCheckBox] = {}
@@ -147,6 +150,7 @@ class _WPITable(QTableWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.setWordWrap(True)
         self.setTextElideMode(Qt.ElideNone)
+        self.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
 
         # Hide Qt's built-in column header - we use row 0 and 1 instead
         self.horizontalHeader().setVisible(False)
@@ -254,19 +258,6 @@ class _WPITable(QTableWidget):
 
     # ── Size ──────────────────────────────────────────────────────────────────
 
-    def sizeHint(self):
-        h = sum(self.rowHeight(r) for r in range(self.rowCount()))
-        # Always reserve horizontal scrollbar height - 16 cols × 90px min = 1440px
-        # exceeds typical window width, so the scrollbar is almost always present.
-        sb_h = self.horizontalScrollBar().sizeHint().height()
-        return QSize(super().sizeHint().width(), h + sb_h + 2)
-
-    def minimumSizeHint(self):
-        # Return a compact minimum so the parent page doesn't overflow horizontally.
-        # The table itself scrolls internally via ScrollBarAsNeeded.
-        vh_w = self.verticalHeader().sizeHint().width()
-        return QSize(vh_w + 3 * 90, self.sizeHint().height())
-
     def resizeEvent(self, event):
         if self._resizing:
             return
@@ -276,6 +267,8 @@ class _WPITable(QTableWidget):
         col_w = max(90, w // _N_COLS)
         for c in range(_N_COLS):
             self.setColumnWidth(c, col_w)
+        # Notify the parent layout that our sizeHint (AdjustToContents) may have changed
+        self.updateGeometry()
         self._resizing = False
 
     def viewportEvent(self, event):
@@ -313,6 +306,8 @@ class _WPITable(QTableWidget):
             self.set_editable(self._editable)
 
     def set_editable(self, editable: bool):
+        if self._strict_read_only:
+            editable = False
         self._editable = editable
         for (row, col), sb in self._spinboxes.items():
             cb = self._checkboxes[col]
@@ -320,8 +315,13 @@ class _WPITable(QTableWidget):
             is_common = cb.isChecked()
             self._set_cell_editable(row, col, editable and (is_first or not is_common))
         for col, cb in self._checkboxes.items():
-            # Non-vehicle-dim columns stay frozen regardless of editable mode
-            cb.setEnabled(editable and _is_vehicle_dim(_COLUMNS[col]))
+            # Enable checkboxes for vehicle-specific columns when in edit mode
+            is_veh_dim = _is_vehicle_dim(_COLUMNS[col])
+            cb.setEnabled(editable and is_veh_dim)
+            if not is_veh_dim:
+                cb.setToolTip("This factor is not vehicle-specific - always common to all")
+            else:
+                cb.setToolTip("Common to all vehicles" if editable else "View-only (common to all)")
 
     def _set_cell_editable(self, row: int, col: int, editable: bool):
         sb = self._spinboxes.get((row, col))
@@ -380,7 +380,7 @@ class _WPITable(QTableWidget):
             self._apply_spinbox_opacity(sb, active)
 
     def _on_spinbox_changed(self, row: int, col: int, value: float):
-        if self._loading:
+        if self._loading or self._strict_read_only:
             return
         if row == _ROW_DATA and self._checkboxes[col].isChecked():
             self._loading = True

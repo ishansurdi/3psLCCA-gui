@@ -82,7 +82,7 @@ _WEDGE_SIMP = {"width": 0.42, "edgecolor": "none", "linewidth": 0}
 _TAB_META = [
     {
         "title": "Pillar Distribution",
-        "desc": "Lifetime cost breakdown across the three sustainability pillars- Economic, Environmental, and Social- aggregated over all lifecycle stages.",
+        "desc": "Lifetime cost breakdown across the three sustainability pillars- Economic, Environmental, and Social- aggregated over all life cycle stages.",
     },
     {
         "title": "Across 3 Pillars of Sustainability",
