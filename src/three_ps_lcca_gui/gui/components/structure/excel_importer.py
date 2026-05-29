@@ -701,7 +701,7 @@ IMPORT_COLUMNS: list[tuple[str, str, bool]] = [
     ("rate_src", "Rate Source", False),
     ("carbon_emission", "Carbon EF", True),
     ("carbon_emission_units_den", "Carbon Unit", False),
-    ("conversion_factor", "Conv. Factor", True),
+    ("conversion_factor", "Conversion Factor", True),
     ("carbon_emission_src", "Carbon EF Source", False),
     ("scrap_rate", "Scrap Rate", True),
     ("recovery_pct", "Recovery %", True),

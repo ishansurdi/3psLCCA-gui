@@ -82,7 +82,7 @@ AGENCY_FIELDS = [
     ),
     FieldDef(
         "agency_address",
-        "Address",
+        "Organisation's Address",
         "[Appears in the report footer.]",
         "text",
     ),
@@ -117,13 +117,13 @@ REVIEWER_FIELDS = [
     ),
     FieldDef(
         "reviewer_organization",
-        "Reviewer's Organization",
+        "Reviewer's Organisation",
         "",
         "text",
     ),
     FieldDef(
         "reviewer_address",
-        "Address",
+        "Reviewer's Address",
         "",
         "text",
     ),
