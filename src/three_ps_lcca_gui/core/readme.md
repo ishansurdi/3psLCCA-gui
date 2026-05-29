@@ -747,7 +747,7 @@ if engine and engine.is_active():
 | `SafeChunkEngine.new(project_id, display_name, base_dir, readable, **kwargs)` | `(engine, status)` | Create a new project |
 | `SafeChunkEngine.open(project_id, base_dir, readable, **kwargs)` | `(engine, status)` | Open an existing project |
 
-### Lifecycle
+### Life Cycle
 
 | Method | Returns | Description |
 |---|---|---|

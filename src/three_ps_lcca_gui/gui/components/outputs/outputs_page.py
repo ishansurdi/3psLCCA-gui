@@ -218,7 +218,7 @@ class ResponsiveTotalCard(QFrame):
         left_v.setContentsMargins(0, 0, 0, 0)
         left_v.setSpacing(0)
         
-        title_lbl = QLabel("Total Lifecycle Cost")
+        title_lbl = QLabel("Total Life Cycle Cost")
         title_lbl.setFont(_f(FS_SM, FW_MEDIUM))
         title_lbl.setStyleSheet(f"color: {get_token('text_secondary')}; letter-spacing: 1px; border: none; background: transparent;")
         left_v.addWidget(title_lbl)
@@ -240,7 +240,7 @@ class ResponsiveTotalCard(QFrame):
         _ap_str = f"{analysis_period} years" if analysis_period else "—"
         _yoc_str = str(year_of_construction) if year_of_construction else "—"
         _LOREM = (
-            f"Total lifecycle cost (across the three pillars) evaluated over an "
+            f"Total life cycle cost (across the three pillars) evaluated over an "
             f"analysis period of {_ap_str} at the assessment year {_yoc_str}."
         )
         
@@ -594,7 +594,7 @@ class LCCInsightsWidget(QWidget):
         findings.append((
             "●", "primary",
             f"<b>{stage_labels[dominant]}</b> is the largest cost stage at "
-            f"<b>{dom_pct:.0f}%</b> of total lifecycle cost — {c} {dom_val}.",
+            f"<b>{dom_pct:.0f}%</b> of total life cycle cost — {c} {dom_val}.",
         ))
 
         soc_pct = soc_total / grand * 100
@@ -1061,14 +1061,14 @@ class OutputsPage(ScrollableForm):
             lambda r: _divider(),
             lambda r: _section_heading("Distribution of LCC"),
             lambda r: _section_description(
-                "These charts illustrate the distribution of the total life cycle cost. The Sustainability Matrix disaggregates costs across the Economic, Environmental, and Social Pillars. The aggregation chart compares the relative weight of three lifecycle phases: Initial Construction, the combined Use/Maintenance/Reconstruction stage, and the final End-of-Life phase."
+                "These charts illustrate the distribution of the total life cycle cost. The Sustainability Matrix disaggregates costs across the Economic, Environmental, and Social Pillars. The aggregation chart compares the relative weight of three life cycle phases: Initial Construction, the combined Use/Maintenance/Reconstruction stage, and the final End-of-Life phase."
             ),
             lambda r: LCCPieWidget(r, currency=self._currency),
             lambda r: AggregateChartWidget(r, currency=self._currency),
             lambda r: _divider(),
             lambda r: _section_heading("Consolidated stage summary"),
             lambda r: _section_description(
-                "A consolidated presentation of costs across the three pillars (economic, social, and environmental) for each lifecycle stage. This table facilitates the identification of phases that bear the most substantial burden."
+                "A consolidated presentation of costs across the three pillars (economic, social, and environmental) for each life cycle stage. This table facilitates the identification of phases that bear the most substantial burden."
             ),
             lambda r: LCCDetailsTable(r, currency=self._currency),
             lambda r: _divider(),

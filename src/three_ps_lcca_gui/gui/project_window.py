@@ -488,7 +488,7 @@ class ProjectWindow(QMainWindow):
         home_action.setIcon(make_icon("home"))
         home_action.triggered.connect(self.show_home)
 
-        self.log_action = QAction("Logs", self)
+        self.log_action = QAction("&Logs", self)
 
         self.menubar.addAction(home_action)
         self.menubar.addMenu(self.menuFile)

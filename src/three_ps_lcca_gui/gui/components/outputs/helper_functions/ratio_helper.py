@@ -1,7 +1,7 @@
 """
 gui/components/outputs/helper_functions/ratio_helper.py
 
-Helpers for calculating and formatting sustainability/lifecycle ratios.
+Helpers for calculating and formatting sustainability/life cycle ratios.
 """
 
 def format_ratio_string(values: list, colors: list, sep_color: str, na_color: str) -> str:

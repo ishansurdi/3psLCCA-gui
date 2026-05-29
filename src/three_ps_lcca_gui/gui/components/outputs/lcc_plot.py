@@ -831,7 +831,7 @@ class LCCBreakdownTable(QWidget):
 
         # ── stage boundary lines ──────────────────────────────────────────────
         # Draw a full-width separator after each stage except the last one so the
-        # three lifecycle phases (Initial / Use / End-of-Life) are clearly delimited.
+        # three life cycle phases (Initial / Use / End-of-Life) are clearly delimited.
         sep_color = QColor(get_token("surface_mid"))
         sep_color.setAlpha(220)
         p.setPen(QPen(sep_color, 2))
