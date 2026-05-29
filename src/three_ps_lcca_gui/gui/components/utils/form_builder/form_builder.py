@@ -339,6 +339,8 @@ def build_form(
         # ── combo ─────────────────────────────────────────────────────────
         elif f.field_type == "combo":
             widget = QComboBox()
+            if f.combo_placeholder is not None:
+                widget.addItem(f.combo_placeholder)
             widget.addItems(f.options or [])
             if f.default is not None:
                 idx = widget.findText(str(f.default))
