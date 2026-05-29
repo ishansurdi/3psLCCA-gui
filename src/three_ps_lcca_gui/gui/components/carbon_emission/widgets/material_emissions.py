@@ -309,7 +309,7 @@ class CarbonTable(TooltipTableMixin, QTableWidget):
         ("Material", _L),  # 1
         ("Value", _C),  # 2  ┐ Quantity group (sub-col → center)
         ("Unit", _C),  # 3  ┘
-        ("Conv. Factor", _R),  # 4
+        ("Conversion Factor", _R),  # 4
         ("Value", _C),  # 5  ┐ Emission group (sub-col → center)
         ("Unit", _C),  # 6  ┘
         ("Reason", _L),  # 7

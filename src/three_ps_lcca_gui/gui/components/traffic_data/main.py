@@ -687,7 +687,7 @@ class TrafficData(ScrollableForm):
             self._peak_table.rebuild(self.num_peak_hours.value())
 
         # ── WPI section (India only) ──────────────────────────────────────────
-        india_layout.addRow(QLabel("<b>WPI Adjustment Factors</b>"))
+        india_layout.addRow(QLabel("<b>Wholesale Price Index (WPI) Adjustment Factors</b>"))
 
         # Unlisted warning (shown if any DB entries failed integrity on load)
         self._wpi_warning = QLabel()
@@ -718,6 +718,7 @@ class TrafficData(ScrollableForm):
         # Table
         self._wpi_table = _WPITable()
         self._wpi_table.data_changed.connect(self._on_field_changed)
+        self._wpi_table.verticalHeader().sectionResized.connect(self._shrink_stack_to_current)
         india_layout.addRow(self._wpi_table)
 
         if DEV:

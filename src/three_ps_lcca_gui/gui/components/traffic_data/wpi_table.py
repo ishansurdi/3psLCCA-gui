@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from PySide6.QtCore import Qt, QSize, Signal, QEvent
+from PySide6.QtCore import Qt, QSize, Signal, QEvent, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -52,22 +52,27 @@ class _ColDef:
 
 
 _COLUMNS: list[_ColDef] = [
-    _ColDef("Fuel Cost", "Petrol", ("fuel_cost", "petrol")),
-    _ColDef("Fuel Cost", "Diesel", ("fuel_cost", "diesel")),
-    _ColDef("Fuel Cost", "Engine Oil", ("fuel_cost", "engine_oil")),
-    _ColDef("Fuel Cost", "Other Oil", ("fuel_cost", "other_oil")),
-    _ColDef("Fuel Cost", "Grease", ("fuel_cost", "grease")),
-    _ColDef("Vehicle Cost", "Prop. Damage", ("vehicle_cost", "property_damage", "{v}")),
-    _ColDef("Vehicle Cost", "Tyre Cost", ("vehicle_cost", "tyre_cost", "{v}")),
-    _ColDef("Vehicle Cost", "Spare Parts", ("vehicle_cost", "spare_parts", "{v}")),
-    _ColDef("Vehicle Cost", "Fixed Depr.", ("vehicle_cost", "fixed_depreciation", "{v}")),
-    _ColDef("Commodity", "Hold. Cost", ("commodity_holding_cost", "{v}")),
-    _ColDef("Pass. & Crew", "Passenger", ("passenger_crew_cost", "passenger_cost")),
-    _ColDef("Pass. & Crew", "Crew", ("passenger_crew_cost", "crew_cost")),
-    _ColDef("Medical Cost", "Fatal", ("medical_cost", "fatal")),
-    _ColDef("Medical Cost", "Major", ("medical_cost", "major")),
-    _ColDef("Medical Cost", "Minor", ("medical_cost", "minor")),
-    _ColDef("VOT Cost", "VOT Cost", ("vot_cost", "{v}")),
+    _ColDef("Fuel Cost\n(INR)", "Petrol Cost", ("fuel_cost", "petrol")),
+    _ColDef("Fuel Cost\n(INR)", "Diesel Cost", ("fuel_cost", "diesel")),
+    _ColDef("Fuel Cost\n(INR)", "Engine Oil Cost", ("fuel_cost", "engine_oil")),
+    _ColDef("Fuel Cost\n(INR)", "Other Oil Cost", ("fuel_cost", "other_oil")),
+    _ColDef("Fuel Cost\n(INR)", "Grease Cost", ("fuel_cost", "grease")),
+
+    _ColDef("Vehicle Cost\n(INR)", "Property Damage Cost", ("vehicle_cost", "property_damage", "{v}")),
+    _ColDef("Vehicle Cost\n(INR)", "Tyre Cost", ("vehicle_cost", "tyre_cost", "{v}")),
+    _ColDef("Vehicle Cost\n(INR)", "Spare Parts Cost", ("vehicle_cost", "spare_parts", "{v}")),
+    _ColDef("Vehicle Cost\n(INR)", "Fixed Depreciation", ("vehicle_cost", "fixed_depreciation", "{v}")),
+
+    _ColDef("Commodity Cost\n(INR)", "Commodity Holding Cost", ("commodity_holding_cost", "{v}")),
+
+    _ColDef("Passenger and Crew Cost\n(INR)", "Passenger Cost", ("passenger_crew_cost", "passenger_cost")),
+    _ColDef("Passenger and Crew Cost\n(INR)", "Crew Cost", ("passenger_crew_cost", "crew_cost")),
+
+    _ColDef("Medical Cost\n(INR)", "Fatal Injury Cost", ("medical_cost", "fatal")),
+    _ColDef("Medical Cost\n(INR)", "Major Injury Cost", ("medical_cost", "major")),
+    _ColDef("Medical Cost\n(INR)", "Minor Injury Cost", ("medical_cost", "minor")),
+
+    _ColDef("Value of Time Cost\n(INR)", "Value of Time Cost", ("vot_cost", "{v}")),
 ]
 
 _N_COLS = len(_COLUMNS)
@@ -121,6 +126,7 @@ class _WPITable(QTableWidget):
         self._resizing: bool = False
 
         self._setup_table()
+        self.verticalHeader().sectionResized.connect(lambda: QTimer.singleShot(0, self.updateGeometry))
         self._build_group_row()
         self._build_label_row()
         self._build_checkbox_row()
@@ -138,7 +144,7 @@ class _WPITable(QTableWidget):
         self.setSelectionMode(QTableWidget.NoSelection)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.setWordWrap(True)
         self.setTextElideMode(Qt.ElideNone)
 
@@ -148,11 +154,9 @@ class _WPITable(QTableWidget):
         self.horizontalHeader().setMinimumSectionSize(90)
 
         self.verticalHeader().setVisible(True)
-        self.verticalHeader().setDefaultSectionSize(42)
-
-        self.setRowHeight(_ROW_GROUP, 42)
-        self.setRowHeight(_ROW_LABEL, 56)  # extra height for word-wrapped labels
-        self.setRowHeight(_ROW_CB, 42)
+        self.verticalHeader().setMinimumSectionSize(42)
+        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.verticalHeader().setTextElideMode(Qt.ElideNone)
 
     def _build_group_row(self):
         """Row 0 - group labels with colspan (setSpan) per group."""

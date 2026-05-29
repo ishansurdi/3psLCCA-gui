@@ -40,7 +40,7 @@ _COLUMNS = [
     ("carbon_emission",              "Emission Factor"),
     ("carbon_emission_units_den",    "Emission Unit"),
     ("carbon_emission_src",          "Emission Source"),
-    ("conversion_factor",            "Conv. Factor"),
+    ("conversion_factor",            "Conversion Factor"),
     ("scrap_rate",                   "Scrap Rate"),
     ("post_demolition_recovery_pct", "Recovery %"),
     ("recycleable",                  "Recyclability"),
