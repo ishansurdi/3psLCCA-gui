@@ -3,15 +3,16 @@ import os
 
 from .mod_base_report import LCCAReportBase
 from .mod_lcca_template import LCCATemplate
-from ..constants import KEY_SHOW_TITLE_PAGE, KEY_SHOW_INTRODUCTION, KEY_SHOW_LCCA_RESULTS
-from ..sections.title_page import add_title_page
-from ..sections.introduction import add_introduction
+from .constants import KEY_SHOW_TITLE_PAGE, KEY_SHOW_INTRODUCTION, KEY_SHOW_LCCA_RESULTS
+from .sections.title_page import add_title_page
+from .sections.introduction import add_introduction
 from .mod_input_data import add_input_data
 from .mod_traffic_data import add_traffic_data
 from .mod_environmental_data import add_environmental_data
 from .mod_results import add_lcca_results
-from ..sections.appendix import add_full_appendix
-from ..plot_exporter import generate_plots
+from .sections.appendix import add_full_appendix
+from .plot_exporter import generate_plots
+from pylatex import NoEscape
 
 class LCCAReportLatex(LCCAReportBase):
 
@@ -24,15 +25,20 @@ class LCCAReportLatex(LCCAReportBase):
         return path + ".tex"
 
     def generate_pdf_output(self, filename="LCCA_Report", output_dir=None):
+        import subprocess
         if not output_dir:
             output_dir = os.getcwd()
+        tex_path = os.path.join(output_dir, filename + ".tex")
+        pdf_path = os.path.join(output_dir, filename + ".pdf")
         try:
-            self.generate_pdf(
-                os.path.join(output_dir, filename),
-                compiler=self.LATEX_EXEC,
-                clean_tex=False,
-            )
-            return os.path.join(output_dir, f"{filename}.pdf")
+            # Run pdflatex twice so \tableofcontents page numbers resolve correctly
+            for _ in range(2):
+                subprocess.run(
+                    [self.LATEX_EXEC, "-interaction=nonstopmode", tex_path],
+                    cwd=output_dir,
+                    capture_output=True,
+                )
+            return pdf_path if os.path.exists(pdf_path) else None
         except Exception as e:
             print(f"Error generating PDF: {e}")
             return None
@@ -65,6 +71,11 @@ def generate_report(output_filename="LCCA_Report", export_dict=None, config_over
     if config.get(KEY_SHOW_TITLE_PAGE, True):
         data["report_title"] = "LCCA Modular Report"
         add_title_page(doc, config, data)
+
+     # 2. Table of contents
+    doc.append(NoEscape(r"\newpage"))
+    doc.append(NoEscape(r"\tableofcontents"))
+    doc.append(NoEscape(r"\newpage"))
 
     # 2. Introduction (optional)
     if config.get(KEY_SHOW_INTRODUCTION, False):

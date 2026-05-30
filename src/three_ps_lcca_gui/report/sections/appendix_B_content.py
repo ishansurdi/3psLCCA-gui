@@ -4,6 +4,7 @@ from pylatex import NoEscape
 APPENDIX_B_LATEX = r"""
 \newpage
 \section*{\fontsize{14pt}{16pt}\selectfont\bfseries Appendix B: Calculation Methodology}
+\addcontentsline{toc}{section}{Appendix B: Calculation Methodology}
 
 \noindent
 This chapter presents the calculation method and equations used for cost calculations.
@@ -121,9 +122,11 @@ The glossary for the terms used in the equations are mentioned below.
 \vspace{0.5em}
 
 {\fontsize{13pt}{15pt}\selectfont\bfseries B.1 Initial Cost}
+\addcontentsline{toc}{subsection}{B.1 Initial Cost}
 
 \vspace{0.3em}
 \textbf{B.1.1 Economic cost}
+\addcontentsline{toc}{subsubsection}{B.1.1 Economic cost}
 
 \noindent
 Initial construction cost
@@ -139,6 +142,7 @@ TC = IC \times I \times DC_y \times IR
 
 \vspace{0.3em}
 \textbf{B.1.2 Social cost}
+\addcontentsline{toc}{subsubsection}{B.1.2 Social cost}
 
 \noindent
 Road user cost during construction
@@ -461,6 +465,7 @@ A_{Tn} = D_{wm} \times DC_m \times CR \times WZM \times RD \times 10^{-6}
 \vspace{0.5em}
 
 \section*{\fontsize{14pt}{16pt}\selectfont\bfseries B.1.3 Environmental cost}
+\addcontentsline{toc}{subsubsection}{B.1.3 Environmental cost}
 
 \begin{itemize}
 \item Embodied carbon emission cost during construction
@@ -486,9 +491,11 @@ IETC = SCC \times \sum_{j=1}^{o} \left[ Q_{j} \times Di_{j} \times (EF_{tp})_{j}
 
 %----------------------------------------------
 {\fontsize{13pt}{15pt}\selectfont\bfseries B.2 Use Stage Cost}
+\addcontentsline{toc}{subsection}{B.2 Use Stage Cost}
 
 \vspace{0.3em}
 \textbf{B.2.1 Economic cost}
+\addcontentsline{toc}{subsubsection}{B.2.1 Economic cost}
 
 \begin{itemize}
   \item \textbf{Routine Inspection cost}
@@ -511,6 +518,7 @@ IETC = SCC \times \sum_{j=1}^{o} \left[ Q_{j} \times Di_{j} \times (EF_{tp})_{j}
 
 \vspace{0.3em}
 \textbf{B.2.2 Social cost}
+\addcontentsline{toc}{subsubsection}{B.2.2 Social cost}
 
 \begin{itemize}
   \item \textbf{Road user cost due to rerouting during major repairs}
@@ -572,6 +580,7 @@ IETC = SCC \times \sum_{j=1}^{o} \left[ Q_{j} \times Di_{j} \times (EF_{tp})_{j}
 
 \vspace{0.3em}
 \textbf{B.2.3 Environmental cost}
+\addcontentsline{toc}{subsubsection}{B.2.3 Environmental cost}
 
 \begin{itemize}
   \item Carbon emission cost due to periodic maintenance
@@ -594,9 +603,11 @@ IETC = SCC \times \sum_{j=1}^{o} \left[ Q_{j} \times Di_{j} \times (EF_{tp})_{j}
 
 %----------------------------------------------
 {\fontsize{13pt}{15pt}\selectfont\bfseries B.3 End-of-Life Stage Cost Calculation}
+\addcontentsline{toc}{subsection}{B.3 End-of-Life Stage Cost Calculation}
 
 \vspace{0.3em}
 \textbf{B.3.1 Economic cost}
+\addcontentsline{toc}{subsubsection}{B.3.1 Economic cost}
 
 \begin{itemize}
   \item \textbf{Demolition and disposal cost for reconstruction}
@@ -613,6 +624,7 @@ IETC = SCC \times \sum_{j=1}^{o} \left[ Q_{j} \times Di_{j} \times (EF_{tp})_{j}
 
 \vspace{0.3em}
 \textbf{B.3.2 Social cost}
+\addcontentsline{toc}{subsubsection}{B.3.2 Social cost}
 
 \begin{itemize}
   \item \textbf{Road user cost due to rerouting of vehicles during demolition for reconstruction}
@@ -701,6 +713,7 @@ IETC = SCC \times \sum_{j=1}^{o} \left[ Q_{j} \times Di_{j} \times (EF_{tp})_{j}
 
 \vspace{0.3em}
 \textbf{B.3.3 Environmental cost}
+\addcontentsline{toc}{subsubsection}{B.3.3 Environmental cost}
 
 \textbf{Carbon Emission Cost}
 
