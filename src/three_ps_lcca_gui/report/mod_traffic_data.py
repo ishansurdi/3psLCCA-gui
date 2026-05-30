@@ -1,7 +1,7 @@
 
 from pylatex import Section, Subsection, Tabular, NoEscape
 from pylatex.utils import bold, escape_latex
-from ..constants import (
+from .constants import (
     KEY_SHOW_AVG_TRAFFIC, KEY_AVG_TRAFFIC,
     KEY_SHOW_ROAD_TRAFFIC, KEY_ROAD_TRAFFIC,
     KEY_SHOW_PEAK_HOUR, KEY_PEAK_HOUR,
@@ -27,6 +27,28 @@ _COL_TYRE = (
 _COL_NEW_VEHICLE = (
     r"|p{\colw{0.409}}|p{\colw{0.318}}|p{\colw{0.273}}|"
 )
+
+
+def _format_traffic_count(value):
+    if isinstance(value, bool):
+        return str(value)
+
+    text = str(value).strip()
+    if isinstance(value, (int, float)):
+        if isinstance(value, float) and not value.is_integer():
+            return f"{value:,.2f}".rstrip("0").rstrip(".")
+        return f"{int(value):,}"
+
+    cleaned = text.replace(",", "")
+    if cleaned.replace(".", "", 1).isdigit():
+        if "." in cleaned:
+            numeric = float(cleaned)
+            if numeric.is_integer():
+                return f"{int(numeric):,}"
+            return f"{numeric:,.2f}".rstrip("0").rstrip(".")
+        return f"{int(cleaned):,}"
+
+    return text
 
 
 def add_traffic_data(doc, config, data):
@@ -59,7 +81,10 @@ def add_traffic_data(doc, config, data):
                 t.add_row([bold("Vehicle type"), bold("Vehicles/day")])
                 t.add_hline()
                 for key, val in data.get(KEY_AVG_TRAFFIC, {}).items():
-                    t.add_row([escape_latex(key), escape_latex(str(val))])
+                    t.add_row([
+                        escape_latex(key),
+                        escape_latex(_format_traffic_count(val)),
+                    ])
                     t.add_hline()
             doc.append(NoEscape(r"\vspace{4pt}"))
 

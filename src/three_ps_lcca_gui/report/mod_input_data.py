@@ -1,7 +1,7 @@
 
 from pylatex import Section, Subsection, Tabular, NoEscape
 from pylatex.utils import bold, escape_latex
-from ..constants import (
+from .constants import (
     KEY_SHOW_BRIDGE_DESC, KEY_BRIDGE_DESC,
     KEY_SHOW_FINANCIAL, KEY_FINANCIAL,
     KEY_SHOW_CONSTRUCTION, KEY_CONSTRUCTION,
@@ -65,6 +65,19 @@ _COL_ONSITE = (
     r"|p{\colw{0.220}}|p{\colw{0.157}}|p{\colw{0.181}}"
     r"|p{\colw{0.118}}|p{\colw{0.142}}|p{\colw{0.181}}|"
 )
+
+
+def _wrap_latex_cell(text, color=None, bold=False):
+    cell = escape_latex(str(text))
+    if bold:
+        cell = r"\textbf{" + cell + r"}"
+    wrapped = (
+        r"\parbox[t]{\linewidth}{\raggedright\arraybackslash\sloppy"
+        r"\seqsplit{" + cell + r"}}"
+    )
+    if color:
+        return r"\cellcolor{" + color + r"}" + wrapped
+    return wrapped
 
 
 def add_input_data(doc, config, data):
@@ -180,19 +193,29 @@ def add_input_data(doc, config, data):
                             
                             if idx == 0:
                                 if row_count > 1:
-                                    cat_cell = r"\cellcolor{white}\multirow{" + str(row_count) + r"}{=}{\centering\textbf{" + escape_latex(comp_name) + r"}}"
+                                    cat_cell = (
+                                        r"\cellcolor{white}\multirow{" + str(row_count) + r"}{=}{"
+                                        + _wrap_latex_cell(comp_name, "white", bold=True)
+                                        + r"}"
+                                    )
                                 else:
-                                    cat_cell = r"\cellcolor{white}\centering\textbf{" + escape_latex(comp_name) + r"}"
+                                    cat_cell = _wrap_latex_cell(comp_name, "white", bold=True)
                             else:
                                 cat_cell = "" # Transparent
 
+                            material_cell = _wrap_latex_cell(mat, latex_color)
+                            rate_cell = _wrap_latex_cell(rate, latex_color)
+                            qty_cell = _wrap_latex_cell(qty, latex_color)
+                            unit_cell = _wrap_latex_cell(unit, latex_color)
+                            source_cell = _wrap_latex_cell(source, latex_color)
+
                             cells = [
                                 cat_cell,
-                                color_cmd + escape_latex(mat),
-                                color_cmd + escape_latex(str(rate)),
-                                color_cmd + escape_latex(str(qty)),
-                                color_cmd + escape_latex(unit),
-                                color_cmd + escape_latex(source),
+                                material_cell,
+                                rate_cell,
+                                qty_cell,
+                                unit_cell,
+                                source_cell,
                             ]
                             
                             rows_tex += " & ".join(cells)

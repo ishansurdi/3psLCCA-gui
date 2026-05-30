@@ -6,6 +6,7 @@ APPENDIX_A_LATEX = r"""
 \clearpage
 
 \section*{\fontsize{14pt}{16pt}\selectfont\bfseries Summary and Conclusions}
+\addcontentsline{toc}{section}{Summary and Conclusions}
 
 \noindent
 The LCCA results indicate the relative contribution of construction, road user, and environmental costs, supporting informed and sustainable bridge planning decisions.
@@ -89,6 +90,7 @@ calculations are listed below.
 \pagestyle{empty}
 
 \section*{\fontsize{14pt}{16pt}\selectfont\bfseries Appendix A: Assumptions}
+\addcontentsline{toc}{section}{Appendix A: Assumptions}
 
 \noindent
 This Life Cycle Cost Assessment (LCCA) has been carried out using a deterministic,

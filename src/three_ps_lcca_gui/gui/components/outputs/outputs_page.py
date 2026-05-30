@@ -1038,12 +1038,12 @@ class OutputsPage(ScrollableForm):
         pdf_btn.clicked.connect(self._generate_pdf_report)
         tl_h.addWidget(pdf_btn)
 
-        prov_btn = QPushButton("Generate Report V2")
-        prov_btn.setFixedHeight(BTN_MD)
-        prov_btn.setFont(_f(FS_BASE, FW_MEDIUM))
-        prov_btn.setStyleSheet(btn_primary())
-        prov_btn.clicked.connect(self._generate_provenance_report)
-        tl_h.addWidget(prov_btn)
+        # prov_btn = QPushButton("Generate Report V2")
+        # prov_btn.setFixedHeight(BTN_MD)
+        # prov_btn.setFont(_f(FS_BASE, FW_MEDIUM))
+        # prov_btn.setStyleSheet(btn_primary())
+        # prov_btn.clicked.connect(self._generate_provenance_report)
+        # tl_h.addWidget(prov_btn)
 
         comp_btn = QPushButton("Add to Comparison ↗")
         comp_btn.setFixedHeight(BTN_MD)
@@ -1238,13 +1238,13 @@ class OutputsPage(ScrollableForm):
         return d
 
     def _generate_pdf_report(self):
-        dlg = ReportSectionDialog(export_dict=self._build_export_dict(), mode="standard", parent=self)
-        dlg.exec()
-
-    def _generate_provenance_report(self):
-        """Triggers the modular V2 report generation using the tree-based dialog."""
         dlg = ReportSectionDialog(export_dict=self._build_export_dict(), mode="provenance", parent=self)
         dlg.exec()
+
+    # def _generate_provenance_report(self):
+    #     """Triggers the modular V2 report generation using the tree-based dialog."""
+    #     dlg = ReportSectionDialog(export_dict=self._build_export_dict(), mode="provenance", parent=self)
+    #     dlg.exec()
 
     def _on_proceed(self):
         self.run_calculation()

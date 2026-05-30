@@ -1,6 +1,8 @@
+import re
+
 from pylatex import Section, Subsection, Subsubsection, NoEscape
 from pylatex.utils import escape_latex
-from ..constants import (
+from .constants import (
     KEY_LCC_TABLE1,
     KEY_STAGE_COSTS,
     KEY_PILLAR_COSTS,
@@ -13,6 +15,48 @@ from ..constants import (
     KEY_PLOT_STAGE_BARS,
     KEY_PLOT_PILLAR_BARS,
 )
+
+RESULT_ROUND_TO = 0
+
+
+def _strip_currency_prefix(value):
+    text = str(value).strip()
+    return re.sub(r"^(?:INR|Rs\.?|₹)\s*", "", text, flags=re.IGNORECASE)
+
+
+def _round_dict_values(data, decimals=None):
+    precision = RESULT_ROUND_TO if decimals is None else decimals
+    rounded = {}
+    for key, value in data.items():
+        text = str(value)
+        match = re.search(r"[+-]?(?:\d[\d,]*)(?:\.\d+)?", text)
+        if not match:
+            rounded[key] = value
+            continue
+
+        number = float(match.group(0).replace(",", ""))
+        rounded_value = round(number, precision)
+        rounded_str = f"{rounded_value:,.{precision}f}"
+        rounded[key] = text.replace(match.group(0), rounded_str, 1)
+    return rounded
+
+
+def _round_table_values(data):
+    return _round_dict_values(data)
+
+
+def _rounding_note():
+    if RESULT_ROUND_TO == 0:
+        return "Values are rounded to the nearest rupee."
+    return f"Values are rounded to {RESULT_ROUND_TO} decimal place(s)."
+
+
+def _append_rounding_note(doc):
+    doc.append(NoEscape(r"\par"))
+    doc.append(NoEscape(r"\vspace{2pt}"))
+    doc.append(NoEscape(r"{\footnotesize\textit{" + _rounding_note() + r"}}"))
+    doc.append(NoEscape(r"\vspace{4pt}"))
+
 
 def add_lcca_results(doc, config, data):
     """Section 3: LCCA Results - Tables 3-1 through 3-7."""
@@ -74,8 +118,10 @@ r"{\parbox[t]{1.5cm}{\raggedright\footnotesize\textbf{\hspace{0pt}" + escape_lat
                         stage_cell = ""
 
                     cells = [stage_cell, r"\textbf{" + escape_latex(cost_label) + r"}"]
-                    cells += [escape_latex(str(v)) for v in vals]
+                    cells += [escape_latex(_strip_currency_prefix(v)) for v in vals]
                     rows_tex += " & ".join(cells) + r" \\" + "\n"
+
+                    
 
                     if idx < row_count - 1:
                         rows_tex += r"\cline{2-8}" + "\n"
@@ -100,21 +146,23 @@ r"{\parbox[t]{1.5cm}{\raggedright\footnotesize\textbf{\hspace{0pt}" + escape_lat
                 + r"}"
             )
             doc.append(NoEscape(longtable_tex))
-            doc.append(NoEscape(r"\vspace{4pt}"))
+            doc.append(NoEscape(r"\footnotetext{All monetary values are in the project currency.}"))
 
         # ── 3.2 Stage-wise distribution ──────────────────────────────────
         with doc.create(Subsection("Stage-wise distribution of life cycle costs")):
             doc.add_kv_table(
                 "Life cycle stage wise costs",
-                data.get(KEY_STAGE_COSTS, {}),
+                _round_table_values(data.get(KEY_STAGE_COSTS, {})),
             )
+            _append_rounding_note(doc)
 
         # ── 3.3 Pillar-wise distribution ─────────────────────────────────
         with doc.create(Subsection("Pillar-wise distribution of life cycle costs")):
             doc.add_kv_table(
                 "Sustainability pillar wise cost",
-                data.get(KEY_PILLAR_COSTS, {}),
+                _round_table_values(data.get(KEY_PILLAR_COSTS, {})),
             )
+            _append_rounding_note(doc)
 
             # ── 3.3.1 Economic costs ──────────────────────────────────────
             with doc.create(Subsubsection("Economic costs")):
@@ -123,9 +171,10 @@ r"{\parbox[t]{1.5cm}{\raggedright\footnotesize\textbf{\hspace{0pt}" + escape_lat
                 )
                 doc.add_kv_table(
                     "Economic cost results across different stages",
-                    data.get(KEY_ECONOMIC_COSTS, {}),
+                    _round_table_values(data.get(KEY_ECONOMIC_COSTS, {})),
                     key_frac=0.62,
                 )
+                _append_rounding_note(doc)
 
             # ── 3.3.2 Social costs ────────────────────────────────────────
             with doc.create(Subsubsection("Social costs")):
@@ -134,13 +183,15 @@ r"{\parbox[t]{1.5cm}{\raggedright\footnotesize\textbf{\hspace{0pt}" + escape_lat
                 )
                 doc.add_kv_table(
                     "Social cost across different stages",
-                    data.get(KEY_SOCIAL_COSTS, {}),
+                    _round_table_values(data.get(KEY_SOCIAL_COSTS, {})),
                     key_frac=0.62,
                 )
+                _append_rounding_note(doc)
                 doc.add_kv_table(
                     "Road user costs during construction",
-                    data.get(KEY_RUC_CONSTRUCTION, {}),
+                    _round_table_values(data.get(KEY_RUC_CONSTRUCTION, {})),
                 )
+                _append_rounding_note(doc)
 
             # ── 3.3.3 Environmental costs ─────────────────────────────────
             with doc.create(Subsubsection("Environmental costs")):
@@ -149,9 +200,10 @@ r"{\parbox[t]{1.5cm}{\raggedright\footnotesize\textbf{\hspace{0pt}" + escape_lat
                 )
                 doc.add_kv_table(
                     "Environmental costs across different stages",
-                    data.get(KEY_ENVIRONMENTAL_COSTS_37, {}),
+                    _round_table_values(data.get(KEY_ENVIRONMENTAL_COSTS_37, {})),
                     key_frac=0.69,
                 )
+                _append_rounding_note(doc)
 
         # ── 3.4 Charts ────────────────────────────────────────────────────────
         _charts = [
@@ -177,7 +229,7 @@ r"{\parbox[t]{1.5cm}{\raggedright\footnotesize\textbf{\hspace{0pt}" + escape_lat
                     doc.append(NoEscape(
                         r"\begin{figure}[H]"
                         r"\centering"
-                        r"\includegraphics[width=0.88\textwidth]{" + fname + r"}"
+                        r"\includegraphics[width=\textwidth]{" + fname + r"}"
                         r"\captionof{figure}{" + escape_latex(caption) + r"}"
                         r"\end{figure}"
                     ))

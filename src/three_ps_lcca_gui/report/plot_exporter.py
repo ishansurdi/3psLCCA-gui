@@ -3,9 +3,9 @@ report/plot_exporter.py
 
 Static (print-ready) chart generation for the LCCA PDF report.
 
-Each function produces a white-background matplotlib Figure with ALL text that
-the interactive GUI widget shows only on hover rendered as permanent visible
-annotations- so the PNG is fully self-explanatory without interactivity.
+Each function produces a white-background matplotlib Figure with permanent,
+compact labels matching the visible GUI chart labels, so the PNG is fully
+self-explanatory without interactivity.
 
 PNGs are created via tempfile.mkstemp inside output_dir so pdflatex can resolve
 them by basename alone (it runs from that same directory).
@@ -14,6 +14,7 @@ them by basename alone (it runs from that same directory).
 import os
 import tempfile
 
+import matplotlib.ticker
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
@@ -24,11 +25,15 @@ from ..gui.components.outputs.plots_helper.Pie import (
     _build_nested_pie_data,
     _pillar_totals_ok,
     _nested_data_ok,
+    SimplePillarPlotter,
+    SustainabilityCircularPlotter,
     COLORS as _PIE_COLORS,
 )
 from ..gui.components.outputs.plots_helper.AggregateChart import (
     _build_stage_data,
     _build_pillar_data as _build_agg_pillar_data,
+    StageBarPlotter,
+    SustainabilityBarPlotter,
     STAGE_COLORS,
     PILLAR_COLORS,
 )
@@ -62,7 +67,7 @@ _PREFIXES = {
 
 def _save(fig: plt.Figure, fd: int, path: str) -> None:
     os.close(fd)
-    fig.savefig(path, dpi=_DPI, bbox_inches="tight", facecolor=_BG)
+    fig.savefig(path, dpi=_DPI, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -70,14 +75,29 @@ def _make_temp(key: str, output_dir: str) -> tuple:
     return tempfile.mkstemp(suffix=".png", prefix=_PREFIXES[key], dir=output_dir)
 
 
+def _fmt_plot_value(value: float, currency: str) -> str:
+    return fmt_currency(value, currency, decimals=0, style="short")
+
+
+def _add_currency_note(fig: Figure, currency: str) -> None:
+    fig.text(0.98, 0.97, f"All values in {currency}",
+             ha="right", va="top", fontsize=8, color=_TC2, alpha=0.85)
+
+
+def _setup_y_formatter(ax, currency: str) -> None:
+    ax.yaxis.set_major_formatter(
+        matplotlib.ticker.FuncFormatter(
+            lambda value, _: _fmt_plot_value(value, currency)
+        )
+    )
+
+
 def _annotate_wedge(ax, wedge, label: str, val: float, total: float,
                     currency: str, r_tip: float, r_text: float,
                     min_span_deg: float = 8.0) -> None:
     """Draw a leader-line annotation from the centre of a pie wedge outward.
 
-    Shows:  label
-            XX.X%
-            XX.XX M <currency>   (value in millions- same as GUI hover)
+    Shows the same compact visible label style used by the GUI charts.
     Skips wedges narrower than *min_span_deg* degrees to avoid crowding.
     """
     span = abs(wedge.theta2 - wedge.theta1)
@@ -85,18 +105,13 @@ def _annotate_wedge(ax, wedge, label: str, val: float, total: float,
         return
     mid_rad = np.radians((wedge.theta1 + wedge.theta2) / 2)
     cos_m, sin_m = np.cos(mid_rad), np.sin(mid_rad)
-    pct = val / (total or 1.0) * 100
-    # Same text format as the GUI hover callbacks
-    txt = (f"{label}\n"
-           f"{pct:.1f}%\n"
-           f"{fmt_currency(val, currency, 2)} M {currency}\n"
-           f"({currency} {fmt_currency(val * 1_000_000, currency, 0)})")
+    txt = f"{label}\n{_fmt_plot_value(val, currency)}"
     ax.annotate(
         txt,
         xy=(r_tip * cos_m, r_tip * sin_m),
         xytext=(r_text * cos_m, r_text * sin_m),
         ha="center", va="center",
-        fontsize=6.0, color=_TC,
+        fontsize=8.5, color=_TC,
         arrowprops=dict(arrowstyle="-", color=_GC, lw=0.7),
         bbox=dict(boxstyle="round,pad=0.28", fc=_BG, ec=_GC, alpha=0.96),
     )
@@ -107,7 +122,7 @@ def _annotate_wedge(ax, wedge, label: str, val: float, total: float,
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_pillar_donut(results: dict, currency: str) -> plt.Figure:
-    items  = _build_pillar_data(results)   # [(label, value_M, color), ...]
+    items  = _build_pillar_data(results)   # [(label, raw_value, color), ...]
     labels = [i[0] for i in items]
     values = [i[1] for i in items]
     colors = [i[2] for i in items]
@@ -127,15 +142,14 @@ def _plot_pillar_donut(results: dict, currency: str) -> plt.Figure:
 
     # Centre: total value (same text as GUI centre_text)
     ax.text(0, 0,
-            f"Total\n{fmt_currency(total, currency, 2)} M {currency}\n"
-            f"({currency} {fmt_currency(total * 1_000_000, currency, 0)})",
+            f"Total\n{_fmt_plot_value(total, currency)}",
             ha="center", va="center", fontsize=8.5,
             fontweight="bold", color=_TC)
 
-    # Annotate each wedge- mirrors the GUI hover text exactly
+    # Annotate each wedge with the compact visible GUI label style.
     for wedge, label, val in zip(wedges, labels, values):
         _annotate_wedge(ax, wedge, label, val, total, currency,
-                        r_tip=0.84, r_text=1.90, min_span_deg=5.0)
+                        r_tip=0.84, r_text=1.55, min_span_deg=5.0)
 
     ax.set_xlim(-2.5, 2.5)
     ax.set_ylim(-2.2, 2.2)
@@ -149,6 +163,7 @@ def _plot_pillar_donut(results: dict, currency: str) -> plt.Figure:
     )
     ax.set_title("Pillar Distribution- Economic : Environmental : Social",
                  fontsize=10, fontweight="bold", color=_TC, pad=8)
+    _add_currency_note(fig, currency)
     return fig
 
 
@@ -173,66 +188,91 @@ def _plot_sustainability_matrix(results: dict, currency: str) -> plt.Figure:
 
     total = sum(inner_vals) or 1.0
 
-    fig = Figure(figsize=(11, 9))
+    fig = Figure(figsize=(9, 7))
     ax = fig.add_subplot(111)
     fig.patch.set_facecolor(_BG)
     ax.set_facecolor(_BG)
     ax.set_aspect("equal")
-    fig.subplots_adjust(left=0.05, right=0.95, bottom=0.08, top=0.92)
+    fig.subplots_adjust(left=0.02, right=0.98, bottom=0.08, top=0.92)
 
     # inner ring: r = 0.5 → 0.8  (width 0.30, radius 0.8)
     inner_wedges, _ = ax.pie(
-        inner_vals, radius=0.8, colors=inner_colors,
-        wedgeprops={"width": 0.30, "edgecolor": _BG, "linewidth": 1.5},
-    )
+    inner_vals, radius=1.0, colors=inner_colors,
+    wedgeprops={"width": 0.35, "edgecolor": _BG, "linewidth": 1.5},
+)
     # outer ring: r = 0.8 → 1.1  (width 0.30, radius 1.1)
     outer_wedges, _ = ax.pie(
-        outer_vals, radius=1.1, colors=outer_colors,
-        wedgeprops={"width": 0.30, "edgecolor": _BG, "linewidth": 1.5},
-    )
+    outer_vals, radius=1.40, colors=outer_colors,
+    wedgeprops={"width": 0.35, "edgecolor": _BG, "linewidth": 1.5},
+)
 
     # Stage boundary separator lines
     angles = np.cumsum(inner_vals) / total * 2 * np.pi
     for angle in angles:
         ax.plot(
-            [0.50 * np.cos(angle), 1.10 * np.cos(angle)],
-            [0.50 * np.sin(angle), 1.10 * np.sin(angle)],
+            [0.65 * np.cos(angle), 1.40 * np.cos(angle)],
+            [0.65 * np.sin(angle), 1.40 * np.sin(angle)],
             color=_GC, lw=1.2,
         )
 
-    # Centre label
-    ax.text(0, 0,
-            f"Total\n{fmt_currency(total, currency, 2)} M {currency}\n"
-            f"({currency} {fmt_currency(total * 1_000_000, currency, 0)})",
+    ax.text(0, 0, f"Total\n{_fmt_plot_value(total, currency)}",
             ha="center", va="center", fontsize=8.5,
             fontweight="bold", color=_TC)
 
-    # Inner stage labels- text inside the ring (r=0.65) for large wedges;
-    # fall back to an outside annotation for small ones.
-    for wedge, label, val in zip(inner_wedges, inner_labels, inner_vals):
-        span = abs(wedge.theta2 - wedge.theta1)
-        mid_rad = np.radians((wedge.theta1 + wedge.theta2) / 2)
-        pct = val / total * 100
-        if span >= 20:
-            # Enough room- place text inside
-            ax.text(
-                0.65 * np.cos(mid_rad), 0.65 * np.sin(mid_rad),
-                f"{label}\n{pct:.1f}%\n{fmt_currency(val, currency, 2)} M",
-                ha="center", va="center", fontsize=6.5,
-                fontweight="bold", color=_TC,
-                bbox=dict(boxstyle="round,pad=0.2", fc=_BG, ec="none", alpha=0.7),
-            )
-        else:
-            _annotate_wedge(ax, wedge, label, val, total, currency,
-                            r_tip=0.65, r_text=1.55, min_span_deg=5.0)
-
-    # Outer pillar labels- annotate outside the outer ring (r_text=2.05)
+    # Outer pillar labels with dot + orthogonal leader lines.
+    label_entries = []
     for wedge, label, val in zip(outer_wedges, outer_labels, outer_vals):
-        _annotate_wedge(ax, wedge, label, val, total, currency,
-                        r_tip=0.95, r_text=2.05, min_span_deg=5.0)
+        if val <= 0:
+            continue
+        mid_rad = np.radians((wedge.theta1 + wedge.theta2) / 2)
+        cos_m, sin_m = np.cos(mid_rad), np.sin(mid_rad)
+        pillar = label.split("- ", 1)[1] if "- " in label else label
+        label_entries.append({
+            "side": "right" if cos_m >= 0 else "left",
+            "x0": 1.40 * cos_m,
+            "y0": 1.40 * sin_m,
+            "y": 1.45 * sin_m,
+            "pillar": pillar,
+            "value": _fmt_plot_value(val, currency),
+        })
 
-    ax.set_xlim(-2.8, 2.8)
-    ax.set_ylim(-2.6, 2.6)
+    def _spread(entries):
+        entries = sorted(entries, key=lambda e: e["y"], reverse=True)
+        min_gap = 0.30
+        for _ in range(80):
+            moved = False
+            for j in range(len(entries) - 1):
+                gap = entries[j]["y"] - entries[j + 1]["y"]
+                if gap < min_gap:
+                    shift = (min_gap - gap) / 2
+                    entries[j]["y"] += shift
+                    entries[j + 1]["y"] -= shift
+                    moved = True
+            if not moved:
+                break
+        return entries
+
+    for side, x_text, x_elbow, ha in (
+        ("right", 2.05, 1.62, "left"),
+        ("left", -2.05, -1.62, "right"),
+    ):
+        for entry in _spread([e for e in label_entries if e["side"] == side]):
+            x_end = x_text - 0.08 if side == "right" else x_text + 0.08
+            ax.plot(
+                [entry["x0"], x_elbow, x_elbow, x_end],
+                [entry["y0"], entry["y0"], entry["y"], entry["y"]],
+                color=_TC2, lw=0.9, solid_capstyle="round",
+            )
+            ax.plot(entry["x0"], entry["y0"], "o",
+                    color=_TC2, markersize=3.0)
+            ax.text(x_text, entry["y"] + 0.07, entry["pillar"],
+                    ha=ha, va="center", fontsize=9,
+                    fontweight="bold", color=_TC)
+            ax.text(x_text, entry["y"] - 0.08, entry["value"],
+                    ha=ha, va="center", fontsize=8.5, color=_TC2)
+
+    ax.set_xlim(-2.6, 2.6)
+    ax.set_ylim(-2.4, 2.4)
     ax.axis("off")
 
     # Combined legend
@@ -244,10 +284,11 @@ def _plot_sustainability_matrix(results: dict, currency: str) -> plt.Figure:
         handles=stage_handles + pillar_handles,
         loc="lower center", bbox_to_anchor=(0.5, -0.03),
         ncol=len(stage_handles) + len(pillar_handles),
-        frameon=False, fontsize=7.5, labelcolor=_TC,
+        frameon=False, fontsize=9, labelcolor=_TC,
     )
     ax.set_title("Sustainability Matrix- Stage and Pillar Decomposition",
                  fontsize=10, fontweight="bold", color=_TC, pad=8)
+    _add_currency_note(fig, currency)
     return fig
 
 
@@ -256,8 +297,8 @@ def _plot_sustainability_matrix(results: dict, currency: str) -> plt.Figure:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_stage_bars(results: dict, currency: str) -> plt.Figure:
-    """Stage bar chart with the same text the GUI hover shows on each bar."""
-    data   = _build_stage_data(results)    # [(label, value_M, color), ...]
+    """Stage bar chart with the same compact visible labels as the GUI."""
+    data   = _build_stage_data(results)    # [(label, raw_value, color), ...]
     labels = [d[0] for d in data]
     values = [d[1] for d in data]
     colors = [d[2] for d in data]
@@ -276,23 +317,20 @@ def _plot_stage_bars(results: dict, currency: str) -> plt.Figure:
     pad    = (max_v - min_v) * 0.12 or 1.0
 
     for i, val in enumerate(values):
-        # Line 1: value in Millions  (GUI hover line 1)
-        # Line 2: actual INR value   (GUI hover line 2)
-        v_line = fmt_currency(val, currency, 2)
-        a_line = f"({currency} {fmt_currency(val * 1_000_000, currency, 0)})"
+        label_text = _fmt_plot_value(val, currency)
         if val >= 0:
-            ax.text(i, val + pad * 0.10, f"{v_line} M\n{a_line}",
+            ax.text(i, val + pad * 0.10, label_text,
                     ha="center", va="bottom",
                     fontsize=7.5, fontweight="bold", color=_TC)
         else:
-            ax.text(i, val - pad * 0.10, f"{v_line} M\n{a_line}",
+            ax.text(i, val - pad * 0.10, label_text,
                     ha="center", va="top",
                     fontsize=7.5, fontweight="bold", color=_TC)
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontweight="bold", color=_TC, fontsize=9)
-    ax.set_ylabel("Total Cost",
-                  fontweight="bold", color=_TC, fontsize=9)
+    ax.set_ylabel("Total Cost", fontweight="bold", color=_TC, fontsize=9)
+    _setup_y_formatter(ax, currency)
     ax.tick_params(axis="both", colors=_TC, labelsize=8)
     ax.yaxis.grid(True, linestyle="--", alpha=0.3, color=_GC)
     ax.set_axisbelow(True)
@@ -314,6 +352,7 @@ def _plot_stage_bars(results: dict, currency: str) -> plt.Figure:
     plt.setp(ax.get_legend().get_title(), color=_TC)
     ax.set_title("Lifecycle Disaggregation- Stage-wise Cost",
                  fontsize=10, fontweight="bold", color=_TC, pad=8)
+    _add_currency_note(fig, currency)
     return fig
 
 
@@ -322,7 +361,7 @@ def _plot_stage_bars(results: dict, currency: str) -> plt.Figure:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_pillar_bars(results: dict, currency: str) -> plt.Figure:
-    """Stacked pillar bar chart with per-segment value labels (GUI hover text)."""
+    """Stacked pillar bar chart with compact per-segment value labels."""
     data       = _build_agg_pillar_data(results)
     stages     = [d["stage"] for d in data]
     categories = ["Economic", "Environmental", "Social"]
@@ -352,14 +391,12 @@ def _plot_pillar_bars(results: dict, currency: str) -> plt.Figure:
             ax.bar(x, sign_vals, bottom=bottom_arr,
                    color=PILLAR_COLORS[cat], edgecolor="none", width=0.5)
 
-            # Per-segment label: GUI hover shows "stage\ncat: X.XX M\nActual: …"
+            # Per-segment label matching the compact visible GUI style.
             for i, (seg_val, bot) in enumerate(zip(sign_vals, bottom_arr)):
                 if abs(seg_val) < 1e-6:
                     continue
                 mid_y = bot + seg_val / 2
-                v_str = fmt_currency(abs(seg_val), currency, 2)
-                a_str = fmt_currency(abs(seg_val) * 1_000_000, currency, 0)
-                label_text = f"{cat}\n{v_str} M\n({currency} {a_str})"
+                label_text = f"{cat}\n{_fmt_plot_value(seg_val, currency)}"
                 # Only annotate if segment is tall enough to read
                 seg_height = abs(seg_val)
                 if seg_height > (max(pos_bottom.max(), abs(neg_bottom.min()), 0.1) * 0.06):
@@ -382,19 +419,19 @@ def _plot_pillar_bars(results: dict, currency: str) -> plt.Figure:
     for i in range(len(stages)):
         if pos_bottom[i] > 0:
             ax.text(i, pos_bottom[i] + pad * 0.12,
-                    f"Total\n{fmt_currency(pos_bottom[i], currency, 2)} M",
+                    f"Total\n{_fmt_plot_value(pos_bottom[i], currency)}",
                     ha="center", va="bottom",
                     fontsize=7.5, fontweight="bold", color=_TC)
         if neg_bottom[i] < 0:
             ax.text(i, neg_bottom[i] - pad * 0.12,
-                    f"Total\n{fmt_currency(neg_bottom[i], currency, 2)} M",
+                    f"Total\n{_fmt_plot_value(neg_bottom[i], currency)}",
                     ha="center", va="top",
                     fontsize=7.5, fontweight="bold", color=_TC)
 
     ax.set_xticks(x)
     ax.set_xticklabels(stages, fontweight="bold", color=_TC, fontsize=9)
-    ax.set_ylabel("Total Cost",
-                  fontweight="bold", color=_TC, fontsize=9)
+    ax.set_ylabel("Total Cost", fontweight="bold", color=_TC, fontsize=9)
+    _setup_y_formatter(ax, currency)
     ax.tick_params(axis="both", colors=_TC, labelsize=8)
     ax.yaxis.grid(True, linestyle="--", alpha=0.3, color=_GC)
     ax.set_axisbelow(True)
@@ -415,6 +452,7 @@ def _plot_pillar_bars(results: dict, currency: str) -> plt.Figure:
     plt.setp(ax.get_legend().get_title(), color=_TC)
     ax.set_title("Lifecycle Disaggregation- Pillar-wise Stacked Bars",
                  fontsize=10, fontweight="bold", color=_TC, pad=8)
+    _add_currency_note(fig, currency)
     return fig
 
 
@@ -435,16 +473,16 @@ def generate_plots(results: dict, output_dir: str, currency: str = "INR") -> dic
     _jobs = [
         (KEY_PLOT_PILLAR_DONUT,
          lambda: _pillar_totals_ok(results) and bool(_build_pillar_data(results)),
-         lambda: _plot_pillar_donut(results, currency)),
+         lambda: SimplePillarPlotter(results, currency).setup_plot()),
         (KEY_PLOT_SUSTAINABILITY_MATRIX,
          lambda: _nested_data_ok(results) and bool(_build_nested_pie_data(results)),
-         lambda: _plot_sustainability_matrix(results, currency)),
+         lambda: SustainabilityCircularPlotter(_build_nested_pie_data(results), currency).setup_plot()),
         (KEY_PLOT_STAGE_BARS,
          lambda: bool(_build_stage_data(results)),
-         lambda: _plot_stage_bars(results, currency)),
+         lambda: StageBarPlotter(_build_stage_data(results), currency).setup_plot()),
         (KEY_PLOT_PILLAR_BARS,
          lambda: bool(_build_agg_pillar_data(results)),
-         lambda: _plot_pillar_bars(results, currency)),
+         lambda: SustainabilityBarPlotter(_build_agg_pillar_data(results), currency).setup_plot()),
     ]
 
     for key, guard, builder in _jobs:

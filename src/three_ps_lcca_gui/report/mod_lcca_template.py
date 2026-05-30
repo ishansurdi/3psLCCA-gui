@@ -21,6 +21,7 @@ from .constants import (
     KEY_SHOW_USE_EMISSION,
     KEY_SHOW_VEHICLE_EMISSION,
     KEY_SHOW_ONSITE_EMISSION,
+    KEY_SHOW_LCCA_RESULTS,
     KEY_FRAMEWORK_FIGURE,
     KEY_BRIDGE_DESC,
     KEY_FINANCIAL,
@@ -90,6 +91,7 @@ class LCCATemplate:
             KEY_SHOW_VEHICLE_EMISSION:  True,
             KEY_SHOW_ONSITE_EMISSION:   True,
             KEY_SHOW_TRANSPORT_EMISSION: True,
+            KEY_SHOW_LCCA_RESULTS:      True,
         }
 
     def get_report_data(self) -> Dict[str, Any]:
@@ -174,7 +176,7 @@ class LCCATemplate:
         design_life = bd.get("design_life", 0)
 
         return {
-            "Name of the Bridge":
+            "Name of bridge":
                 _v(bd.get("bridge_name")),
             "Name of user/agency":
                 _v(bd.get("user_agency")),
@@ -258,12 +260,16 @@ class LCCATemplate:
                     meta_source   = meta.get("source", "")
                     source_db_key = meta.get("source_db_key", "").strip()
 
-                    db_modified = (meta_source == "db_modified")
-
+                    # Build human-readable source display
                     if meta_source in ("db", "db_modified"):
                         source_display = source_db_key
+                    elif meta_source == "custom_db":
+                        source_display = source_db_key or "Custom DB"
+                    elif meta_source == "excel":
+                        source_display = "Excel"
+                    elif meta_source == "manual":
+                        source_display = "Manual"
                     else:
-                        # manual or anything else - no db key, show blank
                         source_display = ""
 
                     rows.append([
@@ -272,7 +278,7 @@ class LCCATemplate:
                         _fmt_unit(unit),
                         _fmt(rate),
                         source_display,
-                        db_modified,   # True => light green background on source cell
+                        meta_source,   # full source string for row highlighting
                     ])
 
                 if rows:
@@ -282,7 +288,7 @@ class LCCATemplate:
                 result[cat_name] = cat_rows
 
         if not result:
-            result[""] = {"": [["", "", "", "", "", False]]}
+            result[""] = {"": [["", "", "", "", "", ""]]}
 
         return result
 
@@ -962,7 +968,7 @@ class LCCATemplate:
 if __name__ == "__main__":
     import argparse, pprint
     parser = argparse.ArgumentParser(description="Preview extracted LCCA template data")
-    parser.add_argument("json", help="Path to .3ps JSON file")
+    parser.add_argument("json", help="Path to .3psLCCA JSON file")
     args = parser.parse_args()
 
     with open(args.json, "r", encoding="utf-8") as fh:

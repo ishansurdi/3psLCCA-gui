@@ -336,7 +336,8 @@ class _PdfGenWorker(QThread):
             work_stem = os.path.join(work_dir, stem)
 
             if self._mode == "provenance":
-                from ....report.v2_report.mod_provenance_generate import generate_report as gen_provenance
+                # from ....report.v2_report.mod_provenance_generate import generate_report as gen_provenance
+                from three_ps_lcca_gui.report.mod_provenance_generate import generate_report as gen_provenance
                 gen_provenance(
                     work_stem, export_dict=self._export_dict, config_override=self._config,
                     output_dir=work_dir,
