@@ -218,30 +218,30 @@ BRIDGE_WARN_RULES = {
         None,
         500,
         None,
-        "Analysis period exceeds 500 years - please verify",
+        "Analysis Period exceeds 500 years - this is beyond typical LCCA horizons; confirm this reflects the intended evaluation period",
     ),
-    "span": (None, 5000.0, None, "Span exceeds 5000 m - please verify"),
+    "span": (None, 5000.0, None, "Span exceeds 5000 m - this is longer than most major bridges; verify the total span length is entered in metres"),
     "carriageway_width": (
         1.5,
         50.0,
-        "Carriageway width is very small - verify",
-        "Carriageway width exceeds 50 m - please verify",
+        "Carriageway Width is below 1.5 m - this is narrower than a standard traffic lane; confirm the width is entered in metres",
+        "Carriageway Width exceeds 50 m - this is wider than most multi-lane roads; verify the value is entered in metres",
     ),
-    "num_lanes": (None, 16, None, "Number of lanes exceeds 16 - please verify"),
+    "num_lanes": (None, 16, None, "Number of Lanes exceeds 16 - this is unusually high; confirm this is the total number of traffic lanes on the bridge deck"),
     # "wind_speed": (None, 80.0, None, "Wind speed exceeds 80 m/s - please verify"),
     "design_life": (
         10,
         200,
-        "Design life below 10 years - verify",
-        "Design life exceeds 200 years - verify",
+        "Design Life is below 10 years - this is shorter than typical bridge service periods; confirm this is the intended operational life of the structure",
+        "Design Life exceeds 200 years - this is beyond typical structural design standards; confirm this is the intended service life",
     ),
     "duration_construction_months": (
         None,
         240,
         None,
-        "Construction duration exceeds 240 months - verify",
+        "Construction Duration exceeds 240 months (20 years) - this is unusually long; verify the value is entered in months, not years",
     ),
-    "working_days_per_month": (None, 31, None, "Working days per month exceeds 31"),
+    "working_days_per_month": (None, 31, None, "Working Days per Month exceeds 31 - a calendar month cannot have more than 31 days; reduce this value"),
 }
 
 
@@ -322,10 +322,12 @@ class BridgeData(ScrollableForm):
         result = validate_form(
             BRIDGE_FIELDS, self, warn_rules=BRIDGE_WARN_RULES, skip_keys=self._LOCKED
         )
-        # days_per_month must be 29–31
+        # days_per_month must be 29-31
         dm = getattr(self, "days_per_month", None)
         if dm is not None and not (29 <= dm.value() <= 31):
-            result["errors"].append("Days per Month must be between 29 and 31")
+            result["errors"].append(
+                "Days per Month must be between 29 and 31 - enter the assumed number of calendar days per month during which the bridge or its traffic is affected"
+            )
             dm.setStyleSheet(f"border: 1px solid {get_token('danger')};")
         # Cross-field: working_days_per_month must not exceed days_per_month
         wd = getattr(self, "working_days_per_month", None)
@@ -337,15 +339,14 @@ class BridgeData(ScrollableForm):
             and wd.value() > dm.value()
         ):
             result["warnings"].append(
-                "Working days per month exceeds days per month - please verify"
+                f"Working Days per Month ({wd.value()}) exceeds Days per Month ({dm.value()}) - working days cannot be more than the total calendar days per month; adjust one of these values"
             )
             wd.setStyleSheet("border: 1px solid orange;")
         # year_of_construction should be >= current year
         yoc = getattr(self, "year_of_construction", None)
         if yoc is not None and yoc.value() < date.today().year:
             result["warnings"].append(
-                f"Year of construction ({yoc.value()}) is before "
-                f"{date.today().year} - verify this is intentional"
+                f"Year of Construction ({yoc.value()}) is in the past - confirm this is intentional or update to the planned construction year"
             )
             yoc.setStyleSheet("border: 1px solid orange;")
         return result

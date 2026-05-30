@@ -93,7 +93,7 @@ def fmt_comma(val) -> str:
 
 
 def fmt_pct(val) -> str:
-    """Percentage — always 1 decimal place.  75.3 → '75.3'"""
+    """Percentage - always 1 decimal place.  75.3 → '75.3'"""
     f, err = _to_float(val)
     return f"{f:.1f}" if err is None else err
 
@@ -221,7 +221,7 @@ if __name__ == "__main__":
     check("unknown unit",   fmt_unit(5_000,        "xyz"),     "5000 xyz")
 
     # fmt_currency INR (SKIP_ME=True → Western mode)
-    print("fmt_currency — INR")
+    print("fmt_currency - INR")
     check("comma",          fmt_currency(12_34_567,    style="comma"),  "1,234,567.00")
     check("short",          fmt_currency(1_00_00_000,  style="short"),  "10 million")
     check("both",           fmt_currency(1_00_00_000,  style="both"),   "10,000,000.00 (10 million)")
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     check("below lakh",     fmt_currency(75_000,       style="comma"),  "75,000.00")
 
     # fmt_currency non-INR
-    print("fmt_currency — USD")
+    print("fmt_currency - USD")
     check("comma",          fmt_currency(1_234_567, currency="USD", style="comma"),  "1,234,567.00")
     check("short",          fmt_currency(1_000_000, currency="USD", style="short"),  "1 million")
     check("both",           fmt_currency(1_000_000, currency="USD", style="both"),   "1,000,000.00 (1 million)")

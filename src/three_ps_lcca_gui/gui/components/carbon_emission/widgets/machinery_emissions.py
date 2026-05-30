@@ -1125,13 +1125,13 @@ class MachineryEmissions(ScrollableForm):
             mode = data.get("mode", "")
             if mode == "detailed":
                 warnings.append(
-                    "Total machinery emissions is 0 kgCO₂e - "
-                    "no equipment rows added or all inputs are zero."
+                    "Total machinery/equipment emissions is 0 kgCO₂e - "
+                    "no equipment rows have been added, or fuel consumption and operating hours are zero for all entries; add equipment details or check existing entries"
                 )
             else:
                 warnings.append(
-                    "Total machinery emissions is 0 kgCO₂e - "
-                    "lumpsum fuel and electricity values are zero."
+                    "Total machinery/equipment emissions is 0 kgCO₂e - "
+                    "both lumpsum fuel consumption and electricity consumption are zero; enter at least one positive value to calculate machinery emissions"
                 )
         return {"errors": [], "warnings": warnings}
 

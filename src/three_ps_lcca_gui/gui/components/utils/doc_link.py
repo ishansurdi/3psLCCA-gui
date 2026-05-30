@@ -7,14 +7,14 @@ Usage
 -----
     from ..utils.doc_link import doc_inline, doc_label
 
-    # 1. Inline HTML fragment — embed anywhere in a rich-text string
+    # 1. Inline HTML fragment - embed anywhere in a rich-text string
     text = (
         f"The discount rate {doc_inline(['financial', 'discount-rate'])}, "
         f"inflation rate {doc_inline(['financial', 'inflation-rate'])} are different "
         f"and a summary is given {doc_inline(['financial', 'summary'], 'here')}."
     )
 
-    # 2. Ready-made QLabel — linkActivated already wired to open_doc
+    # 2. Ready-made QLabel - linkActivated already wired to open_doc
     label = doc_label(text)
     layout.addWidget(label)
 """

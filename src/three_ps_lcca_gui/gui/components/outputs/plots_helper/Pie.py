@@ -16,14 +16,9 @@ from matplotlib import font_manager as _fm
 matplotlib.use("QtAgg")
 
 try:
-    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 except ImportError:
-    from matplotlib.backends.backend_qt import FigureCanvasQTAgg, NavigationToolbar2QT
-
-class _ChartToolbar(NavigationToolbar2QT):
-    toolitems = [t for t in NavigationToolbar2QT.toolitems
-                 if t[0] not in ("Subplots", "Customize")]
-    def set_message(self, s): pass
+    from matplotlib.backends.backend_qt import FigureCanvasQTAgg
 
 from PySide6.QtCore import QEvent, QObject, QSize, Qt
 from PySide6.QtGui import QFont
@@ -56,18 +51,11 @@ from ..helper_functions.lcc_colors import COLORS as LCC_COLORS
 from .AggregateChart import (
     StageBarPlotter, SustainabilityBarPlotter, PillarBreakdownBarPlotter,
     _build_pillar_total_data, _build_pillar_data as _build_pillar_bar_data,
-    _currency_note,
 )
+from .plot_utils import register_ubuntu_fonts, WheelForwarder, ChartToolbar, currency_note
 
 # ── Register Ubuntu fonts ────────────────────────────────────────────────────
-_UBUNTU_FONT_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets", "themes", "Ubuntu_font")
-)
-for _ttf in ["Ubuntu-Light.ttf", "Ubuntu-Regular.ttf", "Ubuntu-Medium.ttf", "Ubuntu-Bold.ttf"]:
-    _path = os.path.join(_UBUNTU_FONT_DIR, _ttf)
-    if os.path.exists(_path):
-        _fm.fontManager.addfont(_path)
-
+register_ubuntu_fonts()
 matplotlib.rcParams["font.family"] = FONT_FAMILY
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,14 +64,14 @@ matplotlib.rcParams["font.family"] = FONT_FAMILY
 
 COLORS = {
     "stages": {
-        "Initial":     "#CCCCCC",
-        "Use":         "#00C49A",
-        "End-of-Life": "#EA9E9E",
+        "Initial":     LCC_COLORS["init_color"],
+        "Use":         LCC_COLORS["use_color"],
+        "End-of-Life": LCC_COLORS["end_color"],
     },
     "pillars": {
-        "Economic":      "#9e9eff",
-        "Environmental": "#8ad400",
-        "Social":        "#ff5a2a",
+        "Economic":      LCC_COLORS["eco_color"],
+        "Environmental": LCC_COLORS["env_color"],
+        "Social":        LCC_COLORS["soc_color"],
     },
 }
 
@@ -94,27 +82,12 @@ _WEDGE_SIMP = {"width": 0.42, "edgecolor": "none", "linewidth": 0}
 _TAB_META = [
     {
         "title": "Pillar Distribution",
-        "desc": "Lifetime cost breakdown across the three sustainability pillars- Economic, Environmental, and Social- aggregated over all lifecycle stages.",
+        "desc": "Lifetime cost breakdown across the three sustainability pillars- Economic, Environmental, and Social- aggregated over all life cycle stages.",
     },
     {
         "title": "Across 3 Pillars of Sustainability",
     },
 ]
-
-# ─────────────────────────────────────────────────────────────────────────────
-# WHEEL FORWARDER
-# ─────────────────────────────────────────────────────────────────────────────
-
-class WheelForwarder(QObject):
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Wheel:
-            parent = obj.parent()
-            while parent is not None:
-                if isinstance(parent, QScrollArea):
-                    QApplication.sendEvent(parent.verticalScrollBar(), event)
-                    return True
-                parent = parent.parent()
-        return False
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DATA & CHART HELPERS
@@ -181,7 +154,8 @@ def _add_smart_labels(ax, wedges, labels, threshold=None, leader_radius=1.3):
 
     artists = {}  # wedge_index → [matplotlib artists]
 
-    MIN_GAP = 0.32
+    max_lines = max(len(e["label"].split("\n")) for e in entries)
+    MIN_GAP = 0.62 if max_lines >= 3 else 0.32
 
     def _resolve(group):
         group = sorted(group, key=lambda e: -e["y_nat"])
@@ -211,13 +185,23 @@ def _add_smart_labels(ax, wedges, labels, threshold=None, leader_radius=1.3):
             dot, = ax.plot(e["x0"], e["y0"], "o", color=line_color,
                     markersize=2.5, alpha=0.9, zorder=10, clip_on=False)
 
-            parts = e["label"].split("\n", 1)
-            name  = parts[0]
-            value = parts[1] if len(parts) > 1 else ""
+            parts = e["label"].split("\n")
             x_txt = x_col + tick
             entry_artists = [line, dot]
 
-            if value:
+            if len(parts) == 3:
+                stage, name, value = parts
+                entry_artists.append(ax.text(x_txt, y_lbl + 0.16, stage, ha=ha, va="center",
+                        color=text_color, fontsize=8.0, alpha=0.65,
+                        clip_on=False, zorder=11))
+                entry_artists.append(ax.text(x_txt, y_lbl, name, ha=ha, va="center",
+                        color=text_color, fontsize=9.5, fontweight="bold",
+                        clip_on=False, zorder=11))
+                entry_artists.append(ax.text(x_txt, y_lbl - 0.16, value, ha=ha, va="center",
+                        color=text_color, fontsize=8.5, alpha=0.65,
+                        clip_on=False, zorder=11))
+            elif len(parts) == 2:
+                name, value = parts
                 entry_artists.append(ax.text(x_txt, y_lbl + 0.09, name, ha=ha, va="center",
                         color=text_color, fontsize=9.5, fontweight="bold",
                         clip_on=False, zorder=11))
@@ -225,7 +209,7 @@ def _add_smart_labels(ax, wedges, labels, threshold=None, leader_radius=1.3):
                         color=text_color, fontsize=8.5, alpha=0.65,
                         clip_on=False, zorder=11))
             else:
-                entry_artists.append(ax.text(x_txt, y_lbl, name, ha=ha, va="center",
+                entry_artists.append(ax.text(x_txt, y_lbl, parts[0], ha=ha, va="center",
                         color=text_color, fontsize=9.5, fontweight="bold",
                         clip_on=False, zorder=11))
 
@@ -245,7 +229,7 @@ def _add_smart_labels(ax, wedges, labels, threshold=None, leader_radius=1.3):
     return artists
 
 def _add_inner_band_labels(ax, wedges, labels):
-    """Stage names rendered inside the inner donut band — no leader lines needed."""
+    """Stage names rendered inside the inner donut band - no leader lines needed."""
     text_color = get_token("text")
     for i, p in enumerate(wedges):
         if p.theta2 - p.theta1 <= 5.0:
@@ -277,7 +261,7 @@ class SimplePillarPlotter:
         self.fig.patch.set_alpha(0.0)
         self.ax = self.fig.add_subplot(111)
         self.ax.set_facecolor("none")
-        self.fig.subplots_adjust(left=0.02, right=0.98, bottom=0.12, top=0.98)
+        self.fig.subplots_adjust(left=0.12, right=0.88, bottom=0.12, top=0.98)
         self.fig.canvas.mpl_connect("motion_notify_event", self._hover)
 
     def _fmt(self, val: float) -> str:
@@ -348,7 +332,7 @@ class SimplePillarPlotter:
         self.ax.axis("off")
         self.ax.set_xlim(-1.85, 1.85)
         self.ax.set_ylim(-1.85, 1.85)
-        self.fig.text(0.98, 0.97, _currency_note(self.currency),
+        self.fig.text(0.98, 0.97, currency_note(self.currency),
                       ha="right", va="top", fontsize=8,
                       color=get_token("text"), alpha=0.85)
         return self.fig
@@ -368,7 +352,7 @@ class SustainabilityCircularPlotter:
         self.fig.patch.set_alpha(0.0)
         self.ax = self.fig.add_subplot(111)
         self.ax.set_facecolor("none")
-        self.fig.subplots_adjust(left=0.02, right=0.98, bottom=0.12, top=0.98)
+        self.fig.subplots_adjust(left=0.14, right=0.86, bottom=0.12, top=0.98)
         self.fig.canvas.mpl_connect("motion_notify_event", self._hover)
         self._prepare_data()
 
@@ -474,28 +458,32 @@ class SustainabilityCircularPlotter:
                         for a in artists: a.set_visible(visible)
         self.fig.canvas.draw_idle()
 
+    # Legend layout (interleaved, ncol=3): even indices = pillars, odd = stages
+    # Columns: (Economic, Initial) | (Environmental, Use) | (Social, End-of-Life)
+    _LEGEND_PILLAR_ORDER = ["Economic", "Environmental", "Social"]
+    _LEGEND_STAGE_ORDER  = ["Initial", "Use", "End-of-Life"]
+
     def _set_legend_alpha(self, hit_outer: int, hit_inner: int = -1):
         leg = self.ax.get_legend()
         if not leg:
             return
         handles, texts = leg.legend_handles, leg.get_texts()
-        n_stages = len(self.inner_labels)
         for i, (handle, text) in enumerate(zip(handles, texts)):
             if hit_outer == -1 and hit_inner == -1:
                 a = 1.0
             elif hit_outer >= 0:
-                # Outer hover: dim pillar entries that don't match, keep stages visible
-                if i < n_stages:
+                # Outer hover: highlight matching pillar, keep stages fully visible
+                if i % 2 == 1:  # stage entry (odd index)
                     a = 1.0
-                else:
+                else:           # pillar entry (even index)
                     hit_pillar = self.outer_labels[hit_outer].split(" - ")[1]
                     a = 1.0 if text.get_text() == hit_pillar else 0.25
             else:
-                # Inner hover: dim stage entries that don't match, keep pillars visible
-                if i < n_stages:
-                    a = 1.0 if i == hit_inner else 0.25
-                else:
+                # Inner hover: highlight matching stage, keep pillars fully visible
+                if i % 2 == 0:  # pillar entry (even index)
                     a = 1.0
+                else:           # stage entry (odd index)
+                    a = 1.0 if self._LEGEND_STAGE_ORDER[i // 2] == self.inner_labels[hit_inner] else 0.25
             handle.set_alpha(a)
             text.set_alpha(a)
 
@@ -514,7 +502,7 @@ class SustainabilityCircularPlotter:
         self.inner_wedges, _ = self.ax.pie(self.inner_vals, radius=self._base_inner_radius, colors=self.inner_colors, wedgeprops=_WEDGE)
         self.outer_wedges, _ = self.ax.pie(self.outer_vals, radius=self._base_outer_radius, colors=self.outer_colors, wedgeprops=_WEDGE)
 
-        outer_disp = [f"{l.split(' - ')[1]}\n{self._fmt(v)}" for l, v in zip(self.outer_labels, self.outer_vals)]
+        outer_disp = [f"{l.split(' - ')[0]}\n{l.split(' - ')[1]}\n{self._fmt(v)}" for l, v in zip(self.outer_labels, self.outer_vals)]
         self._label_artists = _add_smart_labels(self.ax, self.outer_wedges, outer_disp, threshold=15.0, leader_radius=1.45)
 
         if self.total_value > 0:
@@ -526,14 +514,20 @@ class SustainabilityCircularPlotter:
 
         self._center_text = self.ax.text(0, 0, f"Total\n{self._fmt(self.total_value)}", ha="center", va="center", fontsize=10, fontweight="bold", color=tc)
 
-        legend_els = [Patch(facecolor=c, label=l) for l, c in COLORS["pillars"].items()]
-        legend_els += [Patch(facecolor=COLORS["stages"].get(l, "#AAA"), label=l) for l in self.inner_labels]
+        # ncol=3 fills column-by-column, so interleave pillar/stage pairs so each
+        # column holds one of each → row 1: pillars, row 2: stages.
+        _PILLAR_ORDER = ["Economic", "Environmental", "Social"]
+        _STAGE_ORDER  = ["Initial", "Use", "End-of-Life"]
+        legend_els = []
+        for pillar, stage in zip(_PILLAR_ORDER, _STAGE_ORDER):
+            legend_els.append(Patch(facecolor=COLORS["pillars"][pillar], label=pillar))
+            legend_els.append(Patch(facecolor=COLORS["stages"].get(stage, "#AAA"), label=stage))
         self.ax.legend(handles=legend_els, loc="upper center", bbox_to_anchor=(0.5, -0.05), ncol=3, frameon=False, fontsize=8, labelcolor=tc)
 
         self.ax.axis("off")
         self.ax.set_xlim(-2.1, 2.1)
         self.ax.set_ylim(-2.1, 2.1)
-        self.fig.text(0.98, 0.97, _currency_note(self.currency),
+        self.fig.text(0.98, 0.97, currency_note(self.currency),
                       ha="right", va="top", fontsize=8,
                       color=get_token("text"), alpha=0.85)
         return self.fig
@@ -678,7 +672,7 @@ class LCCPieWidget(QWidget):
                 cv.setContentsMargins(0, 0, 0, 0)
                 cv.setSpacing(0)
                 cv.addWidget(c_bar)
-                cv.addWidget(_ChartToolbar(c_bar, chart_cont))
+                cv.addWidget(ChartToolbar(c_bar, chart_cont))
                 self._content_h.addWidget(chart_cont, 2)
             else:
                 _no_data = QLabel("No data available.")
@@ -699,7 +693,7 @@ class LCCPieWidget(QWidget):
             c0.setStyleSheet("background: transparent; border: none;")
             c0.installEventFilter(scroller)
             self._chart_stack.addWidget(c0)
-            self._toolbar_stack.addWidget(_ChartToolbar(c0, self))
+            self._toolbar_stack.addWidget(ChartToolbar(c0, self))
             self._plotters.append(p0)
 
             if _nested_ok:
@@ -712,7 +706,7 @@ class LCCPieWidget(QWidget):
                     c1.setStyleSheet("background: transparent; border: none;")
                     c1.installEventFilter(scroller)
                     self._chart_stack.addWidget(c1)
-                    self._toolbar_stack.addWidget(_ChartToolbar(c1, self))
+                    self._toolbar_stack.addWidget(ChartToolbar(c1, self))
                     self._plotters.append(p1)
 
             # Pillar totals bar chart (bar + no stage)
@@ -727,7 +721,7 @@ class LCCPieWidget(QWidget):
                 c_bar.installEventFilter(scroller)
                 self._bar_chart_idx = self._chart_stack.count()
                 self._chart_stack.addWidget(c_bar)
-                self._toolbar_stack.addWidget(_ChartToolbar(c_bar, self))
+                self._toolbar_stack.addWidget(ChartToolbar(c_bar, self))
 
             # Pillar-x breakdown bar chart (bar + stage): Eco/Env/Soc on x, stacked by stage
             stage_bar_data = _build_pillar_bar_data(self._results)
@@ -741,7 +735,7 @@ class LCCPieWidget(QWidget):
                 c_sbar.installEventFilter(scroller)
                 self._stage_bar_chart_idx = self._chart_stack.count()
                 self._chart_stack.addWidget(c_sbar)
-                self._toolbar_stack.addWidget(_ChartToolbar(c_sbar, self))
+                self._toolbar_stack.addWidget(ChartToolbar(c_sbar, self))
 
             self._bar_cb = QCheckBox("Change to bar chart")
             self._bar_cb.setFont(_f(FS_BASE))

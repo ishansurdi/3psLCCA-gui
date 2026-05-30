@@ -42,7 +42,7 @@ _REF_RE = re.compile(
 )
 _IMG_RE = re.compile(r'!\[([^\]]*)\]\[([^\]]+)\]')
 
-# $$...$$ for display math, $...$ for inline — display matched first to avoid
+# $$...$$ for display math, $...$ for inline - display matched first to avoid
 # treating $$ as two inline delimiters; [^$] in inline prevents crossing $$
 _DISPLAY_MATH_RE = re.compile(r'\$\$(.+?)\$\$', re.DOTALL)
 _INLINE_MATH_RE  = re.compile(r'\$([^$\n]+?)\$')
@@ -81,7 +81,7 @@ def _render_latex_svg(expr: str, display: bool = False,
         with mpl.rc_context(_ubuntu_ctx):
             fig = Figure(figsize=(0.01, 0.01), facecolor="none")
             FigureCanvasSVG(fig)
-            # No axes — fig.text tight-bbox clips to the glyph extent only.
+            # No axes - fig.text tight-bbox clips to the glyph extent only.
             # ha="left" at x=0 ensures no centering whitespace on the right.
             fig.text(
                 0, 0.5,
@@ -149,7 +149,7 @@ def _preprocess_latex(content: str, text_color: str = "") -> str:
             return f"{delim}{expr}{delim}"
         idx = counter[0]
         counter[0] += 1
-        # ltxd = display block, ltxi = inline — consumed by _render for sizing
+        # ltxd = display block, ltxi = inline - consumed by _render for sizing
         tok = f"ltxd{idx}" if display else f"ltxi{idx}"
         ref_lines.append(f"[{tok}]: <data:image/png;base64,{b64}>")
         return f"![eq][{tok}]"

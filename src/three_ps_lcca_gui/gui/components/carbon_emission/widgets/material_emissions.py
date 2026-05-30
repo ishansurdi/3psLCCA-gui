@@ -309,7 +309,7 @@ class CarbonTable(TooltipTableMixin, QTableWidget):
         ("Material", _L),  # 1
         ("Value", _C),  # 2  ┐ Quantity group (sub-col → center)
         ("Unit", _C),  # 3  ┘
-        ("Conv. Factor", _R),  # 4
+        ("Conversion Factor", _R),  # 4
         ("Value", _C),  # 5  ┐ Emission group (sub-col → center)
         ("Unit", _C),  # 6  ┘
         ("Reason", _L),  # 7
@@ -388,7 +388,7 @@ class CarbonTable(TooltipTableMixin, QTableWidget):
         if self.is_included:
             widths = {
                 0: max(120, int(rest * 0.09)),  # Category
-                # col 1 Material is QHeaderView.Stretch — Qt fills remaining width
+                # col 1 Material is QHeaderView.Stretch - Qt fills remaining width
                 2: qty_sub,                     # Quantity › Value
                 3: qty_sub,                     # Quantity › Unit
                 4: max(120, int(rest * 0.09)),  # Conv. Factor
@@ -1016,12 +1016,12 @@ class MaterialEmissions(QWidget):
 
         if result["total_count"] == 0:
             warnings.append(
-                "No materials found - add items in the Construction Works Data section."
+                "No materials are available for emission calculations \u2014 add material entries in the Construction Works Data section first"
             )
         elif result["total_carbon"] == 0.0:
             warnings.append(
-                f"Total material carbon is 0 kgCO\u2082e - "
-                f"{result['included_count']} of {result['total_count']} items are included."
+                f"Total material carbon emission is 0 kgCO\u2082e \u2014 "
+                f"{result['included_count']} of {result['total_count']} materials are included but no positive carbon values were found; check emission factors and material quantities"
             )
 
         missing = sum(
@@ -1034,12 +1034,13 @@ class MaterialEmissions(QWidget):
         )
         if missing:
             warnings.append(
-                f"{missing} item{'s' if missing != 1 else ''} excluded - missing emission factor data."
+                f"{missing} material item{'s' if missing != 1 else ''} excluded from carbon calculations - "
+                f"emission factor data is missing or not assigned; set the emission factor in the Construction Works Data section"
             )
         if suspicious:
             warnings.append(
-                f"{suspicious} item{'s' if suspicious != 1 else ''} excluded - "
-                f"suspicious conversion factor (not confirmed)."
+                f"{suspicious} material item{'s' if suspicious != 1 else ''} excluded - "
+                f"the unit conversion factor is flagged as suspicious and has not been confirmed; review and confirm the conversion factor in the material entry"
             )
 
         return {"errors": [], "warnings": warnings}

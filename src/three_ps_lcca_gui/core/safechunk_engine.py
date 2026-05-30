@@ -1442,7 +1442,7 @@ class SafeChunkEngine:
         try:
             # Hold the write lock while clearing staged data and unlinking .lcca
             # so a concurrent _commit_to_disk can't write the chunk back between steps.
-            # Do NOT cancel _debounce_timer here — it is shared across all chunks.
+            # Do NOT cancel _debounce_timer here - it is shared across all chunks.
             with self._write_lock:
                 was_staged = chunk_name in self._staged_data
                 self._staged_data.pop(chunk_name, None)
@@ -1454,7 +1454,7 @@ class SafeChunkEngine:
                 if lcca.exists():
                     lcca.unlink()
 
-            # Remove backup copies outside the lock — no concurrent writer can create them
+            # Remove backup copies outside the lock - no concurrent writer can create them
             for path in (bak, ebak):
                 if path.exists():
                     try:
@@ -1995,7 +1995,7 @@ class SafeChunkEngine:
                 else:
                     info["status"] = "corrupted"
 
-            # project_meta.json — app/user metadata (always plain JSON)
+            # project_meta.json - app/user metadata (always plain JSON)
             pm = item / "project_meta.json"
             if pm.exists():
                 info["user_meta"] = SafeChunkEngine._read_admin(pm)

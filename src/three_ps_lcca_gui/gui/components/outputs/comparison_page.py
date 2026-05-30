@@ -111,7 +111,7 @@ def _fmt_date(dt_str: str) -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Disk helper — read cache without opening an engine
+# Disk helper - read cache without opening an engine
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _read_cache_from_disk(base_dir: Path, project_id: str) -> dict:
@@ -125,12 +125,12 @@ def _read_cache_from_disk(base_dir: Path, project_id: str) -> dict:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Background worker — one per project
+# Background worker - one per project
 # ──────────────────────────────────────────────────────────────────────────────
 
 class _ComparisonWorker(QThread):
     """
-    Subclasses QThread directly — avoids moveToThread + deleteLater fragility.
+    Subclasses QThread directly - avoids moveToThread + deleteLater fragility.
     The thread IS the worker; no separate QObject needed.
     """
     finished = Signal(str, object)   # (project_id, results_dict)
@@ -341,7 +341,7 @@ class _KPITable(QWidget):
             ("Economic Pillar",             lambda pid: summaries[pid]["pillar_totals"]["eco"],        True),
             ("Environmental Pillar",        lambda pid: summaries[pid]["pillar_totals"]["env"],        True),
             ("Social Pillar",               lambda pid: summaries[pid]["pillar_totals"]["social"],     True),
-            ("Analysis Period",             lambda pid: caches[pid].get("analysis_period", "—"),      False),
+            ("Analysis Period",             lambda pid: caches[pid].get("analysis_period", "-"),      False),
         ]
 
         for row, (label, fn, is_cost) in enumerate(rows, start=1):
@@ -431,12 +431,12 @@ class _KPITable(QWidget):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Grouped bar chart — stages × projects
+# Grouped bar chart - stages × projects
 # ──────────────────────────────────────────────────────────────────────────────
 
 class _ComparisonChart(QWidget):
     """
-    Grouped bar chart: x = lifecycle stage, bars within group = projects.
+    Grouped bar chart: x = life cycle stage, bars within group = projects.
     Each project gets a distinct color; stage groups are visually separated.
     """
 
@@ -455,7 +455,7 @@ class _ComparisonChart(QWidget):
         theme_manager().theme_changed.connect(self._rebuild)
 
     def update_stages(self, stages: list[str]):
-        """Update chart to show only selected lifecycle stages."""
+        """Update chart to show only selected life cycle stages."""
         self._visible_stages = stages
         self._rebuild()
 
@@ -543,7 +543,7 @@ class _ComparisonChart(QWidget):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Standalone result window — one per confirmed comparison group
+# Standalone result window - one per confirmed comparison group
 # ──────────────────────────────────────────────────────────────────────────────
 
 class ComparisonResultWindow(QWidget):
@@ -704,7 +704,7 @@ class ComparisonResultWindow(QWidget):
     def _drain_workers(self):
         """Wait for every thread to exit then drop Python references."""
         for worker in self._workers.values():
-            worker.wait()   # blocks briefly — thread has already emitted its signal
+            worker.wait()   # blocks briefly - thread has already emitted its signal
         self._workers.clear()
 
     def _on_stage_filter_changed(self):
@@ -722,7 +722,7 @@ class ComparisonResultWindow(QWidget):
 
         if not self._results:
             self._body_layout.addWidget(
-                self._banner("All analyses failed — no results to display.", "danger")
+                self._banner("All analyses failed - no results to display.", "danger")
             )
             self._body_layout.addStretch()
             return
@@ -738,7 +738,7 @@ class ComparisonResultWindow(QWidget):
                 f"{n}: {self._caches[p].get('analysis_period', '?')} yrs"
                 for p, n in zip(pids, names)
             ]
-            period_text = "Analysis periods — " + "  ·  ".join(parts)
+            period_text = "Analysis periods - " + "  ·  ".join(parts)
         period_lbl = QLabel(period_text)
         period_lbl.setFont(_f(FS_SM))
         period_lbl.setWordWrap(True)
@@ -813,7 +813,7 @@ class ComparisonResultWindow(QWidget):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Embedded picker panel — lives inside the home page stack
+# Embedded picker panel - lives inside the home page stack
 # ──────────────────────────────────────────────────────────────────────────────
 
 class ComparisonPickerPanel(QWidget):
@@ -1340,7 +1340,7 @@ class ComparisonPickerPanel(QWidget):
                 note_text = "⚠  One or more projects are not analysed. Please run and make ready for comparison."
                 note_color = get_token("warning")
             else:
-                note_text = f"⚠  {n_missing} project{'s' if n_missing > 1 else ''} no longer available — will be excluded"
+                note_text = f"⚠  {n_missing} project{'s' if n_missing > 1 else ''} no longer available - will be excluded"
                 note_color = get_token("danger")
 
             note = QLabel(note_text)
@@ -1368,7 +1368,7 @@ class ComparisonPickerPanel(QWidget):
         )
         br_h.addWidget(rerun_btn)
 
-        # Delete button — explicit no-padding style so the ✕ is always visible
+        # Delete button - explicit no-padding style so the ✕ is always visible
         del_btn = QPushButton("✕")
         del_btn.setFixedSize(BTN_SM, BTN_SM)
         del_btn.setFont(_f(FS_MD, FW_BOLD))

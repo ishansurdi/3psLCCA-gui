@@ -118,7 +118,7 @@ def _annotate_wedge(ax, wedge, label: str, val: float, total: float,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plot 1 – Pillar distribution donut
+# Plot 1 - Pillar distribution donut
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_pillar_donut(results: dict, currency: str) -> plt.Figure:
@@ -168,7 +168,7 @@ def _plot_pillar_donut(results: dict, currency: str) -> plt.Figure:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plot 2 – Sustainability matrix (nested stage+pillar donut)
+# Plot 2 - Sustainability matrix (nested stage+pillar donut)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_sustainability_matrix(results: dict, currency: str) -> plt.Figure:
@@ -293,7 +293,7 @@ def _plot_sustainability_matrix(results: dict, currency: str) -> plt.Figure:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plot 3 – Stage-wise bars
+# Plot 3 - Stage-wise bars
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_stage_bars(results: dict, currency: str) -> plt.Figure:
@@ -346,18 +346,18 @@ def _plot_stage_bars(results: dict, currency: str) -> plt.Figure:
 
     ax.legend(
         handles=[Patch(facecolor=c, label=l) for l, c in zip(labels, colors)],
-        title="Lifecycle Stages", loc="center left", bbox_to_anchor=(1.02, 0.5),
+        title="Life Cycle Stages", loc="center left", bbox_to_anchor=(1.02, 0.5),
         frameon=False, fontsize=8, title_fontsize=9, labelcolor=_TC,
     )
     plt.setp(ax.get_legend().get_title(), color=_TC)
-    ax.set_title("Lifecycle Disaggregation- Stage-wise Cost",
+    ax.set_title("Life Cycle Disaggregation- Stage-wise Cost",
                  fontsize=10, fontweight="bold", color=_TC, pad=8)
     _add_currency_note(fig, currency)
     return fig
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plot 4 – Pillar-wise stacked bars
+# Plot 4 - Pillar-wise stacked bars
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _plot_pillar_bars(results: dict, currency: str) -> plt.Figure:
@@ -450,7 +450,7 @@ def _plot_pillar_bars(results: dict, currency: str) -> plt.Figure:
         frameon=False, fontsize=8, title_fontsize=9, labelcolor=_TC,
     )
     plt.setp(ax.get_legend().get_title(), color=_TC)
-    ax.set_title("Lifecycle Disaggregation- Pillar-wise Stacked Bars",
+    ax.set_title("Life Cycle Disaggregation- Pillar-wise Stacked Bars",
                  fontsize=10, fontweight="bold", color=_TC, pad=8)
     _add_currency_note(fig, currency)
     return fig

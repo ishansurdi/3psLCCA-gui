@@ -16,15 +16,10 @@ from matplotlib import font_manager as _fm
 from three_ps_lcca_gui.gui.theme import FONT_FAMILY
 from three_ps_lcca_gui.gui.themes import get_token
 
-# ── Register Ubuntu fonts ────────────────────────────────────────────────────
-_UBUNTU_FONT_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets", "themes", "Ubuntu_font")
-)
-for _ttf in ["Ubuntu-Light.ttf", "Ubuntu-Regular.ttf", "Ubuntu-Medium.ttf", "Ubuntu-Bold.ttf"]:
-    _path = os.path.join(_UBUNTU_FONT_DIR, _ttf)
-    if os.path.exists(_path):
-        _fm.fontManager.addfont(_path)
+from .plot_utils import register_ubuntu_fonts
 
+# ── Register Ubuntu fonts ────────────────────────────────────────────────────
+register_ubuntu_fonts()
 matplotlib.rcParams["font.family"] = FONT_FAMILY
 
 

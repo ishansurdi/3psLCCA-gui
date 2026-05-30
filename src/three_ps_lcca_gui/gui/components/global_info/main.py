@@ -82,7 +82,7 @@ AGENCY_FIELDS = [
     ),
     FieldDef(
         "agency_address",
-        "Address",
+        "Organisation's Address",
         "[Appears in the report footer.]",
         "text",
     ),
@@ -117,13 +117,13 @@ REVIEWER_FIELDS = [
     ),
     FieldDef(
         "reviewer_organization",
-        "Reviewer's Organization",
+        "Reviewer's Organisation",
         "",
         "text",
     ),
     FieldDef(
         "reviewer_address",
-        "Address",
+        "Reviewer's Address",
         "",
         "text",
     ),
@@ -225,7 +225,7 @@ class GeneralInfo(ScrollableForm):
             item = self.form.itemAt(i, QFormLayout.SpanningRole)
             if item and item.widget():
                 w = item.widget()
-                if isinstance(w, QLabel) and "Assessing Organization" in w.text():
+                if isinstance(w, QLabel) and "Assessing Organisation" in w.text():
                     self.form.takeRow(i)
                     header_row = QWidget()
                     lay = QHBoxLayout(header_row)

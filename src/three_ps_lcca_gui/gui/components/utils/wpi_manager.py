@@ -78,6 +78,7 @@ class WPIProfile:
     remark: str
     hash: str
     data: dict
+    is_shared: bool = False
     integrity: IntegrityState = field(default=IntegrityState.MISSING, init=False)
 
     def __post_init__(self):
@@ -107,6 +108,7 @@ class WPIProfile:
                 "is_custom": self.is_custom,
                 "remark": self.remark,
                 "hash": self.hash,
+                "is_shared": self.is_shared,
             },
             "data": self.data,
         }
@@ -121,6 +123,7 @@ class WPIProfile:
             is_custom=m.get("is_custom", True),
             remark=m.get("remark", ""),
             hash=m.get("hash", ""),
+            is_shared=m.get("is_shared", False),
             data=d["data"],
         )
 
@@ -134,6 +137,7 @@ class WPIProfile:
             remark=f"Derived from '{self.name}'",
             hash="",
             data=json.loads(json.dumps(self.data)),  # deep copy
+            is_shared=self.is_shared,
         )
         copy.stamp_hash()
         return copy

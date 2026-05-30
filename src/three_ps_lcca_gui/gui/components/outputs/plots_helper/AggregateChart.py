@@ -18,16 +18,11 @@ from matplotlib import font_manager as _fm
 matplotlib.use("QtAgg")
 
 try:
-    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 except ImportError:
-    from matplotlib.backends.backend_qt import FigureCanvasQTAgg, NavigationToolbar2QT
+    from matplotlib.backends.backend_qt import FigureCanvasQTAgg
 
-class _ChartToolbar(NavigationToolbar2QT):
-    toolitems = [t for t in NavigationToolbar2QT.toolitems
-                 if t[0] not in ("Subplots", "Customize")]
-    def set_message(self, s): pass
-
-from PySide6.QtCore import QEvent, QObject, QSize, Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QApplication,
@@ -54,16 +49,10 @@ from three_ps_lcca_gui.gui.components.utils.display_format import fmt_currency
 from ..helper_functions.lifecycle_summary import compute_all_summaries
 from ..helper_functions.ratio_helper import format_ratio_string
 from ..helper_functions.lcc_colors import COLORS as LCC_COLORS
+from .plot_utils import register_ubuntu_fonts, WheelForwarder, ChartToolbar, currency_note
 
 # ── Register Ubuntu fonts ────────────────────────────────────────────────────
-_UBUNTU_FONT_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "assets", "themes", "Ubuntu_font")
-)
-for _ttf in ["Ubuntu-Light.ttf", "Ubuntu-Regular.ttf", "Ubuntu-Medium.ttf", "Ubuntu-Bold.ttf"]:
-    _path = os.path.join(_UBUNTU_FONT_DIR, _ttf)
-    if os.path.exists(_path):
-        _fm.fontManager.addfont(_path)
-
+register_ubuntu_fonts()
 matplotlib.rcParams["font.family"] = FONT_FAMILY
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -83,28 +72,8 @@ PILLAR_COLORS = {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# WHEEL FORWARDER
-# ─────────────────────────────────────────────────────────────────────────────
-
-class WheelForwarder(QObject):
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Wheel:
-            parent = obj.parent()
-            while parent is not None:
-                if isinstance(parent, QScrollArea):
-                    QApplication.sendEvent(parent.verticalScrollBar(), event)
-                    return True
-                parent = parent.parent()
-        return False
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # DATA HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
-
-def _currency_note(currency: str) -> str:
-    return f"All values in {currency}"
-
 
 def _build_stage_data(results: dict) -> list:
     """[(label, raw_value, color), ...]- one entry per stage."""
@@ -164,11 +133,26 @@ class _BasePlotter:
         self.fig.patch.set_alpha(0.0)
         self.ax = self.fig.add_subplot(111)
         self.ax.set_facecolor("none")
-        self.fig.subplots_adjust(left=0.1, right=0.75, bottom=0.15, top=0.9)
+        self.fig.subplots_adjust(left=0.18, right=0.75, bottom=0.15, top=0.9)
         self.fig.canvas.mpl_connect("motion_notify_event", self._hover)
 
     def _hover(self, event):
-        pass
+        if event.inaxes != self.ax or not hasattr(self, "annot"):
+            return
+        
+        info = self._get_hover_info(event)
+        if info:
+            text, xy = info
+            self.annot.set_text(text)
+            self.annot.xy = xy
+            self.annot.set_visible(True)
+        else:
+            self.annot.set_visible(False)
+        self.fig.canvas.draw_idle()
+
+    def _get_hover_info(self, event):
+        """To be implemented by subclasses. Returns (text, xy) or None."""
+        return None
 
     def _setup_spines(self, tc):
         for s in self.ax.spines.values():
@@ -224,23 +208,17 @@ class StageBarPlotter(_BasePlotter):
         self.colors     = [d[2] for d in data]
         self._patches: list = []
 
-    def _hover(self, event):
-        if event.inaxes != self.ax or not self._patches:
-            return
-        found = False
+    def _get_hover_info(self, event):
+        if not self._patches:
+            return None
         for i, p in enumerate(self._patches):
             if p is not None and p.contains(event)[0]:
-                self.annot.set_text(
+                text = (
                     f"{self.labels[i]}\n"
                     f"{fmt_currency(self.raw_values[i], self.currency, decimals=0, style='short')}"
                 )
-                self.annot.xy = (event.xdata, event.ydata)
-                self.annot.set_visible(True)
-                found = True
-                break
-        if not found:
-            self.annot.set_visible(False)
-        self.fig.canvas.draw_idle()
+                return text, (event.xdata, event.ydata)
+        return None
 
     def setup_plot(self):
         tc = get_token("text")
@@ -264,7 +242,7 @@ class StageBarPlotter(_BasePlotter):
                     fmt_currency(raw, self.currency, decimals=0, style="short"),
                     ha="center", va="top", fontsize=8, fontweight="bold", color=tc)
 
-        self._setup_axes_style(tc, gc, x, self.labels, "Total Cost")
+        self._setup_axes_style(tc, gc, x, self.labels, "Cost")
         self._setup_y_formatter()
         if self.values:
             self.ax.set_ylim(min(0, min_v) - pad, max(0, max_v) + pad)
@@ -273,9 +251,9 @@ class StageBarPlotter(_BasePlotter):
         self._setup_annotation(tc)
         self._make_legend(
             [Patch(facecolor=c, label=l) for l, c in zip(self.labels, self.colors)],
-            "Lifecycle Stages", tc,
+            "Life Cycle Stages", tc,
         )
-        self.fig.text(0.98, 0.97, _currency_note(self.currency),
+        self.fig.text(0.98, 0.97, currency_note(self.currency),
                       ha="right", va="top", fontsize=8,
                       color=get_token("text"), alpha=0.85)
         return self.fig
@@ -300,10 +278,7 @@ class SustainabilityBarPlotter(_BasePlotter):
             for cat in self.categories
         }
 
-    def _hover(self, event):
-        if event.inaxes != self.ax or not hasattr(self, "annot"):
-            return
-        found = False
+    def _get_hover_info(self, event):
         for patch in self.ax.patches:
             if patch.contains(event)[0]:
                 for cat in self.categories:
@@ -313,19 +288,12 @@ class SustainabilityBarPlotter(_BasePlotter):
                         stage_idx = int(round(x_pos / 0.75))
                         if 0 <= stage_idx < len(self.stages):
                             raw = self.raw_values[cat][stage_idx]
-                            self.annot.set_text(
+                            text = (
                                 f"{self.stages[stage_idx]}\n"
                                 f"{cat}: {fmt_currency(raw, self.currency, decimals=0, style='short')}"
                             )
-                            self.annot.xy = (event.xdata, event.ydata)
-                            self.annot.set_visible(True)
-                            found = True
-                            break
-                if found:
-                    break
-        if not found:
-            self.annot.set_visible(False)
-        self.fig.canvas.draw_idle()
+                            return text, (event.xdata, event.ydata)
+        return None
 
     def setup_plot(self):
         tc  = get_token("text")
@@ -387,13 +355,13 @@ class SustainabilityBarPlotter(_BasePlotter):
             env_v = self.values["Environmental"][i] if self.values["Environmental"] else 0.0
             if pos_bottom[i] > 0:
                 if env_v > 0:
-                    # Env label in green just above bar top
-                    self.ax.text(x[i], pos_bottom[i] + pad * 0.06,
-                        f"Env: {fmt_currency(env_v, self.currency, decimals=0, style='short')}",
+                    # Env label just above bar top
+                    self.ax.text(x[i], pos_bottom[i] + pad * 0.05,
+                        f"Environmental: \n{fmt_currency(env_v, self.currency, decimals=0, style='short')}",
                         ha="center", va="bottom", fontsize=7.5, fontweight="bold",
                         color=env_color, clip_on=False)
-                    # Total with clear breathing room above env label
-                    self.ax.text(x[i], pos_bottom[i] + pad * 0.28,
+                    # Total well above env label (single line, no overlap)
+                    self.ax.text(x[i], pos_bottom[i] + pad * 0.42,
                         fmt_currency(pos_bottom[i], self.currency, decimals=0, style="short"),
                         ha="center", va="bottom", fontsize=8, fontweight="bold", color=tc)
                 else:
@@ -405,7 +373,7 @@ class SustainabilityBarPlotter(_BasePlotter):
                     fmt_currency(neg_bottom[i], self.currency, decimals=0, style="short"),
                     ha="center", va="top", fontsize=8, fontweight="bold", color=tc)
 
-        self._setup_axes_style(tc, gc, x, self.stages, "Total Cost")
+        self._setup_axes_style(tc, gc, x, self.stages, "Cost")
         self._setup_y_formatter()
         self.ax.set_ylim(min(0, y_min) - pad * 0.3, max(0, y_max) + pad)
 
@@ -415,7 +383,7 @@ class SustainabilityBarPlotter(_BasePlotter):
             [Patch(facecolor=PILLAR_COLORS[cat], label=cat) for cat in self.categories],
             "Sustainability Pillars", tc,
         )
-        self.fig.text(0.98, 0.97, _currency_note(self.currency),
+        self.fig.text(0.98, 0.97, currency_note(self.currency),
                       ha="right", va="top", fontsize=8,
                       color=get_token("text"), alpha=0.85)
         return self.fig
@@ -432,7 +400,7 @@ def _lbl_color(hex_color: str) -> str:
 
 
 class PillarBreakdownBarPlotter(_BasePlotter):
-    """Bars per pillar (Eco / Env / Soc) stacked by lifecycle stage."""
+    """Bars per pillar (Eco / Env / Soc) stacked by life cycle stage."""
 
     def __init__(self, data: list, currency: str = "INR"):
         super().__init__(currency)
@@ -443,6 +411,25 @@ class PillarBreakdownBarPlotter(_BasePlotter):
         for d in data:
             for name, raw_val in d["pillars"]:
                 self.raw_values[name][d["stage"]] = raw_val
+
+    def _get_hover_info(self, event):
+        for patch in self.ax.patches:
+            if patch.contains(event)[0]:
+                for stage in self.stages:
+                    color = STAGE_COLORS.get(stage, "#AAAAAA")
+                    if np.allclose(patch.get_facecolor()[:3], matplotlib.colors.to_rgb(color)[:3]):
+                        x_pos   = patch.get_x() + patch.get_width() / 2
+                        cat_idx = int(round(x_pos / 0.75))
+                        if 0 <= cat_idx < len(self.categories):
+                            cat = self.categories[cat_idx]
+                            raw = self.raw_values[cat].get(stage, 0.0)
+                            if raw != 0.0:
+                                text = (
+                                    f"{cat}\n"
+                                    f"{stage}: {fmt_currency(raw, self.currency, decimals=0, style='short')}"
+                                )
+                                return text, (event.xdata, event.ydata)
+        return None
 
     def setup_plot(self):
         tc  = get_token("text")
@@ -459,7 +446,7 @@ class PillarBreakdownBarPlotter(_BasePlotter):
         est_range   = max(total_pos_per_cat) if total_pos_per_cat else 1.0
         min_label_h = est_range * 0.06
 
-        # missed[i] = [(abbrev, formatted_value, color), ...] — only used if no inside labels at all
+        # missed[i] = [(abbrev, formatted_value, color), ...] - only used if no inside labels at all
         missed:        dict[int, list] = {i: [] for i in range(len(self.categories))}
         inside_count:  dict[int, int]  = {i: 0  for i in range(len(self.categories))}
 
@@ -542,16 +529,16 @@ class PillarBreakdownBarPlotter(_BasePlotter):
                 clip_on=False,
             )
 
-        self._setup_axes_style(tc, gc, x, self.categories, "Total Cost")
+        self._setup_axes_style(tc, gc, x, self.categories, "Cost")
         self._setup_y_formatter()
         self.ax.set_ylim(min(0, y_min) - pad, max(0, y_max) + pad)
         self._setup_spines(tc)
         self._setup_annotation(tc)
         self._make_legend(
             [Patch(facecolor=STAGE_COLORS.get(st, "#AAAAAA"), label=st) for st in self.stages],
-            "Lifecycle Stages", tc,
+            "Life Cycle Stages", tc,
         )
-        self.fig.text(0.98, 0.97, _currency_note(self.currency),
+        self.fig.text(0.98, 0.97, currency_note(self.currency),
                       ha="right", va="top", fontsize=8,
                       color=get_token("text"), alpha=0.85)
         return self.fig
@@ -608,15 +595,6 @@ class AggregateChartWidget(QWidget):
         )
         text_v.addWidget(title)
 
-        # desc = QLabel(
-        #     "A comparative analysis of cumulative project impacts across three core lifecycle phases: Initial Construction, Use/Maintenance, and combined Reconstruction/End-of-Life. This visualization illustrates the proportional split between direct capital investments and long-term externalized liabilities."
-        # )
-        # desc.setWordWrap(True)
-        # desc.setAlignment(Qt.AlignCenter)
-        # desc.setFont(_f(FS_BASE))
-        # desc.setStyleSheet(f"color: {get_token('text_secondary')}; border: none; background: transparent;")
-        # text_v.addWidget(desc)
-
         # Ratio box- normalized so smallest = 1
         summary = compute_all_summaries(self._results)
         st      = summary.get("stagewise", {})
@@ -638,12 +616,12 @@ class AggregateChartWidget(QWidget):
         a_use = fmt_currency(v_use, self._currency, decimals=0, style="short", use_short_suffix=True).title()
         a_end = fmt_currency(v_end, self._currency, decimals=0, style="short", use_short_suffix=True).title()
 
-        _sep = f"<span style='color:{get_token('text_disabled')}'>:</span>"
+        _sep = f"<span style='color:{get_token('text_disabled')}'><b>:</b></span>"
 
         ratio_box = QFrame()
         ratio_box.setStyleSheet(
-            f"background-color: {get_token('surface_mid')}; "
-            f"border: 1px solid {get_token('surface_mid')}; "
+            f"background-color: {get_token('surface_mid', 'hover')}; "
+            f"border: 1px solid {get_token('surface_mid', 'focus')}; "
             f"border-radius: {RADIUS_LG}px;"
         )
         ratio_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -727,7 +705,7 @@ class AggregateChartWidget(QWidget):
             c0.setMaximumHeight(420)
             c0.installEventFilter(scroller)
             self._chart_stack.addWidget(c0)
-            self._toolbar_stack.addWidget(_ChartToolbar(c0, self))
+            self._toolbar_stack.addWidget(ChartToolbar(c0, self))
         else:
             lbl = QLabel("Insufficient data.")
             lbl.setAlignment(Qt.AlignCenter)
@@ -745,7 +723,7 @@ class AggregateChartWidget(QWidget):
             c1.setMaximumHeight(420)
             c1.installEventFilter(scroller)
             self._chart_stack.addWidget(c1)
-            self._toolbar_stack.addWidget(_ChartToolbar(c1, self))
+            self._toolbar_stack.addWidget(ChartToolbar(c1, self))
         else:
             lbl = QLabel("Insufficient data.")
             lbl.setAlignment(Qt.AlignCenter)
@@ -771,8 +749,6 @@ class AggregateChartWidget(QWidget):
         chart_cv.addWidget(self._toolbar_stack)
 
         self._card_layout.addWidget(self._chart_cont, 2)
-        # Wide mode: chart on the left
-        self._card_layout.insertWidget(0, self._chart_cont)
 
         self._main_v.addWidget(self.card)
 
@@ -788,7 +764,7 @@ class AggregateChartWidget(QWidget):
             self._text_panel.setMaximumWidth(16777215)
         else:
             self._card_layout.setDirection(QBoxLayout.Direction.LeftToRight)
-            self._card_layout.insertWidget(0, self._chart_cont)
+            self._card_layout.insertWidget(0, self._text_panel)
             self._text_panel.setFixedWidth(350)
 
     def minimumSizeHint(self):

@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QToolTip,
 )
 from PySide6.QtCore import Qt, QSize, QRect, QPoint, QEvent
-from PySide6.QtGui import QPainter, QColor, QPalette
+from PySide6.QtGui import QPainter, QBrush, QColor, QPalette
 from three_ps_lcca_gui.gui.themes import get_token
 
 
@@ -109,8 +109,14 @@ class GroupedHeaderView(QHeaderView):
 
 
 # ---------------------------------------------------------------------------
-# Word-wrap header (no groups) — installed globally on plain QTableWidget/View
+# Word-wrap header (no groups) - installed globally on plain QTableWidget/View
 # ---------------------------------------------------------------------------
+
+def contrast_color(bg: QColor) -> QColor:
+    """Return black or white for readable text on the given background color."""
+    lum = (0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()) / 255
+    return QColor("#000000") if lum > 0.55 else QColor("#ffffff")
+
 
 class WordWrapHeaderView(QHeaderView):
     """Horizontal header that paints column labels with word wrap and left alignment."""
@@ -126,8 +132,6 @@ class WordWrapHeaderView(QHeaderView):
         return QSize(s.width(), max(s.height(), self._MIN_HEIGHT))
 
     def paintSection(self, painter, rect, logical_index):
-        if self._font:
-            painter.setFont(self._font)
         painter.save()
         opt = QStyleOptionHeader()
         self.initStyleOption(opt)
@@ -135,9 +139,19 @@ class WordWrapHeaderView(QHeaderView):
         opt.section = logical_index
         opt.text    = ""
         self.style().drawControl(QStyle.ControlElement.CE_Header, opt, painter, self)
+
+        bg = self.model().headerData(logical_index, self.orientation(), Qt.BackgroundRole)
+        bg_color = bg.color() if isinstance(bg, QBrush) else (bg if isinstance(bg, QColor) else None)
+        if bg_color and bg_color.isValid() and bg_color.alpha() > 0:
+            painter.fillRect(rect.adjusted(0, 0, 0, -2), bg_color)
+            painter.setPen(contrast_color(bg_color))
+        else:
+            painter.setPen(opt.palette.color(QPalette.ButtonText))
+
         text = self.model().headerData(logical_index, self.orientation(), Qt.DisplayRole) or ""
         text_rect = rect.adjusted(6, 4, -6, -4)
-        painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter | Qt.TextWordWrap, str(text))
+        painter.setFont(self._font if self._font else self.font())
+        painter.drawText(text_rect, self.defaultAlignment() | Qt.TextWordWrap, str(text))
         painter.restore()
 
 

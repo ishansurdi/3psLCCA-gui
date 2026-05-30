@@ -68,13 +68,13 @@ FINANCIAL_FIELDS = [
 FINANCIAL_WARN_RULES = {
     "discount_rate": (0.0, 30.0,
                       None,
-                      "Discount rate exceeds 30% - please verify"),
+                      "Discount Rate exceeds 30% - values this high are uncommon; confirm the rate reflects the project's real discount rate (not a nominal rate)"),
     "inflation_rate": (0.0, 25.0,
                        None,
-                       "Inflation rate exceeds 25% - please verify"),
+                       "Inflation Rate exceeds 25% - this is unusually high; confirm it represents the expected annual price increase for the project region"),
     "interest_rate": (0.0, 35.0,
                       None,
-                      "Interest rate exceeds 35% - please verify"),
+                      "Interest Rate exceeds 35% - this is atypically high; verify it reflects the actual borrowing or lending rate applicable to this project"),
 }
 
 SUGGESTED_VALUES = {

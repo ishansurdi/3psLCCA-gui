@@ -92,6 +92,7 @@ RICKE_FIELDS = [
         "Assumptions on future population, GDP, and energy use.",
         "combo",
         options=_SSP_OPTIONS,
+        combo_placeholder="-- Select --",
     ),
     FieldDef(
         "rcp_scenario",
@@ -99,6 +100,7 @@ RICKE_FIELDS = [
         "Representative Concentration Pathway for greenhouse gases.",
         "combo",
         options=_RCP_OPTIONS,
+        combo_placeholder="-- Select --",
     ),
 ]
 CUSTOM_FIELDS = [
@@ -121,7 +123,7 @@ class SocialCost(ScrollableForm):
     
     References:
     - Ricke, K., Drouet, L., Caldeira, K. et al. Country-level social cost of carbon. 
-      Nature Clim Change 8, 895–900 (2018). https://doi.org/10.1038/s41558-018-0282-y
+      Nature Clim Change 8, 895-900 (2018). https://doi.org/10.1038/s41558-018-0282-y
     """
     def __init__(self, controller=None):
         super().__init__(controller=controller, chunk_name=CHUNK)
@@ -638,31 +640,30 @@ class SocialCost(ScrollableForm):
             rcp = data.get("ricke", {}).get("rcp", "")
             if (ssp, rcp) not in _RICKE_SCC_TABLE:
                 errors.append(
-                    f"Invalid SSP/RCP combination: '{ssp}' + '{rcp}' does not exist "
-                    f"in the Ricke et al. table. "
+                    f"Invalid SSP/RCP combination: '{ssp}' + '{rcp}' is not in the Ricke et al. SCC table. "
                     f"Valid pairs: "
                     + ", ".join(f"{s} + {r}" for s, r in _RICKE_SCC_TABLE)
                     + "."
                 )
             elif data.get("ricke", {}).get("usd_to_local_rate", 0.0) == 0.0:
                 warnings.append(
-                    "USD Conversion Rate is 0 - the effective SCC will be 0."
+                    "USD to Local Currency Conversion Rate is 0 - the Ricke et al. social cost of carbon will result in 0 in the local currency; enter the current USD-to-local exchange rate"
                 )
         elif _MODE_NITI in mode:
             cur = data.get("niti", {}).get("currency", "INR")
             if cur != "INR" and data.get("niti", {}).get("inr_to_local_rate", 0.0) == 0.0:
                 warnings.append(
-                    "INR Conversion Rate is 0 - the effective SCC will be 0."
+                    "INR to Local Currency Conversion Rate is 0 - the NITI Aayog social cost of carbon will result in 0 in the local currency; enter the current INR-to-local exchange rate"
                 )
         else:
             scc = data.get("result", {}).get("cost_of_carbon_local", 0.0)
             if scc == 0.0:
                 if _MODE_CUSTOM in mode:
                     warnings.append(
-                        "Social Cost of Carbon is 0 - enter a custom SCC value."
+                        "Social Cost of Carbon is 0 - no carbon pricing will be applied to emissions; enter a positive custom SCC value in the field above"
                     )
                 else:
-                    warnings.append("Social Cost of Carbon is 0.")
+                    warnings.append("Social Cost of Carbon is 0 - the computed SCC for the selected source is 0, so no carbon cost will be applied to emissions; review the selected source or conversion rate")
 
         return {"errors": errors, "warnings": warnings}
 

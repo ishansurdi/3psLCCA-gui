@@ -76,7 +76,7 @@ MAINTENANCE_FIELDS = [
     FieldDef(
         "periodic_maintenance_carbon_cost",
         "Periodic Maintenance Carbon Cost",
-        "[Carbon emission cost of periodic maintenance expressed as a percentage of initial carbon emission cost.]",
+        "[Carbon emissions cost incurred due to periodic maintenance, expressed as a percentage of the initial carbon emissions cost.]",
         "float",
         options=(0.0, 100.0, 3),
         unit="(%)",
@@ -95,7 +95,7 @@ MAINTENANCE_FIELDS = [
         "[Interval between periodic maintenance works (expressed in years).]",
         "int",
         options=(0, 100),
-        unit="(yr)",
+        unit="(year)",
         required=True,
         default=0,
         warn=(
@@ -125,7 +125,7 @@ MAINTENANCE_FIELDS = [
         "[Interval between major inspections (expressed in years).]",
         "int",
         options=(0, 100),
-        unit="(yr)",
+        unit="(year)",
         required=True,
         default=0,
         warn=(
@@ -166,7 +166,7 @@ MAINTENANCE_FIELDS = [
         "[Interval between major repair works (expressed in years).]",
         "int",
         options=(0, 100),
-        unit="(yr)",
+        unit="(year)",
         required=True,
         default=0,
         warn=(
@@ -216,7 +216,7 @@ MAINTENANCE_FIELDS = [
         "[Interval between bearing and expansion joint replacements (expressed in years).]",
         "int",
         options=(0, 100),
-        unit="(yr)",
+        unit="(year)",
         required=True,
         default=0,
         warn=(
