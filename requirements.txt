@@ -8,5 +8,6 @@ openpyxl
 PyYAML
 pylatex
 platformdirs
+pywebview
 -e ./3psLCCA-core
 odfpy

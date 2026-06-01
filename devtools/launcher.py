@@ -187,6 +187,26 @@ def _get_tools() -> list[dict]:
     except ImportError as e:
         tools.append(_error_card("Custom DB Viewer", str(e)))
 
+    # ── Doc Builder ───────────────────────────────────────────────────────────
+    try:
+        from doc_builder_gui import DocBuilderDialog
+        tools.append({
+            "key":    "doc_builder",
+            "icon":   "📄",
+            "name":   "Doc Builder",
+            "desc":   (
+                "Pre-build the glossary docs/ folder into static HTML fragments.\n"
+                "Converts every Markdown file under doc_handler/docs/ to HTML using the "
+                "Python markdown package and writes output to doc_handler/doc_build/. "
+                "The glossary browser loads pre-built HTML directly, skipping runtime "
+                "Markdown parsing for faster page loads. Requires: pip install markdown"
+            ),
+            "accent": _YELLOW,
+            "open":   lambda parent: _open_dialog(DocBuilderDialog, parent),
+        })
+    except ImportError as e:
+        tools.append(_error_card("Doc Builder", str(e)))
+
     # ── File Integrity Checker ─────────────────────────────────────────────
     try:
         from integrity_tool_gui import IntegrityToolDialog

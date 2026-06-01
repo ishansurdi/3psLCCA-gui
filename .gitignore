@@ -105,6 +105,15 @@ Desktop.ini
 *.qrc
 
 # ─────────────────────────────────────────────
+# Doc Builder
+# ─────────────────────────────────────────────
+# Runtime IPC files created by the glossary subprocess
+src/three_ps_lcca_gui/gui/components/utils/doc_handler/.glossary.lock
+src/three_ps_lcca_gui/gui/components/utils/doc_handler/.glossary.nav
+# Devtools npm config (saved per-machine)
+devtools/doc_builder_config.json
+
+# ─────────────────────────────────────────────
 # Local Project Data (optional - adjust if needed)
 # ─────────────────────────────────────────────
 *.sqlite3
@@ -114,3 +123,39 @@ src/three_ps_lcca_gui/gui/components/outputs/suggestion_for_output.md
 # src/three_ps_lcca_gui/gui/assets/themes/arrow_down.svg
 # src/three_ps_lcca_gui/gui/assets/themes/arrow_down_disabled.svg
 src/data/user_db/profile.json
+
+
+
+# ==========================================
+# JavaScript / Node.js
+# ==========================================
+# Dependencies
+node_modules/
+jspm_packages/
+
+# Build and production outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Framework / Testing configs
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.eslintcache
+.stylelintcache
+coverage/
+.nyc_output
