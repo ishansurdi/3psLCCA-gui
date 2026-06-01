@@ -27,7 +27,7 @@ from PySide6.QtGui import QFontMetrics, QPalette, QPixmap, QTextBlockFormat, QTe
 from PySide6.QtWidgets import QApplication, QDialog, QTextBrowser, QVBoxLayout
 
 from three_ps_lcca_gui.gui.themes import get_token, theme_manager
-from three_ps_lcca_gui.gui.theme import FS_LG, FS_SUBHEAD, FS_BASE
+from three_ps_lcca_gui.gui.theme import FS_LG, FS_SUBHEAD, FS_BASE, FS_SM
 
 
 DOCS_DIR = Path(__file__).parent / "docs"
@@ -68,17 +68,8 @@ def _render_latex_svg(expr: str, display: bool = False,
         return None
 
     try:
-        fontsize = FS_BASE
-        _ubuntu_ctx = {
-            'mathtext.fontset': 'custom',
-            'mathtext.rm': 'Ubuntu',
-            'mathtext.it': 'Ubuntu',
-            'mathtext.bf': 'Ubuntu',
-            'mathtext.sf': 'Ubuntu',
-            'mathtext.cal': 'Ubuntu',
-            'mathtext.tt': 'Ubuntu',
-        }
-        with mpl.rc_context(_ubuntu_ctx):
+        fontsize = FS_SM * 0.8
+        with mpl.rc_context({'mathtext.fontset': 'stix'}):
             fig = Figure(figsize=(0.01, 0.01), facecolor="none")
             FigureCanvasSVG(fig)
             # No axes - fig.text tight-bbox clips to the glyph extent only.
@@ -112,8 +103,8 @@ def _svg_to_b64png(svg: str) -> str | None:
         return None
 
     size = renderer.defaultSize()
-    # 3× oversample keeps paths crisp after Qt scales the image down
-    pixmap = QPixmap(size.width() * 3, size.height() * 3)
+    # 6× oversample keeps paths crisp after Qt scales the image down
+    pixmap = QPixmap(size.width() * 4, size.height() * 4)
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
