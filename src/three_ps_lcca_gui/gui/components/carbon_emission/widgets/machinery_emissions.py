@@ -669,18 +669,23 @@ class _DetailedTable(QWidget):
             "ef":     self._cell_float(row, 5),
         }
         dlg = _EditRowDialog(row_data, parent=self)
-        if dlg.exec() == QDialog.Accepted:
-            v = dlg.get_values()
-            _L = Qt.AlignLeft | Qt.AlignVCenter
-            _R = Qt.AlignRight | Qt.AlignVCenter
-            self._table.blockSignals(True)
-            self._table.item(row, 0).setText(v["name"])
-            self._table.item(row, 1).setText(v["source"])
-            self._table.item(row, 2).setText(str(v["rate"]))
-            self._table.item(row, 3).setText(str(v["hrs"]))
-            self._table.item(row, 4).setText(str(v["days"]))
-            self._table.item(row, 5).setText(str(v["ef"]))
-            self._table.blockSignals(False)
+        if dlg.exec() != QDialog.Accepted:
+            return
+        v = dlg.get_values()
+        self._table.blockSignals(True)
+        for col, text in (
+            (0, v["name"]),
+            (1, v["source"]),
+            (2, fmt(v["rate"])),
+            (3, fmt(v["hrs"])),
+            (4, str(v["days"])),
+            (5, fmt(v["ef"])),
+        ):
+            item = self._table.item(row, col)
+            if item:
+                item.setText(text)
+        self._table.blockSignals(False)
+        if v != row_data:
             self._recalculate()
 
     def _delete_row(self, row_idx: int):
@@ -992,8 +997,12 @@ class MachineryEmissions(ScrollableForm):
         mode = self._current_mode()
         if mode == "detailed":
             total = self._detailed_table.get_total()
-            # Re-fit the stack after every row change so no blank space lingers.
-            self._shrink_stack_to_current()
+            # Only re-fit the stack when row count changes; skipping it on plain
+            # value edits prevents a spurious resizeEvent → column-width recalc.
+            new_count = self._detailed_table._table.rowCount()
+            if new_count != getattr(self, "_last_row_count", -1):
+                self._last_row_count = new_count
+                self._shrink_stack_to_current()
         else:
             total = self._lumpsum_elec_total() + self._lumpsum_fuel_total()
             self._lbl_lumpsum_total.setText(f"Lump Sum Subtotal: {fmt_comma(total)} kg CO₂e")
