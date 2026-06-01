@@ -146,6 +146,7 @@ def get_status_config(status: str) -> dict:
         "ok": {"label": "OK", "token": "success"},
         "crashed": {"label": "Needs recovery", "token": "danger"},
         "locked": {"label": "Open", "token": "info"},
+        "in_use": {"label": "Open", "token": "text_disabled"},
         "corrupted": {"label": "Corrupted", "token": "warning"},
     }
     cfg = configs.get(status, configs["ok"])
@@ -580,25 +581,40 @@ class _GridCardDelegate(QStyledItemDelegate):
                 "⋮",
             )
 
-            if is_hov:
+            is_locked = status == "locked"
+            is_in_use = status == "in_use"
+            is_open_anywhere = is_locked or is_in_use
+            show_pill = is_hov or is_open_anywhere
+
+            # ── Star slot ──────────────────────────────────────────────────
+            # We always keep the star in a fixed position (R-58) if pinned
+            # or hovered to prevent it from jumping.
+            show_star = is_hov or is_pinned
+            if show_star:
                 star_rect   = QRect(R - 58, rect.top(), 26, card_h)
-                star_hov    = star_rect.contains(self._mouse_pos)
+                star_hov    = is_hov and star_rect.contains(self._mouse_pos)
                 show_filled = is_pinned or star_hov
                 star_col    = QColor(get_token("primary"))
                 star_col.setAlpha(220 if show_filled else 130)
                 painter.setPen(star_col)
-                painter.setFont(_f(FS_MD + 1, FW_NORMAL))
+                painter.setFont(_f(FS_MD + 1 if is_hov else FS_MD, FW_NORMAL))
                 painter.drawText(star_rect, Qt.AlignCenter,
                                  "★" if show_filled else "☆")
 
-                pill_label = "Return ›" if status == "locked" else "Open"
-                pill_w = 64 if status == "locked" else 56
+            if show_pill:
+                if is_open_anywhere:
+                    pill_label = "Return ›"
+                    pill_w = 64
+                else:
+                    pill_label = "Open"
+                    pill_w = 56
+
                 pill_h = 22
                 pill_x = R - 58 - SP2 - pill_w
                 pill_y = rect.top() + (card_h - pill_h) // 2
                 pill_rect = QRect(pill_x, pill_y, pill_w, pill_h)
                 prim = QColor(get_token("primary"))
-                pill_hov = pill_rect.contains(self._mouse_pos)
+                pill_hov = is_hov and pill_rect.contains(self._mouse_pos)
                 if pill_hov:
                     painter.setBrush(QBrush(prim))
                     painter.setPen(Qt.NoPen)
@@ -613,7 +629,8 @@ class _GridCardDelegate(QStyledItemDelegate):
                 painter.drawText(pill_rect, Qt.AlignCenter, pill_label)
                 right_edge = pill_x - SP2
             else:
-                right_edge = R - 32
+                right_edge = (R - 58 - SP2) if show_star else (R - 32)
+
             dot_token = {
                 "locked": "info",
                 "crashed": "danger",
@@ -629,18 +646,8 @@ class _GridCardDelegate(QStyledItemDelegate):
                 )
                 right_edge -= 16
 
-            if is_pinned:
-                star_c = QColor(get_token("primary"))
-                star_c.setAlpha(220)
-                painter.setPen(star_c)
-                painter.setFont(_f(FS_MD, FW_NORMAL))
-                # Shift a bit more to accommodate the glyph width vs a 5px dot
-                painter.drawText(
-                    QRect(right_edge - 24, rect.top(), 20, card_h),
-                    Qt.AlignCenter,
-                    "\u2605"
-                )
-                right_edge -= 28
+            if is_pinned and not is_hov:
+                pass # Handled by fixed slot above
 
         # ── Title ──────────────────────────────────────────────────────────
         painter.setFont(_f(FS_LG, FW_MEDIUM))
@@ -1497,13 +1504,18 @@ class HomePage(QWidget):
             win.project_id: win for win in self.manager.windows if win.project_id is not None}
         for pid, win in open_windows.items():
             if pid in by_id:
-                by_id[pid]["status"] = "locked"
+                # Differentiate between "Open in THIS window" and "Open in OTHER window"
+                if pid == self._active_project_id:
+                    by_id[pid]["status"] = "locked"
+                else:
+                    by_id[pid]["status"] = "in_use"
+
                 mem_name = win.controller.active_display_name
                 if mem_name:
                     by_id[pid]["display_name"] = mem_name
         for pid, proj in by_id.items():
             if proj.get("status") == "locked" and pid not in open_windows:
-                proj["status"] = "ok"
+                proj["status"] = "in_use"
         recent_map = {r["project_id"]: r for r in sm.get_recent()}
         for pid, rdata in recent_map.items():
             if pid in by_id:
