@@ -1,18 +1,15 @@
 r"""
 gui/components/utils/doc_handler/__init__.py
 
-Singleton in-app Markdown doc viewer built on QTextBrowser.
-Zoom: Ctrl + scroll wheel.
-
-LaTeX math support
-------------------
-Use $...$ for inline and $$...$$ for display math in .md files.
-Expressions are rendered via matplotlib.mathtext (no system LaTeX required).
-If matplotlib is not installed the raw delimiters are shown as-is.
+Markdown rendering backend shared by the glossary browser.
+LaTeX math ($...$ inline, $$...$$ display) is rendered via matplotlib.mathtext.
 
 Usage:
     from ..utils.doc_handler import open_doc
     open_doc(["Bridge_data", "Wind_Speed"])
+
+    from ..utils.doc_handler import open_glossary
+    open_glossary()
 """
 
 from __future__ import annotations
@@ -23,18 +20,14 @@ import re
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QFontMetrics, QPalette, QPixmap, QTextBlockFormat, QTextCharFormat, QTextCursor, QTextDocument, QTextImageFormat
-from PySide6.QtWidgets import QApplication, QDialog, QTextBrowser, QVBoxLayout
+from PySide6.QtGui import QFontMetrics, QPalette, QPixmap, QTextCharFormat, QTextDocument, QTextImageFormat
+from PySide6.QtWidgets import QApplication, QTextBrowser
 
-from three_ps_lcca_gui.gui.themes import get_token, theme_manager
-from three_ps_lcca_gui.gui.theme import FS_LG, FS_SUBHEAD, FS_BASE, FS_SM
+from three_ps_lcca_gui.gui.themes import get_token
+from three_ps_lcca_gui.gui.theme import FS_SM
 
 
 DOCS_DIR = Path(__file__).parent / "docs"
-
-_dialog:  QDialog      | None = None
-_browser: QTextBrowser | None = None
-_content: str                 = ""
 
 _REF_RE = re.compile(
     r'^\[([^\]]+)\]:\s*<?(data:image/[^>\s][^>]*?)>?\s*$',
@@ -119,7 +112,7 @@ def _svg_to_b64png(svg: str) -> str | None:
 
 
 def _preprocess_latex(content: str, text_color: str = "") -> str:
-    """Replace \\[...\\] and \\(...\\) blocks with embedded PNG image references."""
+    """Replace $...$ and $$...$$ blocks with embedded PNG image references."""
     if not text_color:
         text_color = get_token("text") or "#000000"
 
@@ -243,89 +236,13 @@ def _render(browser: QTextBrowser, content: str) -> None:
             cur = doc.find(tok)
 
 
-def open_doc(slug_parts: list[str], parent=None) -> None:
-    global _content
+def open_glossary(slug_parts: list[str] | None = None, parent=None) -> None:
+    """Open the glossary browser, optionally jumping to a specific article."""
+    from .glossary import open_glossary as _open_glossary
+    _open_glossary(slug_parts, parent)
 
+
+def open_doc(slug_parts: list[str], parent=None) -> None:
     if not slug_parts:
         return
-
-    md_path = DOCS_DIR.joinpath(*slug_parts).with_suffix(".md")
-    if not md_path.exists():
-        fallback = DOCS_DIR / "404.md"
-        if not fallback.exists():
-            return
-        md_path = fallback
-
-    _content = md_path.read_text(encoding="utf-8")
-    h1 = re.search(r'^#\s+(.+)', _content, re.MULTILINE)
-    title = h1.group(1).strip() if h1 else md_path.stem.replace("_", " ").replace("-", " ").title()
-    _show(title, parent)
-
-
-def close_doc() -> None:
-    global _dialog
-    if _dialog is not None:
-        _dialog.close()
-
-
-def _show(title: str, parent=None) -> None:
-    global _dialog, _browser
-
-    if QApplication.instance() is None:
-        return
-
-    if _dialog is None:
-        _dialog = QDialog(parent)
-        _dialog.setWindowFlags(Qt.Window)
-        _dialog.resize(860, 640)
-        _dialog.setAttribute(Qt.WA_DeleteOnClose, False)
-
-        layout = QVBoxLayout(_dialog)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        _browser = QTextBrowser()
-        _browser.setObjectName("_doc_browser")
-        _browser.setOpenExternalLinks(True)
-        _browser.setFrameShape(QTextBrowser.Shape.NoFrame)
-        layout.addWidget(_browser)
-
-        _browser._zoom = 0
-
-        def _rerender():
-            sb  = _browser.verticalScrollBar()
-            pos = sb.value()
-            _render(_browser, _content)
-            sb.setValue(pos)
-
-        def _zoom_in():
-            _browser.zoomIn(2); _browser._zoom += 2; _rerender()
-
-        def _zoom_out():
-            _browser.zoomOut(2); _browser._zoom -= 2; _rerender()
-
-        def _wheel(ev):
-            if ev.modifiers() & Qt.ControlModifier:
-                _zoom_in() if ev.angleDelta().y() > 0 else _zoom_out()
-            else:
-                QTextBrowser.wheelEvent(_browser, ev)
-
-        _browser.wheelEvent = _wheel
-
-        theme_manager().theme_changed.connect(_rerender)
-
-    elif parent is not None:
-        _dialog.setParent(parent)
-        _dialog.setWindowFlags(Qt.Window)
-
-    # reset zoom on new doc
-    z = getattr(_browser, "_zoom", 0)
-    if z > 0:  _browser.zoomOut(z)
-    elif z < 0: _browser.zoomIn(-z)
-    _browser._zoom = 0
-
-    _render(_browser, _content)
-
-    _dialog.setWindowTitle(title)
-    _dialog.show()
-    _dialog.raise_()
-    _dialog.activateWindow()
+    open_glossary(slug_parts, parent)

@@ -52,6 +52,7 @@ from three_ps_lcca_gui.gui.components.recycling.main import Recycling
 from three_ps_lcca_gui.gui.components.demolition.main import Demolition
 from three_ps_lcca_gui.gui.components.utils.validation_helpers import set_lock_tooltip_target
 from three_ps_lcca_gui.gui.components.utils.definitions import set_active_unit_system
+from three_ps_lcca_gui.gui.components.utils.doc_handler import open_glossary
 from three_ps_lcca_gui.core.safechunk_engine import SafeChunkEngine
 from PySide6.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QLabel, QPushButton
 from three_ps_lcca_gui.gui.components.rollback_dialog import RollbackDialog
@@ -464,6 +465,12 @@ class ProjectWindow(QMainWindow):
 
         # ── Help menu ─────────────────────────────────────────────────────
         self.menuHelp = QMenu("&Help", self.menubar)
+
+        action_glossary = QAction("Glossary", self)
+        action_glossary.triggered.connect(lambda: open_glossary(parent=self))
+        self.menuHelp.addAction(action_glossary)
+
+        self.menuHelp.addSeparator()
 
         action_contact = QAction("Contact Us", self)
         action_contact.triggered.connect(
