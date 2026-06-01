@@ -88,6 +88,7 @@ from ...utils.table_widgets import (
 )
 from ...utils.definitions import STRUCTURE_CHUNKS, UNIT_DIMENSION, UNIT_DISPLAY
 from ...utils.display_format import fmt, fmt_comma, DECIMAL_PLACES
+from ...utils.doc_link import doc_inline, doc_label
 
 
 class _TransportTable(TooltipTableMixin, QTableWidget):
@@ -250,7 +251,7 @@ class TransportDialog(QDialog):
         self.capacity_in.setRange(0, 1000)
         self.capacity_in.setDecimals(2)
         self.capacity_in.setMinimumHeight(34)
-        self.capacity_in.valueChanged.connect(self._on_capacity_changed)
+        self.capacity_in.valueChanged.connect(self._update_summary)
         vg.addWidget(_field("PAYLOAD CAPACITY (t)", self.capacity_in), 0, 1)
 
         self.gross_in = QDoubleSpinBox()
@@ -267,13 +268,17 @@ class TransportDialog(QDialog):
         self.ef_in.valueChanged.connect(self._update_summary)
         vg.addWidget(_field("EMISSION FACTOR (kgCO₂e / t·km)", self.ef_in), 1, 1)
 
+        ref_lbl = doc_label(
+            f'Reference vehicle classes &amp; definitions &nbsp;'
+            f'{doc_inline(["Carbon_emissions_data", "Transport_vehicle_reference"])}',
+            word_wrap=False,
+        )
+        ref_lbl.setStyleSheet("font-size: 11px; color: gray; background: transparent;")
+        vehicle_frame.layout().addWidget(ref_lbl)
+
         outer.addWidget(vehicle_frame, 3)
 
         layout.addWidget(container)
-
-    def _on_capacity_changed(self):
-        self.gross_in.setMinimum(self.capacity_in.value())
-        self._update_summary()
 
     # ── Main area: material picker ────────────────────────────────────
 
@@ -656,12 +661,60 @@ class TransportDialog(QDialog):
 
     # ── Validation & save ─────────────────────────────────────────────
 
+    def _highlight_error(self, widget):
+        widget.setStyleSheet(f"border: 1.5px solid {get_token('danger')};")
+        widget.setFocus()
+        if isinstance(widget, QDoubleSpinBox):
+            widget.valueChanged.connect(
+                lambda: self._clear_highlight(widget),
+                Qt.ConnectionType.SingleShotConnection,
+            )
+        elif isinstance(widget, QLineEdit):
+            widget.textChanged.connect(
+                lambda: self._clear_highlight(widget),
+                Qt.ConnectionType.SingleShotConnection,
+            )
+
+    def _clear_highlight(self, widget):
+        widget.setStyleSheet("")
+
     def _on_save(self):
-        if self.dist_in.value() <= 0:
-            QMessageBox.critical(self, "Error", "Distance must be greater than 0 km.")
+        dist = self.dist_in.value()
+        cap = self.capacity_in.value()
+        gross = self.gross_in.value()
+        ef = self.ef_in.value()
+
+        if dist <= 0:
+            QMessageBox.critical(self, "Error", "One-way distance must be greater than 0 km.")
+            self._highlight_error(self.dist_in)
             return
-        if not self._get_selected():
+        if cap <= 0:
+            QMessageBox.critical(self, "Error", "Payload capacity must be greater than 0 t.")
+            self._highlight_error(self.capacity_in)
+            return
+        if ef <= 0:
+            QMessageBox.critical(self, "Error", "Emission factor must be greater than 0 kgCO₂e / t·km.")
+            self._highlight_error(self.ef_in)
+            return
+        if gross <= 0:
+            QMessageBox.critical(self, "Error", "Gross weight (loaded) must be greater than 0 t.")
+            self._highlight_error(self.gross_in)
+            return
+        if gross < cap:
+            QMessageBox.critical(self, "Error", "Gross weight (loaded) must be ≥ payload capacity.")
+            self._highlight_error(self.gross_in)
+            return
+        selected = self._get_selected()
+        if not selected:
             QMessageBox.critical(self, "Error", "Select at least one material.")
+            return
+        total_cargo_kg = sum(m["kg_factor"] * m["qty"] for m in selected)
+        if total_cargo_kg <= 0:
+            QMessageBox.critical(
+                self, "Error",
+                "All selected materials have zero quantity.\n"
+                "At least one material must have a non-zero quantity to calculate trips and emissions."
+            )
             return
         self.accept()
 
@@ -695,7 +748,6 @@ class TransportDialog(QDialog):
         for w in (self.capacity_in, self.gross_in, self.ef_in):
             w.blockSignals(True)
         self.capacity_in.setValue(v.get("capacity", 20.0))
-        self.gross_in.setMinimum(self.capacity_in.value())
         self.gross_in.setValue(v.get("gross_weight", 32.0))
         self.ef_in.setValue(v.get("emission_factor", 0.5))
         for w in (self.capacity_in, self.gross_in, self.ef_in):
