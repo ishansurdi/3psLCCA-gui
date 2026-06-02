@@ -23,8 +23,6 @@ conda config --add channels conda-forge
 conda config --add channels osdag
 conda config --add channels zehen-249
 
-# Set channel priority to prevent conflicts
-conda config --set channel_priority strict
 ```
 
 ### 3. Setup and Run
