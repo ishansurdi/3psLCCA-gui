@@ -169,11 +169,11 @@ TRAFFIC_FIELDS = [
     ),
     FieldDef(
         "hourly_capacity",
-        "Hourly Capacity",
+        "Road Hourly Capacity",
         "",
         "int",
         (0, 99999),
-        unit="(veh/hr)",
+        unit="(PCU/hr)",
         required=True,
         doc_slug=["Traffic_data", "Hourly_capacity"],
     ),
@@ -1198,7 +1198,7 @@ class TrafficData(ScrollableForm):
                             f"Passenger Weight Ratio (PWR) for {_veh_label.get(key, key)} must be greater than 0 when that vehicle type has traffic - enter a valid PWR value or set its Vehicles per Day to 0"
                         )
 
-                # Hourly capacity must be > 0
+                # Road Hourly Capacity must be > 0
                 if hasattr(self, "hourly_capacity") and self.hourly_capacity.value() == 0:
                     errors.append("Hourly Road Capacity cannot be 0 - enter the maximum number of vehicles the road can carry per hour")
                     self.hourly_capacity.setProperty("validationState", "error")
