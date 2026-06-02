@@ -544,28 +544,32 @@ def record_to_material_dict(record: dict) -> dict:
         cf = 1.0
 
     return {
-        # ── Core ──────────────────────────────────────────────────────────
-        "id": record.get("id", "").strip(),  # Added: Required for OsBridgeLCCA
-        "material_name": record.get("name", "").strip(),
-        "quantity": _float("quantity"),
-        "unit": raw_unit,
-        "unit_to_si": unit_to_si,
-        "rate": _float("rate"),
-        "rate_source": record.get("rate_src", "").strip(),
-        # ── Carbon ────────────────────────────────────────────────────────
-        "carbon_emission": carbon_ef,
-        "carbon_unit": f"kgCO₂e/{carbon_denom}" if carbon_denom else "",
-        "conversion_factor": cf,
-        # ── Recyclability ─────────────────────────────────────────────────
-        "scrap_rate": scrap,
-        "post_demolition_recovery_percentage": recovery,
-        "is_recyclable": has_recycle,
-        # ── Metadata Tags ─────────────────────────────────────────────────
-        # ── Private flags consumed by add_material() ──────────────────────
-        "_db_original": build_excel_snapshot(record),
-        "_included_in_carbon_emission": has_carbon,
-        "_included_in_recyclability": has_recycle,
-        "_is_excel_import": True,
+        "values": {
+            "id": record.get("id", "").strip(),
+            "material_name": record.get("name", "").strip(),
+            "quantity": _float("quantity"),
+            "unit": raw_unit,
+            "unit_to_si": unit_to_si,
+            "rate": _float("rate"),
+            "rate_source": record.get("rate_src", "").strip(),
+            "carbon_emission": carbon_ef,
+            "carbon_unit": f"kgCO₂e/{carbon_denom}" if carbon_denom else "",
+            "carbon_emission_src": record.get("carbon_emission_src", "").strip(),
+            "conversion_factor": cf,
+            "scrap_rate": scrap,
+            "post_demolition_recovery_percentage": recovery,
+            "is_recyclable": has_recycle,
+        },
+        "meta": {
+            "source": "excel",
+            "source_db_key": "",
+            "db_original": build_excel_snapshot(record),
+        },
+        "state": {
+            "included_in_carbon_emission": has_carbon,
+            "included_in_recyclability": has_recycle,
+        },
+        # Top-level routing/control flags — consumed before add_material() is called
         "_force_overwrite": bool(record.get("_duplicate_name", False)),
         "_component": record.get("component", "").strip(),
         "_chunk_key": record.get("_chunk_key", FALLBACK_CHUNK),
@@ -588,7 +592,9 @@ def _validate_for_engine(
     Enforces the EXACT rules from MaterialDialog.validate_and_accept()
     and StructureManagerWidget.open_dialog(). No more, no less.
 
-    Mutates values_dict in-place for auto-exclusions.
+    *values_dict* is the structured dict from record_to_material_dict()
+    ({values, meta, state}).  Mutates values_dict["state"] in-place for
+    auto-exclusions.
     Returns a list of block reasons - empty = safe to call add_material().
 
     HARD BLOCKS (row skipped entirely):
@@ -597,38 +603,32 @@ def _validate_for_engine(
       3. duplicate material_name in component - open_dialog warning block
 
     AUTO-EXCLUSIONS (row imports, flag silently set to False):
-      4. _included_in_carbon_emission → False if EF <= 0 or CF <= 0
-         (dialog warns user and unchecks; we auto-uncheck silently)
-      5. _included_in_recyclability   → False if scrap <= 0 AND recovery <= 0
-         (dialog warns user and unchecks; we auto-uncheck silently)
-
-    CLEANUP (handled by add_material itself):
-      add_material pops all private keys: _included_in_carbon_emission,
-      _included_in_recyclability, _db_original, _from_sor,
-      _sor_db_key, _is_customized, _is_excel_import.
+      4. state.included_in_carbon_emission → False if EF <= 0 or CF <= 0
+      5. state.included_in_recyclability   → False if scrap <= 0 AND recovery <= 0
     """
     reasons: list[str] = []
+    v = values_dict.get("values", {})
 
     # ── 1. material_name ─────────────────────────────────────────────────────
-    name = str(values_dict.get("material_name", "")).strip()
+    name = str(v.get("material_name", "")).strip()
     if not name:
         reasons.append("material_name is empty")
 
     # ── 2. quantity ──────────────────────────────────────────────────────────
     try:
-        qty = float(values_dict.get("quantity", 0) or 0)
+        qty = float(v.get("quantity", 0) or 0)
     except (ValueError, TypeError):
         qty = 0.0
     if qty <= 0:
         reasons.append(f"quantity must be > 0 (got {qty})")
 
     # ── 2b. unit ─────────────────────────────────────────────────────────────
-    unit = str(values_dict.get("unit", "")).strip()
+    unit = str(v.get("unit", "")).strip()
     if not unit:
         reasons.append("unit is empty - every material must have a unit")
 
     # ── 2c. rate ─────────────────────────────────────────────────────────────
-    rate_raw = values_dict.get("rate", None)
+    rate_raw = v.get("rate", None)
     try:
         rate = float(rate_raw) if rate_raw not in (None, "") else 0.0
     except (ValueError, TypeError):
@@ -660,33 +660,33 @@ def _validate_for_engine(
     if reasons:
         return reasons
 
+    state = values_dict.setdefault("state", {})
+
     # ── 4. carbon auto-exclusion ─────────────────────────────────────────────
-    if values_dict.get("_included_in_carbon_emission"):
+    if state.get("included_in_carbon_emission") is True:
         try:
-            ef = float(values_dict.get("carbon_emission", 0) or 0)
+            ef = float(v.get("carbon_emission", 0) or 0)
         except (ValueError, TypeError):
             ef = 0.0
         try:
-            cf = float(values_dict.get("conversion_factor", 0) or 0)
+            cf = float(v.get("conversion_factor", 0) or 0)
         except (ValueError, TypeError):
             cf = 0.0
         if ef <= 0 or cf <= 0:
-            values_dict["_included_in_carbon_emission"] = False
+            state["included_in_carbon_emission"] = False
 
     # ── 5. recyclability auto-exclusion ──────────────────────────────────────
-    if values_dict.get("_included_in_recyclability"):
+    if state.get("included_in_recyclability"):
         try:
-            scrap = float(values_dict.get("scrap_rate", 0) or 0)
+            scrap = float(v.get("scrap_rate", 0) or 0)
         except (ValueError, TypeError):
             scrap = 0.0
         try:
-            recovery = float(
-                values_dict.get("post_demolition_recovery_percentage", 0) or 0
-            )
+            recovery = float(v.get("post_demolition_recovery_percentage", 0) or 0)
         except (ValueError, TypeError):
             recovery = 0.0
         if scrap <= 0 and recovery <= 0:
-            values_dict["_included_in_recyclability"] = False
+            state["included_in_recyclability"] = False
 
     return reasons
 
@@ -1924,7 +1924,7 @@ def _emit_result(
             _batch_seen.setdefault(batch_key, set())
 
             for row_idx, values_dict in enumerate(rows):
-                mat_name = values_dict.get("material_name", f"row {row_idx + 1}")
+                mat_name = values_dict.get("values", {}).get("material_name", f"row {row_idx + 1}")
                 try:
                     # --- Within-batch duplicate check ------------------------
                     if mat_name.strip().lower() in _batch_seen[batch_key]:
@@ -1955,27 +1955,11 @@ def _emit_result(
                     # --- Write to engine -------------------------------------
                     if force_overwrite:
                         # Update the existing entry in-place (overwrite)
+                        included_carbon = values_dict["state"].get("included_in_carbon_emission", False)
+                        included_recycle = values_dict["state"].get("included_in_recyclability", False)
 
-                        included_carbon = values_dict.pop(
-                            "_included_in_carbon_emission", True
-                        )
-                        included_recycle = values_dict.pop(
-                            "_included_in_recyclability", True
-                        )
-
-                        # Pop remaining private keys that add_material normally handles
-                        for _k in (
-                            "_from_sor",
-                            "_sor_db_key",
-                            "_db_original",   # canonical key (was _db_snapshot)
-                            "_is_excel_import",
-                            "_is_customized",
-                            "_allow_edit_checked",
-                        ):
-                            values_dict.pop(_k, None)
-
-                        # Preserve ID for GUI visibility
-                        _ref_id = values_dict.get("id")
+                        # Preserve SOR reference ID
+                        _ref_id = values_dict.get("values", {}).get("id")
 
                         _engine = manager.controller.engine
                         _chunk_data = _engine.fetch_chunk(chunk_key) or {}
@@ -1993,25 +1977,12 @@ def _emit_result(
                             if _ev == _name_lower and not _item.get("state", {}).get(
                                 "in_trash", False
                             ):
-                                # 1. Sync values (keeping the ID visible)
-                                _item["values"] = dict(values_dict)
-
-                                # 2. Update Metadata to match 4-tier action system
-                                _item["meta"][
-                                    "modified_on"
-                                ] = _dt.datetime.now().isoformat()
-                                _item["meta"]["action"] = "excel"
-                                _item["meta"]["db_original"] = build_excel_snapshot(
-                                    values_dict
-                                )
-
-                                # 3. Sync state flags
-                                _item["state"][
-                                    "included_in_carbon_emission"
-                                ] = included_carbon
-                                _item["state"][
-                                    "included_in_recyclability"
-                                ] = included_recycle
+                                _item["values"] = dict(values_dict["values"])
+                                _item["meta"]["modified_on"] = _dt.datetime.now().isoformat()
+                                _item["meta"]["source"] = "excel"
+                                _item["meta"]["db_original"] = values_dict["meta"].get("db_original", {})
+                                _item["state"]["included_in_carbon_emission"] = included_carbon
+                                _item["state"]["included_in_recyclability"] = included_recycle
                                 _found = True
                                 break
 
@@ -2019,12 +1990,7 @@ def _emit_result(
                             _engine.stage_update(chunk_name=chunk_key, data=_chunk_data)
                         else:
                             # Fallback if item was deleted
-                            values_dict["_included_in_carbon_emission"] = (
-                                included_carbon
-                            )
-                            values_dict["_included_in_recyclability"] = included_recycle
-                            values_dict["_is_excel_import"] = True
-                            manager.add_material(comp_name, dict(values_dict))
+                            manager.add_material(comp_name, values_dict)
 
                     elif chunk_key != manager.chunk_name:
                         # Route to a different chunk via a lightweight proxy

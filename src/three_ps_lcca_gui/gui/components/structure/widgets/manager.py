@@ -170,51 +170,34 @@ class StructureManagerWidget(QWidget):
         g_layout.addLayout(btn_bar)
         self.container_layout.addWidget(group)
 
-    def add_material(self, comp_name, values_dict, is_trash=False):
+    def add_material(self, comp_name, mat_dict, is_trash=False):
         now = datetime.datetime.now().isoformat()
 
-        included_carbon = values_dict.pop("_included_in_carbon_emission", True)
-        included_recycling = values_dict.pop("_included_in_recyclability", True)
-        allow_edit_checked = values_dict.pop("_allow_edit_checked", False)
-        from_sor = values_dict.pop("_from_sor", False)
-        sor_db_key = values_dict.pop("_sor_db_key", "")
-        is_excel = values_dict.pop("_is_excel_import", False)
-        values_dict.pop("_is_customized", None)
-        db_original = values_dict.pop("_db_original", {})
-        # `id` may come from an Excel CID#ID column - store it as a reference, not a value field
-        _excel_ref_id = values_dict.pop("id", None)
-        if _excel_ref_id and "sor_ref_id" not in db_original:
-            db_original = dict(db_original)
-            db_original["sor_ref_id"] = str(_excel_ref_id)
+        values = dict(mat_dict.get("values", {}))
+        meta_in = mat_dict.get("meta", {})
+        state_in = mat_dict.get("state", {})
 
-        # Compute source + source_db_key
-        if is_excel:
-            source = "excel"
-            source_db_key = ""
-        elif from_sor:
-            is_custom = sor_db_key.startswith("custom::")
-            clean_key = sor_db_key.removeprefix("custom::")
-            source = "custom_db" if is_custom else "db"
-            source_db_key = clean_key
-        else:
-            source = "manual"
-            source_db_key = ""
+        # SOR reference code in values["id"] is not a stored value field
+        sor_ref_id = values.pop("id", None)
+        db_original = dict(meta_in.get("db_original") or {})
+        if sor_ref_id and "sor_ref_id" not in db_original:
+            db_original["sor_ref_id"] = str(sor_ref_id)
 
         new_entry = {
             "id": str(uuid.uuid4()),
-            "values": values_dict,
+            "values": values,
             "meta": {
                 "created_on": now,
                 "modified_on": now,
-                "source": source,
-                "source_db_key": source_db_key,
+                "source": meta_in.get("source", "manual"),
+                "source_db_key": meta_in.get("source_db_key", ""),
                 "db_original": db_original,
             },
             "state": {
                 "in_trash": is_trash,
-                "included_in_carbon_emission": included_carbon,
-                "included_in_recyclability": included_recycling,
-                "allow_edit_checked": allow_edit_checked,
+                "included_in_carbon_emission": state_in.get("included_in_carbon_emission", True),
+                "included_in_recyclability": state_in.get("included_in_recyclability", False),
+                "allow_edit_checked": state_in.get("allow_edit_checked", False),
             },
         }
 
@@ -276,7 +259,7 @@ class StructureManagerWidget(QWidget):
         )
 
         def _on_material_added(values):
-            name = values.get("material_name", "").strip()
+            name = values.get("values", {}).get("material_name", "").strip()
             if name.lower() in self._existing_names(comp_name):
                 QMessageBox.warning(
                     self,
@@ -307,37 +290,26 @@ class StructureManagerWidget(QWidget):
                     sor_db_key=self._get_project_sor_db(),
                 )
                 if dialog.exec():
-                    new_values = dialog.get_values()
+                    new_data = dialog.get_values()
+                    new_values = dict(new_data.get("values", {}))
+                    new_meta = new_data.get("meta", {})
+                    new_state = new_data.get("state", {})
 
-                    included_carbon = new_values.pop(
-                        "_included_in_carbon_emission", True
-                    )
-                    included_recycling = new_values.pop(
-                        "_included_in_recyclability", True
-                    )
-                    allow_edit_checked = new_values.pop("_allow_edit_checked", False)
-                    new_values.pop("_from_sor", None)
-                    new_values.pop("_sor_db_key", None)
-                    new_values.pop("_is_customized", None)
-                    new_values.pop("_is_excel_import", None)
-                    # _db_original is the encoded snapshot from get_values()
-                    new_db_original = new_values.pop("_db_original", None)
+                    # SOR reference code is not a stored value field
+                    sor_ref_id = new_values.pop("id", None)
+                    new_db_original = new_meta.get("db_original")
+                    if sor_ref_id and new_db_original is not None and "sor_ref_id" not in new_db_original:
+                        new_db_original = dict(new_db_original)
+                        new_db_original["sor_ref_id"] = str(sor_ref_id)
 
                     item_to_edit["values"] = new_values
                     now = datetime.datetime.now().isoformat()
                     item_to_edit["meta"]["modified_on"] = now
-                    # Always overwrite snapshot- dialog rebuilds it fresh on each suggestion.
-                    # Keep the existing encoded value when nothing changed (empty string
-                    # means no DB source was involved this edit).
                     if new_db_original is not None:
                         item_to_edit["meta"]["db_original"] = new_db_original
-                    item_to_edit["state"][
-                        "included_in_carbon_emission"
-                    ] = included_carbon
-                    item_to_edit["state"][
-                        "included_in_recyclability"
-                    ] = included_recycling
-                    item_to_edit["state"]["allow_edit_checked"] = allow_edit_checked
+                    item_to_edit["state"]["included_in_carbon_emission"] = new_state.get("included_in_carbon_emission", True)
+                    item_to_edit["state"]["included_in_recyclability"] = new_state.get("included_in_recyclability", False)
+                    item_to_edit["state"]["allow_edit_checked"] = new_state.get("allow_edit_checked", False)
 
                     self.controller.engine.stage_update(
                         chunk_name=self.chunk_name, data=current_data

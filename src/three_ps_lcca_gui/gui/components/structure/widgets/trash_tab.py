@@ -128,6 +128,28 @@ class TrashTabWidget(QWidget):
 
             if comp_name in data and data_index < len(data[comp_name]):
                 item = data[comp_name][data_index]
+
+                # Before restoring, check for an active item with the same name.
+                if not should_trash:
+                    restoring_name = (
+                        item.get("values", {}).get("material_name", "").strip().lower()
+                    )
+                    active_names = {
+                        it.get("values", {}).get("material_name", "").strip().lower()
+                        for it in data[comp_name]
+                        if not it.get("state", {}).get("in_trash", False)
+                    }
+                    if restoring_name and restoring_name in active_names:
+                        from PySide6.QtWidgets import QMessageBox
+                        QMessageBox.warning(
+                            self,
+                            "Name Conflict",
+                            f'A material named "{item.get("values", {}).get("material_name", "")}" '
+                            f'already exists in "{comp_name}".\n\n'
+                            "Remove or rename the existing material before restoring this one.",
+                        )
+                        return
+
                 if "state" not in item:
                     item["state"] = {}
                 item["state"]["in_trash"] = should_trash

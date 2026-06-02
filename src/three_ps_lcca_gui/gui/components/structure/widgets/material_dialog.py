@@ -49,6 +49,7 @@ from ..registry.material_catalog import list_databases
 from ..registry.search_engine import MaterialSearchEngine, AdvancedSearchEngine
 
 import os
+import uuid as _uuid_mod
 
 from three_ps_lcca_gui.gui.themes import get_token
 from three_ps_lcca_gui.gui.theme import FS_BASE
@@ -504,13 +505,72 @@ def build_excel_snapshot(values_dict: dict) -> dict:
     Build a complete snapshot from an Excel-imported values_dict.
     Captures all parsed fields to ensure 100% data parity for audit logs.
     """
-    # Create a shallow copy and explicitly set the action tag
     snapshot = dict(values_dict)
     snapshot["action"] = "excel"
-
-    # Optional: Remove internal keys that start with "_" if you want to
-    # keep only "real" data in the snapshot.
     return {k: v for k, v in snapshot.items() if not k.startswith("_")}
+
+
+def convert_sor_item_to_material(dict_b: dict) -> dict:
+    """
+    Convert a raw SOR/database item (dict_b) into a fully structured material
+    entry ready for storage.  The returned dict follows the canonical
+    {id, values, meta, state} schema.
+
+    Consumed by the dialog autofill pipeline (future step).
+    """
+    def _valid(val):
+        return val not in ("not_available", None, "", 0, 0.0)
+
+    carbon_eligible = all(
+        _valid(dict_b.get(k))
+        for k in ("carbon_emission", "carbon_emission_units_den", "conversion_factor")
+    )
+
+    raw_key = dict_b.get("db_key") or ""
+    is_custom = raw_key.startswith("custom::")
+    source = "custom_db" if is_custom else "db"
+    source_db_key = raw_key.removeprefix("custom::")
+
+    values = {
+        "material_name": dict_b.get("name", ""),
+        "quantity": None,
+        "unit": dict_b.get("unit"),
+        "unit_to_si": 1.0,
+        "rate": dict_b.get("rate") if _valid(dict_b.get("rate")) else None,
+        "rate_source": dict_b.get("rate_src", "") if _valid(dict_b.get("rate_src")) else "",
+        "carbon_emission": dict_b.get("carbon_emission") if _valid(dict_b.get("carbon_emission")) else None,
+        "carbon_unit": (
+            f"kgCO₂e/{dict_b.get('carbon_emission_units_den')}"
+            if _valid(dict_b.get("carbon_emission_units_den"))
+            else None
+        ),
+        "carbon_emission_src": dict_b.get("carbon_emission_src", "") if _valid(dict_b.get("carbon_emission_src")) else "",
+        "conversion_factor": dict_b.get("conversion_factor") if _valid(dict_b.get("conversion_factor")) else None,
+        "scrap_rate": None,
+        "post_demolition_recovery_percentage": None,
+    }
+    state = {
+        "in_trash": False,
+        "included_in_carbon_emission": carbon_eligible,
+        "included_in_recyclability": False,
+        "allow_edit_checked": False,
+    }
+    db_original = {
+        **dict_b,
+        "action": "custom_db" if is_custom else "internal_db",
+        "db_key": raw_key,
+    }
+    return {
+        "id": str(_uuid_mod.uuid4()),
+        "values": values,
+        "meta": {
+            "source": source,
+            "source_db_key": source_db_key,
+            "db_original": db_original,
+            "defaults": {"values": dict(values), "state": dict(state)},
+        },
+        "state": state,
+    }
 
 
 def _load_material_suggestions(db_keys: list = None, comp_name: str = None) -> dict:
@@ -910,7 +970,28 @@ class MaterialDialog(QDialog):
         carbon_hdr.addWidget(carbon_title)
         carbon_hdr.addStretch()
         self.carbon_chk = QCheckBox("Include")
-        self.carbon_chk.setChecked(s.get("included_in_carbon_emission", True))
+        _carbon_state = s.get("included_in_carbon_emission", True)
+        if _carbon_state == "not_available":
+            # New format — explicit.
+            self.carbon_chk.setChecked(False)
+            self.carbon_chk.setEnabled(False)
+            self._sor_carbon_available = False
+        elif _carbon_state is False and self.is_edit:
+            # Old project format stored False for both "user unchecked" and
+            # "SOR had no carbon data".  Infer which case applies:
+            # if the item came from a DB source AND the DB snapshot shows no
+            # carbon data, the False was really "not_available".
+            _db_source = _meta.get("source", "") in ("db", "custom_db")
+            _db_carbon = self._db_original.get("carbon_emission", "not_available")
+            _db_no_carbon = _db_carbon in MaterialDialog._DB_NA
+            if _db_source and _db_no_carbon:
+                self.carbon_chk.setChecked(False)
+                self.carbon_chk.setEnabled(False)
+                self._sor_carbon_available = False
+            else:
+                self.carbon_chk.setChecked(False)  # explicit user choice
+        else:
+            self.carbon_chk.setChecked(bool(_carbon_state))
         carbon_hdr.addWidget(self.carbon_chk)
         root.addLayout(carbon_hdr)
 
@@ -2063,20 +2144,13 @@ class MaterialDialog(QDialog):
         return "user_added"
 
     def get_values(self) -> dict:
-        """Returns a clean dictionary of material data for the OsBridgeLCCA database.
+        """Return material data as {values, meta, state}.
 
-        Private keys (prefixed with _) are consumed by add_material() /
-        open_edit_dialog() in manager.py and are never stored inside item["values"].
-
-        Key contract (must stay in sync with manager.py):
-          _included_in_carbon_emission  → item["state"]
-          _included_in_recyclability    → item["state"]
-          _allow_edit_checked           → item["state"]
-          _from_sor                     → drives source / source_db_key in item["meta"]
-          _sor_db_key                   → same
-          _is_excel_import              → same
-          _is_customized                → metadata flag (popped, not stored)
-          _db_original                  → encoded snapshot → item["meta"]["db_original"]
+        Consumed by:
+          manager.add_material() / open_edit_dialog()
+          material_emissions._open_emission_edit()
+          recycling.main._open_recyclability_edit()
+          custom_material_db.save_material()
         """
         actual_unit = self.unit_in.currentData() or ""
         unit_to_si, _ = self._get_unit_info(actual_unit)
@@ -2085,37 +2159,49 @@ class MaterialDialog(QDialog):
         recycle_on = self.recycle_chk.isChecked()
 
         action = self._compute_action()
-        is_from_sor = action in ("internal_db", "custom_db")
-        is_excel = action == "excel"
+        if action == "excel":
+            source = "excel"
+            source_db_key = ""
+        elif action in ("internal_db", "custom_db"):
+            raw_key = self._db_original.get("db_key", "")
+            source = "custom_db" if raw_key.startswith("custom::") else "db"
+            source_db_key = raw_key.removeprefix("custom::")
+        else:
+            source = "manual"
+            source_db_key = ""
 
         return {
-            # ── field values (stored in item["values"]) ───────────────────
-            "id": self.id_in.text().strip(),
-            "material_name": self.name_in.text().strip(),
-            "quantity": float(self.qty_in.text() or 0),
-            "unit": actual_unit,
-            "unit_to_si": unit_to_si or 1.0,
-            "rate": float(self.rate_in.text() or 0),
-            "rate_source": self.src_in.text().strip(),
-            # Zero-out carbon / recycle fields when the checkbox is off so
-            # downstream code sees a clean 0 rather than a stale DB value.
-            "carbon_emission": float(self.carbon_em_in.text() or 0) if carbon_on else 0.0,
-            "carbon_unit": f"kgCO₂e/{self.carbon_denom_cb.currentData() or ''}",
-            "conversion_factor": float(self.conv_factor_in.text() or 0),
-            "scrap_rate": float(self.scrap_in.text() or 0) if recycle_on else 0.0,
-            "post_demolition_recovery_percentage": float(
-                self.recycling_perc_in.text() or 0
-            ) if recycle_on else 0.0,
-            # ── private keys consumed by manager (never reach item["values"]) ─
-            "_included_in_carbon_emission": carbon_on,
-            "_included_in_recyclability": recycle_on,
-            "_allow_edit_checked": self._allow_edit_chk.isChecked(),
-            "_from_sor": is_from_sor,
-            "_sor_db_key": self._db_original.get("db_key", "") if is_from_sor else "",
-            "_is_excel_import": is_excel,
-            "_is_customized": self._is_customized,
-            # snapshot stored as plain dict in item["meta"]["db_original"]
-            "_db_original": self._db_original,
+            "values": {
+                "id": self.id_in.text().strip(),
+                "material_name": self.name_in.text().strip(),
+                "quantity": float(self.qty_in.text() or 0),
+                "unit": actual_unit,
+                "unit_to_si": unit_to_si or 1.0,
+                "rate": float(self.rate_in.text() or 0),
+                "rate_source": self.src_in.text().strip(),
+                # Zero-out when checkbox is off so downstream sees clean 0.
+                "carbon_emission": float(self.carbon_em_in.text() or 0) if carbon_on else 0.0,
+                "carbon_unit": f"kgCO₂e/{self.carbon_denom_cb.currentData() or ''}",
+                "carbon_emission_src": self.carbon_src_in.text().strip(),
+                "conversion_factor": float(self.conv_factor_in.text() or 0),
+                "scrap_rate": float(self.scrap_in.text() or 0) if recycle_on else 0.0,
+                "post_demolition_recovery_percentage": float(
+                    self.recycling_perc_in.text() or 0
+                ) if recycle_on else 0.0,
+            },
+            "meta": {
+                "source": source,
+                "source_db_key": source_db_key,
+                "db_original": self._db_original,
+            },
+            "state": {
+                "included_in_carbon_emission": (
+                    True if carbon_on
+                    else ("not_available" if not self._sor_carbon_available else False)
+                ),
+                "included_in_recyclability": recycle_on,
+                "allow_edit_checked": self._allow_edit_chk.isChecked(),
+            },
         }
 
     # ── Window close / Escape ─────────────────────────────────────────────

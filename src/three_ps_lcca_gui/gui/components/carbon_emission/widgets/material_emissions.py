@@ -611,7 +611,7 @@ class MaterialEmissions(QWidget):
                     )
 
                     valid = is_carbon_valid(item)
-                    is_included_flag = state.get("included_in_carbon_emission", True)
+                    is_included_flag = state.get("included_in_carbon_emission") is True
                     is_confirmed = state.get("carbon_conversion_confirmed", False)
                     suspicious = analysis["is_suspicious"] and not is_confirmed
 
@@ -911,15 +911,14 @@ class MaterialEmissions(QWidget):
         dialog = MaterialDialog(comp_name, parent=self, data=item, emissions_only=True)
         if dialog.exec():
             vals = dialog.get_values()
+            v_vals = vals.get("values", {})
             data = self.controller.engine.fetch_chunk(chunk_id) or {}
             if comp_name in data and data_index < len(data[comp_name]):
                 target = data[comp_name][data_index]
-                target["values"]["carbon_emission"] = vals.get("carbon_emission", 0.0)
-                target["values"]["carbon_unit"] = vals.get("carbon_unit", "")
-                target["values"]["conversion_factor"] = vals.get(
-                    "conversion_factor", 1.0
-                )
-                target["state"]["included_in_carbon_emission"] = vals.get(
+                target["values"]["carbon_emission"] = v_vals.get("carbon_emission", 0.0)
+                target["values"]["carbon_unit"] = v_vals.get("carbon_unit", "")
+                target["values"]["conversion_factor"] = v_vals.get("conversion_factor", 1.0)
+                target["state"]["included_in_carbon_emission"] = vals.get("state", {}).get(
                     "included_in_carbon_emission", True
                 )
                 target["state"]["carbon_conversion_confirmed"] = True
@@ -979,7 +978,7 @@ class MaterialEmissions(QWidget):
                         v.get("unit", ""), carbon_denom, _cf_value(v)
                     )
                     valid = is_carbon_valid(item)
-                    is_included_flag = state.get("included_in_carbon_emission", True)
+                    is_included_flag = state.get("included_in_carbon_emission") is True
                     is_confirmed = state.get("carbon_conversion_confirmed", False)
                     suspicious = analysis["is_suspicious"] and not is_confirmed
 

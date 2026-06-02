@@ -132,33 +132,36 @@ class CustomMaterialDB:
 
     # ── Mutations ─────────────────────────────────────────────────────────
 
-    def save_material(self, db_name: str, values: dict):
+    def save_material(self, db_name: str, mat_dict: dict):
         """
         Insert or update a material in *db_name*.
-        *values* is the dict returned by MaterialDialog.get_values().
+        *mat_dict* is the structured dict returned by MaterialDialog.get_values()
+        ({values, meta, state}).
         Existing row with the same (db_name, name) is updated in-place.
         """
         now = datetime.datetime.now().isoformat()
-        name = (values.get("material_name") or "").strip()
+        v = mat_dict.get("values", {})
+
+        name = (v.get("material_name") or "").strip()
         if not name:
             raise ValueError("material_name must not be empty")
 
-        carbon_unit = values.get("carbon_unit", "")
+        carbon_unit = v.get("carbon_unit", "")
         denom = carbon_unit.split("/")[-1].strip() if "/" in carbon_unit else ""
 
-        carbon_em = values.get("carbon_emission", None)
+        carbon_em = v.get("carbon_emission", None)
         carbon_em_str = str(carbon_em) if carbon_em else "not_available"
 
-        cf = values.get("conversion_factor", None)
+        cf = v.get("conversion_factor", None)
         cf_str = str(cf) if cf else "not_available"
 
-        scrap = values.get("scrap_rate", None)
+        scrap = v.get("scrap_rate", None)
         scrap_str = str(scrap) if scrap else ""
 
-        recovery = values.get("post_demolition_recovery_percentage", None)
+        recovery = v.get("post_demolition_recovery_percentage", None)
         recovery_str = str(recovery) if recovery else ""
 
-        recycleable = "Recyclable" if values.get("is_recyclable") else "Non-recyclable"
+        recycleable = "Recyclable" if v.get("is_recyclable") else "Non-recyclable"
 
         with self._connect() as conn:
             existing = conn.execute(
@@ -177,13 +180,13 @@ class CustomMaterialDB:
                     WHERE db_name=? AND name=?
                     """,
                     (
-                        values.get("unit", ""),
-                        values.get("rate") or None,
-                        values.get("rate_source", ""),
+                        v.get("unit", ""),
+                        v.get("rate") or None,
+                        v.get("rate_source", ""),
                         carbon_em_str, denom,
-                        values.get("carbon_emission_src", ""),
+                        v.get("carbon_emission_src", ""),
                         cf_str, scrap_str, recovery_str, recycleable,
-                        values.get("type", ""), values.get("grade", ""),
+                        v.get("type", ""), v.get("grade", ""),
                         now, db_name, name,
                     ),
                 )
@@ -199,13 +202,13 @@ class CustomMaterialDB:
                     """,
                     (
                         db_name, name,
-                        values.get("unit", ""),
-                        values.get("rate") or None,
-                        values.get("rate_source", ""),
+                        v.get("unit", ""),
+                        v.get("rate") or None,
+                        v.get("rate_source", ""),
                         carbon_em_str, denom,
-                        values.get("carbon_emission_src", ""),
+                        v.get("carbon_emission_src", ""),
                         cf_str, scrap_str, recovery_str, recycleable,
-                        values.get("type", ""), values.get("grade", ""),
+                        v.get("type", ""), v.get("grade", ""),
                         now, now,
                     ),
                 )

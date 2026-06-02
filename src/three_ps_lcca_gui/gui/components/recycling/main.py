@@ -729,15 +729,16 @@ class Recycling(QWidget):
         )
         if dialog.exec():
             vals = dialog.get_values()
+            v_vals = vals.get("values", {})
             data = self.controller.engine.fetch_chunk(chunk_id) or {}
             if comp_name in data and data_index < len(data[comp_name]):
                 target = data[comp_name][data_index]
-                target["values"]["post_demolition_recovery_percentage"] = vals.get(
+                target["values"]["post_demolition_recovery_percentage"] = v_vals.get(
                     "post_demolition_recovery_percentage", 0.0
                 )
-                target["values"]["scrap_rate"] = vals.get("scrap_rate", 0.0)
-                target["state"]["included_in_recyclability"] = vals.get(
-                    "_included_in_recyclability", True
+                target["values"]["scrap_rate"] = v_vals.get("scrap_rate", 0.0)
+                target["state"]["included_in_recyclability"] = vals.get("state", {}).get(
+                    "included_in_recyclability", False
                 )
                 target["meta"]["modified_on"] = datetime.datetime.now().isoformat()
                 self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
