@@ -878,6 +878,10 @@ class Recycling(QWidget):
             self.on_refresh()
             self._loaded = True
 
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self._loaded = False
+
     def _on_project_reloaded(self):
         self._loaded = False
         if self.isVisible():

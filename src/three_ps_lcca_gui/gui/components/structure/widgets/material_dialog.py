@@ -1209,7 +1209,9 @@ class MaterialDialog(QDialog):
             "custom_db_modified",
         ):
             mat_name = v.get("material_name", "")
-            self._sor_item = self._suggestions.get(mat_name)
+            # Try to restore the SOR item from the saved snapshot first, fallback to suggestions
+            self._sor_item = self._db_original if self._db_original else self._suggestions.get(mat_name)
+            self._sor_filled_name = mat_name  # Prevents immediate reset/re-autofill on open
             self._allow_edit_chk.setEnabled(True)
             # Restore checkbox + lock state directly from what was saved
             saved_allow_edit = s.get("allow_edit_checked", False)
@@ -1296,7 +1298,7 @@ class MaterialDialog(QDialog):
         # Exact match → selection just happened; autofill and stop.
         # Guard with _ui_ready so this doesn't fire during __init__ before
         # all widgets (unit_in, carbon_em_in, etc.) have been created.
-        if q in self._suggestions and not self._skip_suggestions:
+        if q in self._suggestions and not self._skip_suggestions and q != self._sor_filled_name:
             if self._ui_ready:
                 self._on_suggestion_selected(q)
             return
