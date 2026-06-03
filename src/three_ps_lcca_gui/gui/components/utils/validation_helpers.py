@@ -68,16 +68,22 @@ def _apply_border_style(widget, color: str):
     """
     Apply a coloured validation border without clobbering the app QSS.
 
-    QComboBox: widget-level stylesheets (even scoped ones) override the entire
-    app QSS block for that widget, losing drop-down button / popup styling.
-    Instead we set a dynamic property and let main.qss handle the border via
-    a ``QComboBox[validationState="..."]`` selector.
+    QComboBox / QAbstractSpinBox: widget-level stylesheets (even scoped ones)
+    override the entire app QSS block for that widget, losing complex styling
+    (drop-down buttons, up/down arrows). Instead we set a dynamic property
+    and let main.qss handle the border via a ``[validationState="..."]`` selector.
 
     All other widgets: a bare ``border:`` inline rule only overrides the border
     property and leaves the rest of the app QSS intact.
     """
-    if isinstance(widget, QComboBox):
-        widget.setProperty("validationState", color)
+    state = ""
+    if color == get_token("danger"):
+        state = "error"
+    elif color == get_token("warning"):
+        state = "warning"
+
+    if isinstance(widget, (QComboBox, QAbstractSpinBox)):
+        widget.setProperty("validationState", state)
         widget.style().unpolish(widget)
         widget.style().polish(widget)
     else:
@@ -86,7 +92,7 @@ def _apply_border_style(widget, color: str):
 
 def _clear_border_style(widget):
     """Clear a validation border set by ``_apply_border_style``."""
-    if isinstance(widget, QComboBox):
+    if isinstance(widget, (QComboBox, QAbstractSpinBox)):
         widget.setProperty("validationState", "")
         widget.style().unpolish(widget)
         widget.style().polish(widget)

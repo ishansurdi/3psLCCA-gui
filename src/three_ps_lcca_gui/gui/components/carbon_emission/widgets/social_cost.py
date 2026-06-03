@@ -13,7 +13,13 @@ from ...base_widget import ScrollableForm
 from ...utils.form_builder.form_definitions import FieldDef, Section
 from ...utils.form_builder.form_builder import build_form
 from ...utils.display_format import fmt, DECIMAL_PLACES
-from ...utils.validation_helpers import freeze_form, freeze_widgets, confirm_clear_all
+from ...utils.validation_helpers import (
+    freeze_form,
+    freeze_widgets,
+    confirm_clear_all,
+    validate_form,
+    clear_field_styles,
+)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -74,6 +80,11 @@ NITI_FIELDS = [
         "float",
         options=(1e-6, 1e6, DECIMAL_PLACES),
         unit="(Currency/INR)",
+        warn=(
+            0.0001,
+            None,
+            "INR to Local Currency Conversion Rate is 0 - the NITI Aayog social cost of carbon will result in 0 in the local currency; enter the current INR-to-local exchange rate",
+        ),
     ),
 ]
 RICKE_FIELDS = [
@@ -85,6 +96,11 @@ RICKE_FIELDS = [
         "float",
         options=(1e-6, 1e6, DECIMAL_PLACES),
         unit="(Currency/USD)",
+        warn=(
+            0.0001,
+            None,
+            "USD to Local Currency Conversion Rate is 0 - the Ricke et al. social cost of carbon will result in 0 in the local currency; enter the current USD-to-local exchange rate",
+        ),
     ),
     FieldDef(
         "ssp_scenario",
@@ -111,6 +127,11 @@ CUSTOM_FIELDS = [
         "float",
         options=(0.0, 1e6, DECIMAL_PLACES),
         unit="(Currency/kgCO₂e)",
+        warn=(
+            0.0001,
+            None,
+            "Social Cost of Carbon is 0 - no carbon pricing will be applied to emissions; enter a positive custom SCC value in the field above",
+        ),
     ),
 ]
 
@@ -325,6 +346,9 @@ class SocialCost(ScrollableForm):
         if self._suppress_signals:
             return
         mode = self.source.currentText()
+
+        # Clear any validation styles from the previous mode
+        clear_field_styles(HEADER_FIELDS + NITI_FIELDS + RICKE_FIELDS + CUSTOM_FIELDS, self)
 
         # Release the fixed height BEFORE the panel swap - otherwise Qt stretches
         # the new (shorter) panel's rows to fill the old panel's locked height.
@@ -631,10 +655,29 @@ class SocialCost(ScrollableForm):
 
     def validate(self) -> dict:
         data = self.collect_data()
-        errors = []
-        warnings = []
         mode = data.get("source", "")
 
+        # 1. Select fields and skip keys based on active methodology
+        active_fields = HEADER_FIELDS.copy()
+        skip = set()
+
+        if _MODE_RICKE in mode:
+            active_fields += RICKE_FIELDS
+            if str(self._project_currency).upper() == "USD":
+                skip.add("usd_to_local_rate")
+        elif _MODE_NITI in mode:
+            active_fields += NITI_FIELDS
+            if str(self._project_currency).upper() == "INR":
+                skip.add("inr_to_local_rate")
+        else:
+            active_fields += CUSTOM_FIELDS
+
+        # 2. Run standard validation (handles warn rules in FieldDefs)
+        result = validate_form(active_fields, self, skip_keys=skip)
+        errors = result["errors"]
+        warnings = result["warnings"]
+
+        # 3. Add complex cross-field validation
         if _MODE_RICKE in mode:
             ssp = data.get("ricke", {}).get("ssp", "")
             rcp = data.get("ricke", {}).get("rcp", "")
@@ -645,25 +688,16 @@ class SocialCost(ScrollableForm):
                     + ", ".join(f"{s} + {r}" for s, r in _RICKE_SCC_TABLE)
                     + "."
                 )
-            elif data.get("ricke", {}).get("usd_to_local_rate", 0.0) == 0.0:
-                warnings.append(
-                    "USD to Local Currency Conversion Rate is 0 - the Ricke et al. social cost of carbon will result in 0 in the local currency; enter the current USD-to-local exchange rate"
-                )
-        elif _MODE_NITI in mode:
-            cur = data.get("niti", {}).get("currency", "INR")
-            if cur != "INR" and data.get("niti", {}).get("inr_to_local_rate", 0.0) == 0.0:
-                warnings.append(
-                    "INR to Local Currency Conversion Rate is 0 - the NITI Aayog social cost of carbon will result in 0 in the local currency; enter the current INR-to-local exchange rate"
-                )
-        else:
+
+        # 4. General fallback warning for zero-SCC results in non-custom modes
+        #    (e.g. if the scientific baseline is 0)
+        if _MODE_CUSTOM not in mode:
             scc = data.get("result", {}).get("cost_of_carbon_local", 0.0)
             if scc == 0.0:
-                if _MODE_CUSTOM in mode:
-                    warnings.append(
-                        "Social Cost of Carbon is 0 - no carbon pricing will be applied to emissions; enter a positive custom SCC value in the field above"
-                    )
-                else:
-                    warnings.append("Social Cost of Carbon is 0 - the computed SCC for the selected source is 0, so no carbon cost will be applied to emissions; review the selected source or conversion rate")
+                warnings.append(
+                    "Social Cost of Carbon is 0 - the computed SCC for the selected source is 0, "
+                    "so no carbon cost will be applied to emissions; review the selected source or conversion rate"
+                )
 
         return {"errors": errors, "warnings": warnings}
 

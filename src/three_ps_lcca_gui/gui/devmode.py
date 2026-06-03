@@ -47,6 +47,46 @@ def setup_dev_menu(parent_window, menubar):
     action_inspector.triggered.connect(lambda: set_pesticide("beast"))
     dev_menu.addAction(action_inspector)
 
+    # --- LaTeX Submenu ---
+    # Each entry: (menu label, module path, function name, output filename)
+    _LATEX_ENTRIES = [
+        ("Bridge Data",    "three_ps_lcca_gui.code_to_latex.bridge_data_latex",    "bridge_data_to_latex",    "bridge_data.tex"),
+        ("Financial Data",    "three_ps_lcca_gui.code_to_latex.financial_data_latex",    "financial_data_to_latex",    "financial_data.tex"),
+        ("Maintenance Data", "three_ps_lcca_gui.code_to_latex.maintenance_data_latex", "maintenance_data_to_latex", "maintenance_data.tex"),
+        ("Vehicle Traffic Data", "three_ps_lcca_gui.code_to_latex.traffic_data_latex", "vehicle_traffic_data_to_latex", "vehicle_traffic_data.tex"),
+    ]
+
+    def _make_save_latex(module_path, fn_name, filename):
+        def _handler():
+            try:
+                from pathlib import Path
+                import importlib
+                mod = importlib.import_module(module_path)
+                fn = getattr(mod, fn_name)
+                tests_dir = Path(__file__).parent.parent / "code_to_latex" / "tests"
+                tests_dir.mkdir(exist_ok=True)
+                out_path = tests_dir / filename
+                doc = "\n".join([
+                    r"\documentclass{article}",
+                    r"\usepackage{booktabs}",
+                    r"\usepackage[margin=1in]{geometry}",
+                    r"\begin{document}",
+                    fn(parent_window.controller),
+                    r"\end{document}",
+                ])
+                out_path.write_text(doc, encoding="utf-8")
+                QMessageBox.information(parent_window, "LaTeX", f"Saved to:\n{out_path}")
+            except Exception as exc:
+                QMessageBox.critical(parent_window, "LaTeX Error", str(exc))
+        return _handler
+
+    latex_menu = QMenu("LaTeX", dev_menu)
+    for label, module_path, fn_name, filename in _LATEX_ENTRIES:
+        action = QAction(f"Save {label} (tests/)", parent_window)
+        action.triggered.connect(_make_save_latex(module_path, fn_name, filename))
+        latex_menu.addAction(action)
+    dev_menu.addMenu(latex_menu)
+
     # --- Add to Menubar ---
     menubar.addMenu(dev_menu)
     return dev_menu

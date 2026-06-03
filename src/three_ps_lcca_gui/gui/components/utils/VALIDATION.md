@@ -2,6 +2,8 @@
 
 How to add errors and warnings to any data-entry page.
 
+> **Note:** For a detailed guide on using `FieldDef` parameters for validation, see [FIELDDEF_VALIDATION.md](./FIELDDEF_VALIDATION.md).
+
 ---
 
 ## Concepts
