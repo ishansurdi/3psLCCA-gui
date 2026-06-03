@@ -35,6 +35,7 @@ from three_ps_lcca_gui.gui.theme import (
 from three_ps_lcca_gui.gui.styles import font as _f
 from PySide6.QtWidgets import QToolTip
 from three_ps_lcca_gui.gui.version import VERSION
+from three_ps_lcca_gui.gui.devmode import setup_dev_menu
 from three_ps_lcca_gui.gui.project_controller import ProjectController
 from three_ps_lcca_gui.gui.themes import get_token, theme_manager
 from three_ps_lcca_gui.gui.components.home_page import HomePage
@@ -490,6 +491,9 @@ class ProjectWindow(QMainWindow):
         )
         self.menuHelp.addAction(action_feedback)
 
+        # ── Dev menu ──────────────────────────────────────────────────────
+        self.menuDev = setup_dev_menu(self, self.menubar)
+
         # ── Menubar ───────────────────────────────────────────────────────
         home_action = QAction("Home", self)
         home_action.setIcon(make_icon("home"))
@@ -501,6 +505,8 @@ class ProjectWindow(QMainWindow):
         self.menubar.addMenu(self.menuFile)
         self.menubar.addAction(self.log_action)
         self.menubar.addMenu(self.menuHelp)
+        if self.menuDev:
+            self.menubar.addMenu(self.menuDev)
 
         top_bar_layout.addWidget(
             self.menubar, alignment=Qt.AlignmentFlag.AlignCenter)
