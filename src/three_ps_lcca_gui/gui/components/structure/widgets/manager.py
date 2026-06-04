@@ -316,6 +316,7 @@ class StructureManagerWidget(QWidget):
                     item_to_edit["values"] = new_values
                     now = datetime.datetime.now().isoformat()
                     item_to_edit["meta"]["modified_on"] = now
+                    item_to_edit["meta"]["source"] = new_meta.get("source", item_to_edit["meta"].get("source", "manual"))
                     if new_db_original is not None:
                         item_to_edit["meta"]["db_original"] = new_db_original
                     item_to_edit["state"]["included_in_carbon_emission"] = new_state.get("included_in_carbon_emission", True)

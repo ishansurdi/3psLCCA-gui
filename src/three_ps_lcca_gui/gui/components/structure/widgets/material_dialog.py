@@ -1285,6 +1285,7 @@ class MaterialDialog(QDialog):
             "internal_db",
             "custom_db",
             "excel",
+            "excel_modified",
             "db",
             "db_modified",
             "custom_db_modified",
@@ -1293,6 +1294,8 @@ class MaterialDialog(QDialog):
             # Try to restore the SOR item from the saved snapshot first, fallback to suggestions
             self._sor_item = self._db_original if self._db_original else self._suggestions.get(mat_name)
             self._sor_filled_name = mat_name  # Prevents immediate reset/re-autofill on open
+            if _src in ("excel", "excel_modified"):
+                self._allow_edit_chk.setText("Allow editing Excel-imported values")
             self._allow_edit_chk.setEnabled(True)
             # Restore checkbox + lock state directly from what was saved
             saved_allow_edit = s.get("allow_edit_checked", False)
@@ -1509,6 +1512,7 @@ class MaterialDialog(QDialog):
                 self._sor_filling = True
                 try:
                     snap = self._user_edited_snapshot
+                    self.id_in.setText(snap.get("id", ""))
                     self.rate_in.setText(snap.get("rate", ""))
                     if snap.get("unit_idx", -1) >= 0:
                         self.unit_in.setCurrentIndex(snap["unit_idx"])
@@ -1534,6 +1538,7 @@ class MaterialDialog(QDialog):
             if self._sor_item is not None:
                 # Snapshot all current user-edited values before overwriting with DB values
                 self._user_edited_snapshot = {
+                    "id": self.id_in.text(),
                     "rate": self.rate_in.text(),
                     "unit_idx": self.unit_in.currentIndex(),
                     "src": self.src_in.text(),
@@ -1548,6 +1553,8 @@ class MaterialDialog(QDialog):
                 self._sor_filling = True
                 try:
                     item = self._sor_item
+                    self.id_in.setText(str(item.get("id", "") or ""))
+
                     unit = item.get("unit", "")
                     if unit:
                         idx = _resolve_unit_code(unit, self.unit_in)
@@ -2132,9 +2139,9 @@ class MaterialDialog(QDialog):
     # ── Output ────────────────────────────────────────────────────────────
 
     def _compute_action(self) -> str:
-        """Determines the source 'action' for metadata: user_added, internal_db, custom_db, or excel."""
+        """Determines the source 'action' for metadata: user_added, internal_db, custom_db, excel, or excel_modified."""
         if self._db_original.get("action") == "excel":
-            return "excel"
+            return "excel_modified" if self._is_customized else "excel"
         if self._sor_item:
             return (
                 "custom_db"
@@ -2159,8 +2166,8 @@ class MaterialDialog(QDialog):
         recycle_on = self.recycle_chk.isChecked()
 
         action = self._compute_action()
-        if action == "excel":
-            source = "excel"
+        if action in ("excel", "excel_modified"):
+            source = action
             source_db_key = ""
         elif action in ("internal_db", "custom_db"):
             raw_key = self._db_original.get("db_key", "")
