@@ -104,6 +104,7 @@ class TrashTabWidget(QWidget):
                 continue
             if not items[data_index].get("state", {}).get("in_trash", False):
                 continue
+
             del data[comp_name][data_index]
             self.controller.save_chunk_data(chunk_id, data)
 
@@ -157,6 +158,8 @@ class TrashTabWidget(QWidget):
                 if "state" not in item:
                     item["state"] = {}
                 item["state"]["in_trash"] = should_trash
+                if not should_trash:
+                    item["state"].pop("_transport_snapshot", None)
 
                 self.controller.save_chunk_data(chunk_id, data)
 

@@ -13,6 +13,7 @@ class ProjectController(QObject):
     dirty_changed = Signal(bool)
     project_loaded = Signal()
     chunk_updated = Signal(str)
+    material_trashed = Signal(str)   # emits the material UUID when moved to trash
 
     def __init__(self):
         super().__init__()

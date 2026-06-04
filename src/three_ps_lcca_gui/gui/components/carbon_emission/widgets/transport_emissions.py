@@ -160,7 +160,7 @@ def calc_vehicle_emission(entry: dict, mat_index: dict) -> tuple:
             continue
 
         val = item.get("values", {})
-        qty = float(val.get("quantity", 0) or 0)
+        qty = float(val.get("quantity") or 0)
         unit = val.get("unit", "")
         name = val.get("material_name", "")
 
@@ -406,6 +406,11 @@ class TransportEmissions(QWidget):
         self._loaded = False
         if controller and hasattr(controller, "project_loaded"):
             controller.project_loaded.connect(self._on_project_reloaded)
+        if controller and hasattr(controller, "chunk_updated"):
+            _WATCHED = {"str_foundation", "str_sub_structure", "str_super_structure", "str_misc", "transport_data"}
+            controller.chunk_updated.connect(
+                lambda name: QTimer.singleShot(0, self.on_refresh) if name in _WATCHED else None
+            )
 
         outer = QVBoxLayout(self)
         outer.setSpacing(8)
@@ -495,6 +500,23 @@ class TransportEmissions(QWidget):
         vehicles = data.get("vehicles", [])
 
         mat_index = _build_material_index(self.controller.engine)
+
+        # Auto-clean stale material references (trashed or permanently deleted)
+        dirty = False
+        for entry in vehicles:
+            if entry.get("state", {}).get("in_trash", False):
+                continue
+            clean = []
+            for m in entry.get("materials", []):
+                uuid = m.get("uuid") if isinstance(m, dict) else m
+                item_data = mat_index.get(uuid)
+                if item_data and not item_data[0].get("state", {}).get("in_trash", False):
+                    clean.append(m)
+                else:
+                    dirty = True
+            entry["materials"] = clean
+        if dirty:
+            self.controller.engine.stage_update(chunk_name="transport_data", data=data)
 
         total_emission = 0.0
         cat_totals = {label: 0.0 for _, label in STRUCTURE_CHUNKS}

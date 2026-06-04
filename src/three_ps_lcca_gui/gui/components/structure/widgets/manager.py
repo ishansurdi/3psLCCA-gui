@@ -90,6 +90,7 @@ class StructureManagerWidget(QWidget):
                 self.controller.engine.stage_update(
                     chunk_name=self.chunk_name, data=data
                 )
+                self.controller.chunk_updated.emit(self.chunk_name)
 
             info = self.controller.engine.fetch_chunk("general_info") or {}
             self._currency = str(info.get("project_currency", ""))
@@ -216,6 +217,7 @@ class StructureManagerWidget(QWidget):
         self.controller.engine.stage_update(
             chunk_name=self.chunk_name, data=current_data
         )
+        self.controller.chunk_updated.emit(self.chunk_name)
         self.save_current_state()
 
         if is_trash:
@@ -316,6 +318,7 @@ class StructureManagerWidget(QWidget):
                     self.controller.engine.stage_update(
                         chunk_name=self.chunk_name, data=current_data
                     )
+                    self.controller.chunk_updated.emit(self.chunk_name)
                     self.save_current_state()
 
                     def _do_edit():
@@ -377,25 +380,86 @@ class StructureManagerWidget(QWidget):
 
     def toggle_trash_status(self, comp_name, data_index, should_trash):
         data = self.controller.engine.fetch_chunk(self.chunk_name) or {}
-        if comp_name in data and len(data[comp_name]) > data_index:
-            if "state" not in data[comp_name][data_index]:
-                data[comp_name][data_index]["state"] = {}
-            data[comp_name][data_index]["state"]["in_trash"] = should_trash
-            self.data = data  # keep cached copy in sync for _update_summary
+        if comp_name not in data or len(data[comp_name]) <= data_index:
+            return
 
-            self.controller.engine.stage_update(chunk_name=self.chunk_name, data=data)
-            self.save_current_state()
+        item = data[comp_name][data_index]
+        mat_uuid = item.get("id")
+        mat_name = item.get("values", {}).get("material_name", "")
 
-            def _do_refresh():
-                table = self.sections.get(comp_name)
-                if table:
-                    table.remove_row_by_index(data_index)
-                self._update_summary()
-                main_view = self.window().findChild(QWidget, "StructureTabView")
-                if main_view:
-                    main_view.update_trash_count()
+        # If trashing, warn about all pages that reference this material
+        if should_trash and mat_uuid:
+            state = item.get("state", {})
+            impacts = []
 
-            QTimer.singleShot(0, _do_refresh)
+            if state.get("included_in_carbon_emission") is True:
+                impacts.append("• Carbon Emissions — this material contributes to carbon calculations")
+
+            if state.get("included_in_recyclability") is True:
+                impacts.append("• Recycling — this material is included in recyclability calculations")
+
+            transport = self.controller.engine.fetch_chunk("transport_data") or {}
+            affected_deliveries = [
+                v.get("vehicle", {}).get("name", "Unnamed")
+                for v in transport.get("vehicles", [])
+                if not v.get("state", {}).get("in_trash", False)
+                and any(
+                    (m.get("uuid") if isinstance(m, dict) else m) == mat_uuid
+                    for m in v.get("materials", [])
+                )
+            ]
+            if affected_deliveries:
+                impacts.append(
+                    "• Transport Deliveries — referenced in: "
+                    + ", ".join(affected_deliveries)
+                )
+
+            if impacts:
+                reply = QMessageBox.warning(
+                    self,
+                    "Material Referenced in Other Pages",
+                    f'"{mat_name}" is used in:\n\n'
+                    + "\n".join(impacts)
+                    + "\n\nMoving to trash will exclude it from all these calculations.\n\nContinue?",
+                    QMessageBox.Yes | QMessageBox.No,
+                )
+                if reply == QMessageBox.No:
+                    return
+                # Remove from deliveries and snapshot the removed entries for restore
+                removed_from = []
+                for v in transport.get("vehicles", []):
+                    before = v.get("materials", [])
+                    removed = [m for m in before if (m.get("uuid") if isinstance(m, dict) else m) == mat_uuid]
+                    if removed:
+                        v["materials"] = [m for m in before if m not in removed]
+                        removed_from.append({"vehicle_id": v.get("id"), "entry": removed[0]})
+                if removed_from:
+                    self.controller.engine.stage_update(chunk_name="transport_data", data=transport)
+                # Store snapshot so restore can put it back
+                item.setdefault("state", {})["_transport_snapshot"] = removed_from
+
+        if "state" not in item:
+            item["state"] = {}
+        item["state"]["in_trash"] = should_trash
+        self.data = data
+
+        self.controller.engine.stage_update(chunk_name=self.chunk_name, data=data)
+        self.controller.chunk_updated.emit(self.chunk_name)
+        self.save_current_state()
+
+        if should_trash and mat_uuid:
+            self.controller.material_trashed.emit(mat_uuid)
+
+        def _do_refresh():
+            table = self.sections.get(comp_name)
+            if table:
+                table.remove_row_by_index(data_index)
+            self._update_summary()
+            main_view = self.window().findChild(QWidget, "StructureTabView")
+            if main_view:
+                main_view.update_trash_count()
+
+        QTimer.singleShot(0, _do_refresh)
 
     def add_new_component(self):
         dialog = QInputDialog(self)
@@ -444,6 +508,7 @@ class StructureManagerWidget(QWidget):
 
         current_data.pop(name, None)
         self.controller.engine.stage_update(chunk_name=self.chunk_name, data=current_data)
+        self.controller.chunk_updated.emit(self.chunk_name)
         self.save_current_state()
         self.data = current_data
         self.refresh_ui()

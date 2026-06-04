@@ -406,6 +406,11 @@ class Recycling(QWidget):
         self._loaded = False
         if controller and hasattr(controller, "project_loaded"):
             controller.project_loaded.connect(self._on_project_reloaded)
+        if controller and hasattr(controller, "chunk_updated"):
+            _STRUCTURE_CHUNKS = {"str_foundation", "str_sub_structure", "str_super_structure", "str_misc"}
+            controller.chunk_updated.connect(
+                lambda name: QTimer.singleShot(0, self.on_refresh) if name in _STRUCTURE_CHUNKS else None
+            )
 
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
