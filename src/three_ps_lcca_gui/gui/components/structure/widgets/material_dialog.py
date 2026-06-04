@@ -812,6 +812,7 @@ class MaterialDialog(QDialog):
         # "db_original" is the canonical meta key; "db_snapshot" is accepted as a
         # legacy alias so old project files still load correctly.
         _meta = data.get("meta", {}) if data else {}
+        self._meta = _meta
         self._db_original = _meta.get("db_original") or _meta.get("db_snapshot") or {}
 
         # Migrate any custom units embedded in old project data → global DB
@@ -979,11 +980,12 @@ class MaterialDialog(QDialog):
         carbon_hdr.addStretch()
         self.carbon_chk = QCheckBox("Include")
 
-        # Authoritative check: DB/custom_db source with no carbon data in values
-        # overrides whatever state was saved — carbon cannot be enabled.
+        # Authoritative check: DB/excel source with no carbon data disables the checkbox,
+        # BUT only when allow_edit is not already enabled (user may have unlocked it).
         _is_db_source = _meta.get("source", "") in ("db", "excel")
         _values_carbon = v.get("carbon_emission")
-        _db_has_no_carbon = _is_db_source and _values_carbon in MaterialDialog._DB_NA
+        _allow_edit_saved = s.get("allow_edit_checked", False)
+        _db_has_no_carbon = _is_db_source and _values_carbon in MaterialDialog._DB_NA and not _allow_edit_saved
 
         _carbon_state = s.get("included_in_carbon_emission", True)
         if _db_has_no_carbon:
@@ -1035,7 +1037,7 @@ class MaterialDialog(QDialog):
         self.carbon_denom_cb.wheelEvent = lambda event: event.ignore()
         self.carbon_denom_cb.setModel(self._build_full_unit_model())
 
-        existing_carbon_unit = v.get("carbon_unit", "")
+        existing_carbon_unit = v.get("carbon_unit") or ""
         if existing_carbon_unit and "/" in existing_carbon_unit:
             saved_denom = existing_carbon_unit.split("/")[-1].strip()
             didx = _resolve_unit_code(saved_denom, self.carbon_denom_cb)
@@ -1250,6 +1252,7 @@ class MaterialDialog(QDialog):
                 self.rate_in,
                 self.src_in,
                 self.carbon_em_in,
+                self.carbon_src_in,
                 self.conv_factor_in,
             ):
                 w.setReadOnly(True)
@@ -1318,6 +1321,9 @@ class MaterialDialog(QDialog):
             self._allow_edit_chk.setChecked(saved_allow_edit)
             self._allow_edit_chk.blockSignals(False)
             self._lock_autofilled_fields(not saved_allow_edit)
+            if saved_allow_edit and not self.recyclability_only:
+                self._sor_carbon_available = True
+                self.carbon_chk.setEnabled(True)
             # emissions_only mode must be able to edit carbon fields regardless of lock state
             if self.emissions_only:
                 self.carbon_em_in.setReadOnly(False)
@@ -1450,6 +1456,8 @@ class MaterialDialog(QDialog):
         self._allow_edit_chk.setChecked(False)
         self._allow_edit_chk.blockSignals(False)
         self._allow_edit_chk.setEnabled(False)
+        self._sor_carbon_available = True
+        self.carbon_chk.setEnabled(True)
         self._update_cf()
 
     def _populate_type_filter(self, preselect: str = None):
@@ -1559,6 +1567,7 @@ class MaterialDialog(QDialog):
                 self.carbon_src_in.clear()
                 self._sor_filling = False
             self._is_modified_by_user = True
+            self._sor_carbon_available = True
             self.carbon_chk.setEnabled(True)
         else:
             if self._sor_item is not None:
@@ -1618,6 +1627,7 @@ class MaterialDialog(QDialog):
                         self.carbon_denom_cb.setCurrentIndex(
                             self.carbon_denom_cb.findData(_PLACEHOLDER)
                         )
+                    self._sor_carbon_available = carbon_available
                     self.carbon_chk.setChecked(carbon_available)
                     self.carbon_chk.setEnabled(carbon_available)
 
@@ -2110,27 +2120,26 @@ class MaterialDialog(QDialog):
             return
 
         if self.carbon_chk.isChecked():
-            try:
-                ef = float(self.carbon_em_in.text() or 0)
-                cf = float(self.conv_factor_in.text() or 0)
-            except ValueError:
-                ef, cf = 0, 0
+            _ef_text = self.carbon_em_in.text().strip()
+            _cf_text = self.conv_factor_in.text().strip()
+            ef = float(_ef_text) if _ef_text else None
+            cf = float(_cf_text) if _cf_text else None
 
-            if ef <= 0:
+            if ef is None or ef <= 0:
                 reply = QMessageBox.warning(
                     self,
                     "Emission Factor",
-                    "Emission factor is 0 - carbon cost will be skipped.\n\nContinue?",
+                    "Emission factor is 0 or blank - carbon cost will be skipped.\n\nContinue?",
                     QMessageBox.Yes | QMessageBox.No,
                 )
                 if reply == QMessageBox.No:
                     return
                 self.carbon_chk.setChecked(False)
-            elif cf <= 0:
+            elif cf is None or cf <= 0:
                 reply = QMessageBox.warning(
                     self,
                     "Conversion Factor",
-                    "Conversion factor is 0 - carbon cost will be skipped.\n\nContinue?",
+                    "Conversion factor is 0 or blank - carbon cost will be skipped.\n\nContinue?",
                     QMessageBox.Yes | QMessageBox.No,
                 )
                 if reply == QMessageBox.No:
@@ -2221,15 +2230,34 @@ class MaterialDialog(QDialog):
     # ── Output ────────────────────────────────────────────────────────────
 
     def _compute_action(self) -> str:
-        """Determines the source 'action' for metadata: user_added, internal_db, custom_db, excel, or excel_modified."""
-        if self._db_original.get("action") == "excel":
+        """Determine source action for metadata.
+
+        Rules:
+          db + edited          → db_modified   (stays db_modified on re-edit)
+          excel + edited       → excel_modified (stays excel_modified on re-edit)
+          custom_db + edited   → custom_db_modified
+          anything unmodified  → original action
+        """
+        orig_action = self._db_original.get("action", "")
+        current_source = self._meta.get("source", "") if hasattr(self, "_meta") else ""
+
+        # Already marked as modified — preserve that state regardless of further edits
+        if current_source in ("db_modified", "excel_modified", "custom_db_modified"):
+            return current_source
+
+        if orig_action == "excel":
             return "excel_modified" if self._is_customized else "excel"
+
+        if orig_action == "internal_db":
+            return "db_modified" if self._is_customized else "internal_db"
+
+        if orig_action == "custom_db":
+            return "custom_db_modified" if self._is_customized else "custom_db"
+
         if self._sor_item:
-            return (
-                "custom_db"
-                if (self._db_original.get("db_key") or "").startswith("custom::")
-                else "internal_db"
-            )
+            is_custom = (self._db_original.get("db_key") or "").startswith("custom::")
+            return "custom_db" if is_custom else "internal_db"
+
         return "user_added"
 
     def get_values(self) -> dict:
@@ -2252,9 +2280,13 @@ class MaterialDialog(QDialog):
         if action in ("excel", "excel_modified"):
             source = action
             source_db_key = ""
-        elif action in ("internal_db", "custom_db"):
+        elif action in ("internal_db", "db_modified"):
             raw_key = self._db_original.get("db_key", "")
-            source = "custom_db" if raw_key.startswith("custom::") else "db"
+            source = "db_modified" if action == "db_modified" else "db"
+            source_db_key = raw_key
+        elif action in ("custom_db", "custom_db_modified"):
+            raw_key = self._db_original.get("db_key", "")
+            source = "custom_db_modified" if action == "custom_db_modified" else "custom_db"
             source_db_key = raw_key.removeprefix("custom::")
         else:
             source = "manual"

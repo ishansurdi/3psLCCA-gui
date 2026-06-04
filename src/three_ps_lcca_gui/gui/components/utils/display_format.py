@@ -31,6 +31,8 @@ _UNIT_DIVISORS.update({short.lower(): div for _, div, _, short in _INDIA_UNITS +
 
 def _to_float(val):
     """Return (float, None) on success or (None, fallback_str) on failure."""
+    if val is None:
+        return None, "-"
     try:
         return float(val), None
     except (TypeError, ValueError):

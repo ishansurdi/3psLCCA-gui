@@ -476,7 +476,7 @@ class TransportDialog(QDialog):
             return float(v["unit_to_si"]), False
         if v.get("transport_kg_factor"):
             return float(v["transport_kg_factor"]), False
-        cu = v.get("carbon_unit", "").split("/", 1)
+        cu = (v.get("carbon_unit") or "").split("/", 1)
         if v.get("conversion_factor") and len(cu) == 2 and \
            cu[0].lower().replace("₂", "2") in ("kgco2e", "kgco2") and \
            cu[1].lower() == "kg":

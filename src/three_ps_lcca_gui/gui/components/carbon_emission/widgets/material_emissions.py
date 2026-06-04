@@ -35,6 +35,8 @@ def _fmt_unit(code: str) -> str:
 
 def _fmt_carbon_unit(carbon_unit: str) -> str:
     """Normalize stored carbon_unit: fix CO2e subscript and unit symbols."""
+    if not carbon_unit:
+        return ""
     unit = carbon_unit.replace("CO2e", "CO₂e")
     if "/" in unit:
         prefix, denom = unit.rsplit("/", 1)
@@ -602,7 +604,7 @@ class MaterialEmissions(QWidget):
                     # Target denominator for carbon is usually the unit after the slash
                     carbon_unit = v.get("carbon_unit", "")
                     carbon_denom = (
-                        carbon_unit.split("/")[-1] if "/" in carbon_unit else ""
+                        carbon_unit.split("/")[-1] if carbon_unit and "/" in carbon_unit else ""
                     )
 
                     # Unit resolver analysis (cached - same inputs always yield same result)
@@ -659,7 +661,7 @@ class MaterialEmissions(QWidget):
             t.setItem(row, 4, _ri(fmt(_cf_raw) if _cf_raw not in _NA else "-"))
             t.setItem(row, 5, _ri(fmt(v.get("carbon_emission"))))
             t.setItem(
-                row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit", "")))
+                row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit")))
             )
 
             carbon_item = QTableWidgetItem(fmt(carbon))
@@ -724,7 +726,7 @@ class MaterialEmissions(QWidget):
             t.setItem(row, 4, _ri(fmt(_cf_raw) if _cf_raw not in _NA else "-"))
             t.setItem(row, 5, _ri(fmt(v.get("carbon_emission"))))
             t.setItem(
-                row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit", "")))
+                row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit")))
             )
             t.setItem(row, 7, QTableWidgetItem(reason))
 
@@ -813,7 +815,8 @@ class MaterialEmissions(QWidget):
         src.update_height()
 
         v = item_data.get("values", {})
-        carbon_denom = v.get("carbon_unit", "").split("/")[-1] if "/" in v.get("carbon_unit", "") else ""
+        _cu = v.get("carbon_unit") or ""
+        carbon_denom = _cu.split("/")[-1] if "/" in _cu else ""
         analysis = _cached_analysis(v.get("unit", ""), carbon_denom, _cf_value(v))
         _cf_raw = v.get("conversion_factor")
 
@@ -828,7 +831,7 @@ class MaterialEmissions(QWidget):
             t.setItem(row, 3, QTableWidgetItem(_fmt_unit(v.get("unit", ""))))
             t.setItem(row, 4, _ri(fmt(_cf_raw) if _cf_raw not in _NA else "-"))
             t.setItem(row, 5, _ri(fmt(v.get("carbon_emission"))))
-            t.setItem(row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit", ""))))
+            t.setItem(row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit"))))
             carbon_item = QTableWidgetItem(fmt(carbon))
             carbon_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             t.setItem(row, 7, carbon_item)
@@ -856,7 +859,7 @@ class MaterialEmissions(QWidget):
             t.setItem(row, 3, QTableWidgetItem(_fmt_unit(v.get("unit", ""))))
             t.setItem(row, 4, _ri(fmt(_cf_raw) if _cf_raw not in _NA else "-"))
             t.setItem(row, 5, _ri(fmt(v.get("carbon_emission"))))
-            t.setItem(row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit", ""))))
+            t.setItem(row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit"))))
             t.setItem(row, 7, QTableWidgetItem("User Excluded"))
             row_data = {"btns": ["edit", "include"], "chunk_id": chunk_id,
                         "comp_name": comp_name, "idx": idx, "item": item_data}
@@ -972,7 +975,7 @@ class MaterialEmissions(QWidget):
                     state = item.get("state", {})
                     carbon_unit = v.get("carbon_unit", "")
                     carbon_denom = (
-                        carbon_unit.split("/")[-1] if "/" in carbon_unit else ""
+                        carbon_unit.split("/")[-1] if carbon_unit and "/" in carbon_unit else ""
                     )
                     analysis = _cached_analysis(
                         v.get("unit", ""), carbon_denom, _cf_value(v)

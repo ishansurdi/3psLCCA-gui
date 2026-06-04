@@ -19,7 +19,7 @@ import time
 import datetime
 
 from ..utils.definitions import UNIT_DISPLAY
-from ..utils.display_format import fmt, fmt_comma
+from ..utils.display_format import fmt, fmt_comma, DECIMAL_PLACES
 from ..utils.icons import make_icon
 from ..utils.table_widgets import (
     GroupedHeaderView,
@@ -593,9 +593,13 @@ class Recycling(QWidget):
 
             t.setItem(row, 0, QTableWidgetItem(category))
             t.setItem(row, 1, QTableWidgetItem(v.get("material_name", "")))
-            t.setItem(row, 2, _ri(fmt(v.get("quantity", 0))))
+            t.setItem(row, 2, _ri(fmt(v.get("quantity"))))
             t.setItem(row, 3, QTableWidgetItem(unit))
-            t.setItem(row, 4, _ri(f"{_recycle_pct(v):.1f}%"))
+            t.setItem(row, 4, _ri(
+                f"{_recycle_pct(v):.{DECIMAL_PLACES}f}%"
+                if v.get("post_demolition_recovery_percentage") is not None
+                else "-"
+            ))
             t.setItem(row, 5, _ri(recyclable_qty))
             t.setItem(row, 6, _ri(fmt(v.get("scrap_rate"))))
             val_item = QTableWidgetItem(value_str)
@@ -649,9 +653,13 @@ class Recycling(QWidget):
 
             t.setItem(row, 0, QTableWidgetItem(category))
             t.setItem(row, 1, QTableWidgetItem(v.get("material_name", "")))
-            t.setItem(row, 2, _ri(fmt(v.get("quantity", 0))))
+            t.setItem(row, 2, _ri(fmt(v.get("quantity"))))
             t.setItem(row, 3, QTableWidgetItem(unit))
-            t.setItem(row, 4, _ri(f"{_recycle_pct(v):.1f}%"))
+            t.setItem(row, 4, _ri(
+                f"{_recycle_pct(v):.{DECIMAL_PLACES}f}%"
+                if v.get("post_demolition_recovery_percentage") is not None
+                else "-"
+            ))
             t.setItem(row, 5, _ri(fmt(v.get("scrap_rate"))))
             t.setItem(row, 6, QTableWidgetItem(reason))
 
@@ -734,9 +742,9 @@ class Recycling(QWidget):
             if comp_name in data and data_index < len(data[comp_name]):
                 target = data[comp_name][data_index]
                 target["values"]["post_demolition_recovery_percentage"] = v_vals.get(
-                    "post_demolition_recovery_percentage", 0.0
+                    "post_demolition_recovery_percentage"
                 )
-                target["values"]["scrap_rate"] = v_vals.get("scrap_rate", 0.0)
+                target["values"]["scrap_rate"] = v_vals.get("scrap_rate")
                 target["state"]["included_in_recyclability"] = vals.get("state", {}).get(
                     "included_in_recyclability", False
                 )

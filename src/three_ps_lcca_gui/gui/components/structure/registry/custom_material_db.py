@@ -146,7 +146,7 @@ class CustomMaterialDB:
         if not name:
             raise ValueError("material_name must not be empty")
 
-        carbon_unit = v.get("carbon_unit", "")
+        carbon_unit = v.get("carbon_unit") or ""
         denom = carbon_unit.split("/")[-1].strip() if "/" in carbon_unit else ""
 
         carbon_em = v.get("carbon_emission", None)
