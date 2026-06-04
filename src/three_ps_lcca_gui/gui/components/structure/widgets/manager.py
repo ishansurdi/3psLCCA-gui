@@ -269,7 +269,11 @@ class StructureManagerWidget(QWidget):
 
         def _on_material_added(values):
             name = values.get("values", {}).get("material_name", "").strip()
-            if name.lower() in self._existing_names(comp_name):
+            existing = self._existing_names(comp_name)
+            # print(f"[DUP CHECK] name='{name}'  name_lower='{name.lower()}'")
+            # print(f"[DUP CHECK] existing names: {existing}")
+            # print(f"[DUP CHECK] match={name.lower() in existing}")
+            if name.lower() in existing:
                 QMessageBox.warning(
                     self,
                     "Duplicate Name",

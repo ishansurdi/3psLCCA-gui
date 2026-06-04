@@ -787,7 +787,9 @@ class MaterialDialog(QDialog):
         self._sor_filled_name = None  # name that triggered the last autofill
         self._sor_filling = False
         self._is_modified_by_user = False
-        self._is_customized = False
+        # Seed True when re-opening an already-modified item so _compute_action returns _modified
+        _existing_source = (data.get("meta", {}).get("source", "") if data else "")
+        self._is_customized = _existing_source in ("db_modified", "excel_modified", "custom_db_modified")
         self._pre_allow_edit_source = None  # saved when "Allow editing" is checked
         self._sor_carbon_available = True  # False when SOR has no carbon data
         self._db_original = {}  # immutable snapshot of DB values at suggestion time
@@ -1405,18 +1407,27 @@ class MaterialDialog(QDialog):
         if not self._suggestions:
             return
         q = text.strip()
-        # Exact match → selection just happened; autofill and stop.
+        # Complete name match → autofill (add mode only).
+        # Use case-insensitive exact match against the full suggestion name.
         # Guard with _ui_ready so this doesn't fire during __init__ before
         # all widgets (unit_in, carbon_em_in, etc.) have been created.
-        if q in self._suggestions and not self._skip_suggestions and q != self._sor_filled_name:
-            if self._ui_ready:
-                self._on_suggestion_selected(q)
+        _q_lower = q.lower()
+        _exact_key = next(
+            (k for k in self._suggestions if k.lower() == _q_lower), None
+        ) if not self._skip_suggestions and q != self._sor_filled_name else None
+        if _exact_key is not None:
+            print(f"[MaterialDialog] Exact match found: '{q}' → '{_exact_key}'")
+            print(f"[MaterialDialog] All suggestions ({len(self._suggestions)}):")
+            for k in sorted(self._suggestions.keys()):
+                print(f"  '{k}'  lower='{k.lower()}'")
+            print(f"[MaterialDialog] q='{q}'  q_lower='{_q_lower}'")
+            if self._ui_ready and not self.is_edit:
+                self._on_suggestion_selected(_exact_key)
             return
         # Name no longer matches the autofilled suggestion → clear stale DB values.
-        # For excel-sourced materials, preserve the snapshot and just mark as modified
-        # so renaming doesn't silently wipe source attribution or field values.
+        # In edit mode, just mark as customized — never wipe existing field values.
         if self._ui_ready and self._sor_item is not None and q != self._sor_filled_name:
-            if self._db_original.get("action") == "excel":
+            if self.is_edit or self._db_original.get("action") == "excel":
                 self._is_customized = True
             else:
                 self._reset_sor_state()
@@ -1570,7 +1581,8 @@ class MaterialDialog(QDialog):
             self._sor_carbon_available = True
             self.carbon_chk.setEnabled(True)
         else:
-            if self._sor_item is not None:
+            _restore_source = self._sor_item or (self._db_original if self._db_original else None)
+            if _restore_source is not None:
                 # Snapshot all current user-edited values before overwriting with DB values
                 self._user_edited_snapshot = {
                     "src_id": self.id_in.text(),
@@ -1587,7 +1599,7 @@ class MaterialDialog(QDialog):
                 # Restore all values from the DB suggestion that was selected
                 self._sor_filling = True
                 try:
-                    item = self._sor_item
+                    item = _restore_source
                     self.id_in.setText(str(item.get("src_id", "") or ""))
 
                     unit = item.get("unit", "")
@@ -1657,6 +1669,8 @@ class MaterialDialog(QDialog):
                 if restore_carbon_src:
                     self.carbon_src_in.setText(restore_carbon_src)
                 self._sor_filling = False
+                self._is_customized = False
+                self._is_modified_by_user = False
 
         self._lock_autofilled_fields(not checked)
 
@@ -2239,20 +2253,16 @@ class MaterialDialog(QDialog):
           anything unmodified  → original action
         """
         orig_action = self._db_original.get("action", "")
-        current_source = self._meta.get("source", "") if hasattr(self, "_meta") else ""
-
-        # Already marked as modified — preserve that state regardless of further edits
-        if current_source in ("db_modified", "excel_modified", "custom_db_modified"):
-            return current_source
+        _modified = self._is_customized or self._is_modified_by_user
 
         if orig_action == "excel":
-            return "excel_modified" if self._is_customized else "excel"
+            return "excel_modified" if _modified else "excel"
 
         if orig_action == "internal_db":
-            return "db_modified" if self._is_customized else "internal_db"
+            return "db_modified" if _modified else "internal_db"
 
         if orig_action == "custom_db":
-            return "custom_db_modified" if self._is_customized else "custom_db"
+            return "custom_db_modified" if _modified else "custom_db"
 
         if self._sor_item:
             is_custom = (self._db_original.get("db_key") or "").startswith("custom::")
