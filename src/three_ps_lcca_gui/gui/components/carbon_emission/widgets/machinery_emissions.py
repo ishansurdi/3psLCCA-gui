@@ -198,10 +198,10 @@ LUMPSUM_FUEL_FIELDS = [
 _LUMPSUM_KEYS = [
     ("elec_consumption_per_day", 0.0),
     ("elec_days", 0),
-    ("elec_ef", 0.71),
+    ("elec_ef", 0.0),
     ("fuel_consumption_per_day", 0.0),
     ("fuel_days", 0),
-    # ("fuel_ef", 2.69),
+    ("fuel_ef", 0.0),
 ]
 
 
@@ -906,10 +906,6 @@ class MachineryEmissions(ScrollableForm):
                 w.valueChanged.connect(self._on_totals_changed)
 
         # Set default EF values
-        if hasattr(self, "elec_ef"):
-            self.elec_ef.setValue(0.71)
-        # if hasattr(self, "fuel_ef"):
-        #     self.fuel_ef.setValue(2.69)
 
         # Lump sum subtotal
         ls_total_row = QWidget()

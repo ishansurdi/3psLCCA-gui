@@ -16,6 +16,11 @@ from PySide6.QtWidgets import (
 )
 
 from three_ps_lcca_gui.gui.themes import get_token
+from three_ps_lcca_gui.gui.version import DEV_MODE
+from three_ps_lcca_gui.gui.theme import (
+    FS_LG, FS_MD, FS_BASE, FS_SM,
+    FW_SEMIBOLD, FW_NORMAL,
+)
 from ....base_widget import ScrollableForm
 from ....utils.form_builder.form_definitions import FieldDef, Section
 from ....utils.form_builder.form_builder import build_form, _PLACEHOLDER
@@ -38,7 +43,7 @@ _SSP_LABEL_MAP = {
 }
 
 _RCP_LABEL_MAP = {
-    "Closest RCP (default)":        None,
+    "Closest RCP (Default)":        None,
     "RCP4.5 (≈ +2.5°C in 2100)":   "rcp45",
     "RCP6.0 (≈ +3°C in 2100)":     "rcp60",
     "RCP8.5 (≈ +4.5°C in 2100)":   "rcp85",
@@ -52,13 +57,13 @@ _DMG_FUNC_LABEL_MAP = {
 }
 
 _DMG_PARAMS_LABEL_MAP = {
-    "bootstrap (full uncertainty)":  "bootstrap",
-    "estimates (central params)":    "estimates",
+    "Bootstrap (Full Uncertainty)":  "bootstrap",
+    "Estimates (Central Params)":    "estimates",
 }
 
 _CLIMATE_LABEL_MAP = {
-    "expected (central projections)": "expected",
-    "uncertain (bootstrapped)":       "uncertain",
+    "Expected (Central Projections)": "expected",
+    "Uncertain (Bootstrapped)":       "uncertain",
 }
 
 _DISC_MAP = {
@@ -71,9 +76,9 @@ _DISC_MAP = {
 }
 
 _PERCENTILE_MAP = {
-    "16.7% (optimistic)":  0,
-    "50.0% (central)":     1,
-    "83.3% (pessimistic)": 2,
+    "16.7% (Optimistic)":  0,
+    "50.0% (Central)":     1,
+    "83.3% (Pessimistic)": 2,
 }
 
 
@@ -101,7 +106,7 @@ def _lookup(df, iso3, run, dmgfuncpar, climate, ssp, rcp, disc):
     except KeyError:
         return None, "missing"
 
-CHUNK = "social_cost_data"
+CHUNK = None  # SCCWidget owns saving; sub-widgets must not autosave to the chunk
 
 _SSP_OPTIONS = [
     "SSP1 (Sustainability)",
@@ -112,7 +117,7 @@ _SSP_OPTIONS = [
 ]
 
 _RCP_OVERRIDE_OPTIONS = [
-    "Closest RCP (default)",
+    "Closest RCP (Default)",
     "RCP4.5 (≈ +2.5°C in 2100)",
     "RCP6.0 (≈ +3°C in 2100)",
     "RCP8.5 (≈ +4.5°C in 2100)",
@@ -126,13 +131,13 @@ _DMG_FUNC_OPTIONS = [
 ]
 
 _DMG_PARAM_OPTIONS = [
-    "bootstrap (full uncertainty)",
-    "estimates (central params)",
+    "Bootstrap (Full Uncertainty)",
+    "Estimates (Central Params)",
 ]
 
 _CLIMATE_MODEL_OPTIONS = [
-    "expected (central projections)",
-    "uncertain (bootstrapped)",
+    "Expected (Central Projections)",
+    "Uncertain (Bootstrapped)",
 ]
 
 _DISCOUNTING_OPTIONS = [
@@ -145,9 +150,9 @@ _DISCOUNTING_OPTIONS = [
 ]
 
 _PERCENTILE_OPTIONS = [
-    "16.7% (optimistic)",
-    "50.0% (central)",
-    "83.3% (pessimistic)",
+    "16.7% (Optimistic)",
+    "50.0% (Central)",
+    "83.3% (Pessimistic)",
 ]
 
 RICKE_FIELDS: list[FieldDef | Section] = [
@@ -264,10 +269,18 @@ class RickeWidget(ScrollableForm):
         for lbl in (self._lbl_scc, self._lbl_range, self._lbl_params, self._lbl_status):
             lbl.setWordWrap(True)
 
-        self._lbl_scc.setStyleSheet(f"color: {get_token('text')};")
-        self._lbl_range.setStyleSheet(f"color: {get_token('text_secondary')};")
-        self._lbl_params.setStyleSheet(f"color: {get_token('text_secondary')};")
-        self._lbl_status.setStyleSheet(f"color: {get_token('text_secondary')};")
+        self._lbl_scc.setStyleSheet(
+            f"color: {get_token('text')}; font-size: {FS_LG}pt; font-weight: {FW_SEMIBOLD};"
+        )
+        self._lbl_range.setStyleSheet(
+            f"color: {get_token('text_secondary')}; font-size: {FS_MD}pt; font-weight: {FW_NORMAL};"
+        )
+        self._lbl_params.setStyleSheet(
+            f"color: {get_token('text_secondary')}; font-size: {FS_SM}pt; font-weight: {FW_NORMAL};"
+        )
+        self._lbl_status.setStyleSheet(
+            f"color: {get_token('text_secondary')}; font-size: {FS_BASE}pt; font-weight: {FW_NORMAL};"
+        )
 
         for lbl in (self._lbl_scc, self._lbl_range, self._lbl_params, self._lbl_status):
             self.form.addRow(lbl)
@@ -294,8 +307,11 @@ class RickeWidget(ScrollableForm):
         if isinstance(widget, QDoubleSpinBox):
             widget.setSuffix(f" {currency}/USD")
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._print_ricke_cost()
+
     def refresh_from_engine(self):
-        super().refresh_from_engine()
         self._update_currency_suffix()
 
     def _populate_iso3(self):
@@ -350,11 +366,11 @@ class RickeWidget(ScrollableForm):
 
         if unfilled_names:
             self._lbl_scc.setText("-")
-            self._lbl_scc.setStyleSheet(f"color: {get_token('text')};")
+            self._lbl_scc.setStyleSheet(f"color: {get_token('text')}; font-size: {FS_LG}pt; font-weight: {FW_SEMIBOLD};")
             self._lbl_range.setText("")
             self._lbl_params.setText("")
             self._lbl_status.setText(f"Waiting for: {', '.join(unfilled_names)}")
-            self._lbl_status.setStyleSheet(f"color: {get_token('text_secondary')};")
+            self._lbl_status.setStyleSheet(f"color: {get_token('text_secondary')}; font-size: {FS_BASE}pt; font-weight: {FW_NORMAL};")
             print(f"[RickeWidget] waiting for: {', '.join(unfilled_names)}")
             return
 
@@ -401,40 +417,54 @@ class RickeWidget(ScrollableForm):
                 "This combination was not found in the DB - please change one or more selections above."
             )
             self._lbl_scc.setText("No Result")
-            self._lbl_scc.setStyleSheet(f"color: {get_token('danger')};")
+            self._lbl_scc.setStyleSheet(f"color: {get_token('danger')}; font-size: {FS_LG}pt; font-weight: {FW_SEMIBOLD};")
             self._lbl_range.setText("")
             self._lbl_params.setText(summary)
-            self._lbl_params.setStyleSheet(f"color: {get_token('text_secondary')};")
+            self._lbl_params.setStyleSheet(f"color: {get_token('text_secondary')}; font-size: {FS_SM}pt; font-weight: {FW_NORMAL};")
             self._lbl_status.setText(msg)
-            self._lbl_status.setStyleSheet(f"color: {get_token('danger')};")
-            print(f"[RickeWidget] {msg}")
+            self._lbl_status.setStyleSheet(f"color: {get_token('danger')}; font-size: {FS_BASE}pt; font-weight: {FW_NORMAL};")
+            if DEV_MODE:
+                print(f"[RickeWidget] {msg}")
         else:
             lo, med, hi = result
             displayed = result[pct_idx]
-            cpi_ratio = self._field_map["cpi_ratio"].value() if "cpi_ratio" in self._field_map else 1.0
-            adjusted = displayed * cpi_ratio
-            adj_lo, adj_hi = lo * cpi_ratio, hi * cpi_ratio
-            cpi_applied = abs(cpi_ratio - 1.0) > 1e-6
-            currency = get_currency()
+            cpi_ratio    = self._field_map["cpi_ratio"].value()        if "cpi_ratio"        in self._field_map else 1.0
+            usd_to_local = self._field_map["usd_to_local_rate"].value() if "usd_to_local_rate" in self._field_map else 1.0
+            after_cpi    = displayed * cpi_ratio
+            final        = after_cpi * usd_to_local
+            adj_lo, adj_hi = lo * cpi_ratio * usd_to_local, hi * cpi_ratio * usd_to_local
+            cpi_applied  = abs(cpi_ratio - 1.0) > 1e-6
+            currency     = get_currency()
 
             if cpi_applied:
-                scc_text = f"{adjusted:,.4f} {currency} / tCO₂   (CPI-adjusted from {displayed:,.4f} in 2018 USD)"
+                scc_text = f"{final:,.4f} {currency} / tCO₂   (CPI-adjusted from {displayed:,.4f} in 2018 USD)"
                 ci_text  = (
-                    f"66.7% Confidence Interval:  {adj_lo:,.4f}  –  {adj_hi:,.4f} {currency} / tCO₂  (CPI-adjusted)\n"
+                    f"66.7% Confidence Interval:  {adj_lo:,.4f}  –  {adj_hi:,.4f} {currency} / tCO₂  (adjusted)\n"
                     f"                             {lo:,.4f}  –  {hi:,.4f} USD / tCO₂  (2018 USD)"
                 )
             else:
-                scc_text = f"{displayed:,.4f} {currency} / tCO₂   (2018 USD)"
+                scc_text = f"{final:,.4f} {currency} / tCO₂   (2018 USD)"
                 ci_text  = f"66.7% Confidence Interval:  {lo:,.4f}  –  {hi:,.4f} {currency} / tCO₂"
 
             self._lbl_scc.setText(scc_text)
-            self._lbl_scc.setStyleSheet(f"color: {get_token('success')};")
+            self._lbl_scc.setStyleSheet(f"color: {get_token('success')}; font-size: {FS_LG}pt; font-weight: {FW_SEMIBOLD};")
             self._lbl_range.setText(ci_text)
-            self._lbl_range.setStyleSheet(f"color: {get_token('text_secondary')};")
+            self._lbl_range.setStyleSheet(f"color: {get_token('text_secondary')}; font-size: {FS_MD}pt; font-weight: {FW_NORMAL};")
             self._lbl_params.setText(summary)
-            self._lbl_params.setStyleSheet(f"color: {get_token('text_secondary')};")
-            self._lbl_status.setText("")
-            print(f"[RickeWidget] SCC = {adjusted:,.4f} USD/tCO₂ (CPI ratio={cpi_ratio}, 2018 base={displayed:,.4f})  CI=[{adj_lo:,.4f}–{adj_hi:,.4f}]")
+            self._lbl_params.setStyleSheet(f"color: {get_token('text_secondary')}; font-size: {FS_SM}pt; font-weight: {FW_NORMAL};")
+
+            breakdown = (
+                f"① Raw (2018 USD):           {displayed:,.4f} USD/tCO₂\n"
+                f"② After CPI (× {cpi_ratio}):     {after_cpi:,.4f} USD/tCO₂\n"
+                f"③ Final (× {usd_to_local} {currency}/USD):  {final:,.4f} {currency}/tCO₂"
+            )
+            self._lbl_status.setText(breakdown)
+            self._lbl_status.setStyleSheet(f"color: {get_token('text_secondary')}; font-size: {FS_SM}pt; font-weight: {FW_NORMAL};")
+
+            if DEV_MODE:
+                print(f"[RickeWidget] raw (2018 USD):        {displayed:,.4f} USD/tCO₂  CI=[{lo:,.4f}–{hi:,.4f}]")
+                print(f"[RickeWidget] after CPI (ratio={cpi_ratio}): {after_cpi:,.4f} USD/tCO₂")
+                print(f"[RickeWidget] final ({currency}, rate={usd_to_local}): {final:,.4f} {currency}/tCO₂  CI=[{adj_lo:,.4f}–{adj_hi:,.4f}]")
 
     def _clear_all(self):
         if not confirm_clear_all(self):
@@ -520,5 +550,6 @@ class RickeWidget(ScrollableForm):
         if reason != "ok":
             return None
 
-        cpi_ratio = fm["cpi_ratio"].value() if "cpi_ratio" in fm else 1.0
-        return result[pct_idx] * cpi_ratio
+        cpi_ratio        = fm["cpi_ratio"].value()        if "cpi_ratio"        in fm else 1.0
+        usd_to_local     = fm["usd_to_local_rate"].value() if "usd_to_local_rate" in fm else 1.0
+        return result[pct_idx] * cpi_ratio * usd_to_local

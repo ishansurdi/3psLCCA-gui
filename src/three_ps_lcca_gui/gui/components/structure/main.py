@@ -124,10 +124,38 @@ class StructureTabView(QWidget):
         self.main_layout.addWidget(self.content_stack)
 
         # --- CONNECTIONS ---
+        for tab in (self.foundation_tab, self.substructure_tab, self.superstructure_tab, self.misc_tab):
+            tab.total_changed.connect(self._save_str_summary)
+
         self.excel_btn.clicked.connect(self._open_excel_import)
         self.download_btn.clicked.connect(self._download_excel)
         self.trash_btn.clicked.connect(self.toggle_trash_view)
         self.tab_view.currentChanged.connect(self._on_tab_changed)
+
+    def _save_str_summary(self):
+        if not self.controller or not self.controller.engine:
+            return
+
+        def _tab_data(tab) -> dict:
+            return {
+                "total":      getattr(tab, "_computed_total",      0.0),
+                "items":      getattr(tab, "_computed_count",       0),
+                "components": getattr(tab, "_computed_components",  0),
+            }
+
+        foundation    = _tab_data(self.foundation_tab)
+        substructure  = _tab_data(self.substructure_tab)
+        super_str     = _tab_data(self.superstructure_tab)
+        misc          = _tab_data(self.misc_tab)
+
+        self.controller.engine.stage_update(chunk_name="str_summary", data={
+            "foundation":      foundation,
+            "substructure":    substructure,
+            "super_structure": super_str,
+            "misc":            misc,
+            "grand_total":     foundation["total"] + substructure["total"] + super_str["total"] + misc["total"],
+            "total_items":     foundation["items"] + substructure["items"] + super_str["items"] + misc["items"],
+        })
 
     def on_refresh(self):
         """Refreshes all active tabs and updates the global trash count."""

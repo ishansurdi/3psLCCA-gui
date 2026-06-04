@@ -17,7 +17,7 @@ from ....utils.display_format import DECIMAL_PLACES
 from ....utils.validation_helpers import freeze_form, validate_form, clear_field_styles, confirm_clear_all
 from ....utils.common_requested_data import get_currency
 
-CHUNK = "social_cost_data"
+CHUNK = None  # SCCWidget owns saving; sub-widgets must not autosave to the chunk
 
 CUSTOM_FIELDS: list[FieldDef | Section] = [
     FieldDef(
@@ -42,12 +42,6 @@ class CustomWidget(ScrollableForm):
         build_form(self, CUSTOM_FIELDS)
         self._update_currency_suffix()
 
-    def _update_currency_suffix(self):
-        widget = self._field_map.get("scc_value")
-        if isinstance(widget, QDoubleSpinBox):
-            currency = get_currency()
-            widget.setSuffix(f" {currency}/kgCO₂e")
-
         btn_row = QWidget()
         btn_layout = QHBoxLayout(btn_row)
         btn_layout.setContentsMargins(0, 10, 0, 10)
@@ -56,6 +50,12 @@ class CustomWidget(ScrollableForm):
         self._btn_clear.clicked.connect(self._clear_all)
         btn_layout.addWidget(self._btn_clear)
         self.form.addRow(btn_row)
+
+    def _update_currency_suffix(self):
+        widget = self._field_map.get("scc_value")
+        if isinstance(widget, QDoubleSpinBox):
+            currency = get_currency()
+            widget.setSuffix(f" {currency}/kgCO₂e")
 
     def _clear_all(self):
         if not confirm_clear_all(self):
@@ -83,7 +83,6 @@ class CustomWidget(ScrollableForm):
         clear_field_styles(self._field_map)
 
     def refresh_from_engine(self):
-        super().refresh_from_engine()
         self._update_currency_suffix()
 
     def get_cost(self) -> float | None:

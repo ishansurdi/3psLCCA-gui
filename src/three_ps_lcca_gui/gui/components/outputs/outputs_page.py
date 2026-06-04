@@ -52,6 +52,7 @@ from three_ps_lcca_gui.gui.components.utils.form_builder.form_definitions import
     ValidationStatus,
 )
 from three_ps_lcca_gui.gui.components.utils.form_builder.form_builder import build_form
+from three_ps_lcca_gui.gui.components.utils.common_requested_data import get_currency
 from three_ps_lcca_gui.gui.components.utils.validation_helpers import (
     clear_field_styles,
     freeze_form,
@@ -1173,7 +1174,7 @@ class OutputsPage(ScrollableForm):
         #     _log.warning("DEBUG: failed to dump all_data: %s", _e)
         # ── END DEBUG ──────────────────────────────────────────
 
-        self._currency = all_data.get("general_info", {}).get("project_currency")
+        self._currency = get_currency()
         self._show_calculating()
 
         self._calc_thread = QThread(self)

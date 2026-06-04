@@ -1,3 +1,4 @@
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -30,6 +31,7 @@ from three_ps_lcca_gui.gui.styles import btn_danger
 
 
 class StructureManagerWidget(QWidget):
+    total_changed = Signal()  # emitted whenever the computed total changes
     def __init__(self, controller, chunk_name, default_components):
         super().__init__()
         self.controller = controller
@@ -129,18 +131,27 @@ class StructureManagerWidget(QWidget):
     def _update_summary(self):
         total = 0.0
         count = 0
+        components = 0
         for items in self.data.values():
+            comp_has_items = False
             for item in items:
                 if not item.get("state", {}).get("in_trash", False):
                     v = item.get("values", {})
-                    total += float(v.get("quantity", 0) or 0) * float(
-                        v.get("rate", 0) or 0
-                    )
+                    total += float(v.get("quantity", 0) or 0) * float(v.get("rate", 0) or 0)
                     count += 1
+                    comp_has_items = True
+            if comp_has_items:
+                components += 1
+        self._computed_total      = total
+        self._computed_count      = count
+        self._computed_components = components
         currency = getattr(self, "_currency", "")
         suffix = f" ({currency})" if currency else ""
-        self.total_lbl.setText(f"Total{suffix}: {fmt_comma(total)}")
-        self.count_lbl.setText(f"{count} item{'s' if count != 1 else ''}")
+        item_str = f"{count} item{'s' if count != 1 else ''}"
+        comp_str = f"{components} component{'s' if components != 1 else ''}"
+        self.total_lbl.setText(f"Total{suffix}: {fmt_comma(total)}  |  {item_str} in {comp_str}")
+        self.count_lbl.hide()
+        self.total_changed.emit()
 
     def create_section(self, name):
         group = QGroupBox(name)
