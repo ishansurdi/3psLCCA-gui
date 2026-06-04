@@ -972,7 +972,7 @@ class MaterialDialog(QDialog):
         self.carbon_chk = QCheckBox("Include")
         _carbon_state = s.get("included_in_carbon_emission", True)
         if _carbon_state == "not_available":
-            # New format — explicit.
+            # New format - explicit.
             self.carbon_chk.setChecked(False)
             self.carbon_chk.setEnabled(False)
             self._sor_carbon_available = False

@@ -569,7 +569,7 @@ def record_to_material_dict(record: dict) -> dict:
             "included_in_carbon_emission": has_carbon,
             "included_in_recyclability": has_recycle,
         },
-        # Top-level routing/control flags — consumed before add_material() is called
+        # Top-level routing/control flags - consumed before add_material() is called
         "_force_overwrite": bool(record.get("_duplicate_name", False)),
         "_component": record.get("component", "").strip(),
         "_chunk_key": record.get("_chunk_key", FALLBACK_CHUNK),

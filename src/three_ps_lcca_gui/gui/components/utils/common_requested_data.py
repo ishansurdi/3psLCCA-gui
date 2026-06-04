@@ -6,7 +6,7 @@ Usage:
     from ...components.utils.common_requested_data import set_controller
     set_controller(controller)
 
-    # anywhere in the UI — no argument needed:
+    # anywhere in the UI - no argument needed:
     from ...components.utils.common_requested_data import get_currency
     currency = get_currency()   # returns "" if no project is active
 """

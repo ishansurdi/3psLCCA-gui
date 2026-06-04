@@ -75,7 +75,7 @@ class CSCCExplorer(tk.Tk):
         super().__init__()
         self.index = index
         self.iso3_list = iso3_list
-        self.title("Country-level Social Cost of Carbon — Explorer")
+        self.title("Country-level Social Cost of Carbon - Explorer")
         self.resizable(False, False)
         self._build_ui()
         self._refresh()
@@ -205,7 +205,7 @@ class CSCCExplorer(tk.Tk):
 
         self.gscc_title_lbl = tk.Label(
             result_frame,
-            text="Social Cost of Carbon — Global",
+            text="Social Cost of Carbon - Global",
             font=("Helvetica", 11), fg="#bdc3c7", bg="#1a252f",
         )
         self.gscc_title_lbl.pack(pady=(10, 0))
@@ -224,7 +224,7 @@ class CSCCExplorer(tk.Tk):
 
         self.gscc_lbl = tk.Label(
             result_frame,
-            text="—",
+            text="-",
             font=("Helvetica", 28, "bold"),
             fg="#f1c40f", bg="#1a252f",
         )
@@ -291,7 +291,7 @@ class CSCCExplorer(tk.Tk):
         result = lookup_gscc(self.index, iso3, run, dmgfuncpar, climate, ssp, rcp, disc)
 
         label = "Global" if iso3 == "WLD" else iso3
-        self.gscc_title_lbl.config(text=f"Social Cost of Carbon — {label}")
+        self.gscc_title_lbl.config(text=f"Social Cost of Carbon - {label}")
 
         if result is None:
             self.gscc_lbl.config(text="N/A", fg="#e74c3c")

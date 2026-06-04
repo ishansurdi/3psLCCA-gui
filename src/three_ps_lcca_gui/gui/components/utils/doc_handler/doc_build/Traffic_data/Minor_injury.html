@@ -85,7 +85,7 @@ mjx-container{display:inline-block;vertical-align:middle}
 <p>It covers a wide range of non-emergency events such as cuts, wounds, bruises, swelling, and more. These injuries are generally defined as physical harms that are not life-threatening, do not cause permanent disability, and do not require extensive hospitalization or surgical interventions. They are typically treatable with first aid or primary care and generally allow for full recovery within a short period, often within a few days or weeks.</p>
 </main>
 <script>(function(){
-  // Search — pure DOM, no pywebview needed
+  // Search - pure DOM, no pywebview needed
   var inp = document.getElementById('search');
   inp && (inp.oninput = function(){
     var t = this.value.toLowerCase();
@@ -100,7 +100,7 @@ mjx-container{display:inline-block;vertical-align:middle}
     });
   });
 
-  // Theme + navigation polling — requires pywebview (graceful no-op if absent)
+  // Theme + navigation polling - requires pywebview (graceful no-op if absent)
   window.addEventListener('pywebviewready', function(){
     pywebview.api.get_theme().then(function(t){
       var s = document.documentElement.style;

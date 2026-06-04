@@ -281,7 +281,7 @@ class DocBuilderDialog(QDialog):
             self._node_edit.setText(path)
             self._log.appendPlainText(f"Found: {path}")
         else:
-            self._log.appendPlainText("Node.js not found on PATH — install from https://nodejs.org")
+            self._log.appendPlainText("Node.js not found on PATH - install from https://nodejs.org")
 
     def _refresh_pkg_status(self) -> None:
         renderer = self._cfg.get("renderer", "katex")
@@ -291,7 +291,7 @@ class DocBuilderDialog(QDialog):
             self._pkg_lbl.setStyleSheet(f"color:{_GREEN}; font-size:11px;")
             self._install_btn.setText("Reinstall")
         else:
-            self._pkg_lbl.setText(f"{pkg} + marked — not installed")
+            self._pkg_lbl.setText(f"{pkg} + marked - not installed")
             self._pkg_lbl.setStyleSheet(f"color:{_RED}; font-size:11px;")
             self._install_btn.setText("Install")
 
@@ -337,13 +337,13 @@ class DocBuilderDialog(QDialog):
         self._worker.start()
 
     def _on_build_done(self, n: int, elapsed: float) -> None:
-        self._set_status(f"Done — {n} file(s) in {elapsed:.1f} s", _GREEN)
+        self._set_status(f"Done - {n} file(s) in {elapsed:.1f} s", _GREEN)
         self._log.appendPlainText(f"\nOutput → {BUILD_DIR}")
         self._set_busy(False)
 
     def _on_build_failed(self, msg: str) -> None:
         self._log.appendPlainText(f"\n{msg}")
-        self._set_status("Build failed — see log above.", _RED)
+        self._set_status("Build failed - see log above.", _RED)
         self._set_busy(False)
 
     def _clean(self) -> None:

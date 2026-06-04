@@ -86,7 +86,7 @@ mjx-container{display:inline-block;vertical-align:middle}
 <p><div class="math-display"><span class="katex"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>A</mi><mi>d</mi><mi>d</mi><mi>i</mi><mi>t</mi><mi>i</mi><mi>o</mi><mi>n</mi><mi>a</mi><mi>l</mi><mtext> </mtext><mi>r</mi><mi>e</mi><mi>r</mi><mi>o</mi><mi>u</mi><mi>t</mi><mi>e</mi><mtext> </mtext><mi>d</mi><mi>i</mi><mi>s</mi><mi>t</mi><mi>a</mi><mi>n</mi><mi>c</mi><mi>e</mi><mo>=</mo><mi>x</mi><mo>×</mo><mi>s</mi><mi>p</mi><mi>a</mi><mi>n</mi></mrow><annotation encoding="application/x-tex">Additional\ reroute\ distance = x \times span</annotation></semantics></math></span></div></p>
 </main>
 <script>(function(){
-  // Search — pure DOM, no pywebview needed
+  // Search - pure DOM, no pywebview needed
   var inp = document.getElementById('search');
   inp && (inp.oninput = function(){
     var t = this.value.toLowerCase();
@@ -101,7 +101,7 @@ mjx-container{display:inline-block;vertical-align:middle}
     });
   });
 
-  // Theme + navigation polling — requires pywebview (graceful no-op if absent)
+  // Theme + navigation polling - requires pywebview (graceful no-op if absent)
   window.addEventListener('pywebviewready', function(){
     pywebview.api.get_theme().then(function(t){
       var s = document.documentElement.style;

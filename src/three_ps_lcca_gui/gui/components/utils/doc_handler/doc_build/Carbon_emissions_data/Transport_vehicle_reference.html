@@ -146,7 +146,7 @@ Values are indicative defaults. Actual emission factors vary with fuel type, loa
 <p>where <strong>Empty Weight = Gross Weight − Payload Capacity</strong>.</p>
 </main>
 <script>(function(){
-  // Search — pure DOM, no pywebview needed
+  // Search - pure DOM, no pywebview needed
   var inp = document.getElementById('search');
   inp && (inp.oninput = function(){
     var t = this.value.toLowerCase();
@@ -161,7 +161,7 @@ Values are indicative defaults. Actual emission factors vary with fuel type, loa
     });
   });
 
-  // Theme + navigation polling — requires pywebview (graceful no-op if absent)
+  // Theme + navigation polling - requires pywebview (graceful no-op if absent)
   window.addEventListener('pywebviewready', function(){
     pywebview.api.get_theme().then(function(t){
       var s = document.documentElement.style;

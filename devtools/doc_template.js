@@ -1,5 +1,5 @@
 (function(){
-  // Search — pure DOM, no pywebview needed
+  // Search - pure DOM, no pywebview needed
   var inp = document.getElementById('search');
   inp && (inp.oninput = function(){
     var t = this.value.toLowerCase();
@@ -14,7 +14,7 @@
     });
   });
 
-  // Theme + navigation polling — requires pywebview (graceful no-op if absent)
+  // Theme + navigation polling - requires pywebview (graceful no-op if absent)
   window.addEventListener('pywebviewready', function(){
     pywebview.api.get_theme().then(function(t){
       var s = document.documentElement.style;

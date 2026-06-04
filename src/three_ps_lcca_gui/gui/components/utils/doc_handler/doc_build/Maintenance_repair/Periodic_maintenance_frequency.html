@@ -84,7 +84,7 @@ mjx-container{display:inline-block;vertical-align:middle}
 <p>It is defined as the scheduled, recurring intervals at which maintenance tasks are performed to retain an asset in a satisfactory operating condition, preventing failure and extending its service life. These maintenance activities are planned, non-continuous events occurring annually, quarterly, or over longer, fixed time periods and are usually treated as future, discounted expenditures.</p>
 </main>
 <script>(function(){
-  // Search — pure DOM, no pywebview needed
+  // Search - pure DOM, no pywebview needed
   var inp = document.getElementById('search');
   inp && (inp.oninput = function(){
     var t = this.value.toLowerCase();
@@ -99,7 +99,7 @@ mjx-container{display:inline-block;vertical-align:middle}
     });
   });
 
-  // Theme + navigation polling — requires pywebview (graceful no-op if absent)
+  // Theme + navigation polling - requires pywebview (graceful no-op if absent)
   window.addEventListener('pywebviewready', function(){
     pywebview.api.get_theme().then(function(t){
       var s = document.documentElement.style;

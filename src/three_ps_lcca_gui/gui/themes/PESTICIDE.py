@@ -9,12 +9,12 @@ if TYPE_CHECKING:
 PESTICIDE.py - Qt Layout Debugger.
 
 API:
-    paraside(mode)   — 'rainbow' | 'beast' | 'off'
-    inspector(show)  — show/hide inspector panel independently
+    paraside(mode)   - 'rainbow' | 'beast' | 'off'
+    inspector(show)  - show/hide inspector panel independently
 
 Controls (when active):
-    Hover            — overlay rect + live inspector update
-    Alt + click      — lock / unlock inspector to a widget
+    Hover            - overlay rect + live inspector update
+    Alt + click      - lock / unlock inspector to a widget
 """
 
 
@@ -51,9 +51,9 @@ _PICK_MODE   = False  # True = hover tracks widgets, click selects & exits pick
 
 def paraside(mode: str = "rainbow"):
     """
-    'rainbow' — colored borders on every widget.
-    'beast'   — borders + inspector panel visible.
-    'off'     — restore standard UI.
+    'rainbow' - colored borders on every widget.
+    'beast'   - borders + inspector panel visible.
+    'off'     - restore standard UI.
     """
     global _ACTIVE_MODE
     _ACTIVE_MODE = mode
@@ -217,11 +217,11 @@ def _create_inspector():
             bar.setStyleSheet("background:#2d2d2d; border-bottom:1px solid #444;")
             blay = QtWidgets.QHBoxLayout(bar)
             blay.setContentsMargins(8, 5, 8, 5)
-            self._lbl_header = QtWidgets.QLabel("— no selection —")
+            self._lbl_header = QtWidgets.QLabel("- no selection -")
             self._lbl_header.setObjectName("header")
             blay.addWidget(self._lbl_header, 1)
             self._btn_pick = QtWidgets.QCheckBox("Pick")
-            self._btn_pick.setToolTip("Pick mode — hover to highlight, click to select")
+            self._btn_pick.setToolTip("Pick mode - hover to highlight, click to select")
             self._btn_pick.toggled.connect(self._on_pick_toggled)
             blay.addWidget(self._btn_pick)
             self._btn_lock = QtWidgets.QPushButton("🔒")
@@ -355,7 +355,7 @@ def _create_inspector():
             self._clear_info()
 
             if not widget:
-                self._lbl_header.setText("— no selection —")
+                self._lbl_header.setText("- no selection -")
                 self._ss_edit.setPlainText("")
                 return
 

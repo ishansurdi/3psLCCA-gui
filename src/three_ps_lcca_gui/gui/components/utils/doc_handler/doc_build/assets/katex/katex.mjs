@@ -4638,9 +4638,9 @@ boldItalic, boldItalic,
 // Map fancy A-Z letters to script, not calligraphic.
 // This aligns with unicode-math and math fonts (except Cambria Math).
 script, noFont,
-// A-Z script, a-z — no font
+// A-Z script, a-z - no font
 noFont, noFont,
-// A-Z bold script, a-z bold script — no font
+// A-Z bold script, a-z bold script - no font
 fraktur, fraktur,
 // A-Z, a-z
 doubleStruck, doubleStruck,

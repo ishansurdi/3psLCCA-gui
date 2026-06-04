@@ -56,7 +56,7 @@ def _is_running() -> bool:
         proc = psutil.Process(pid)
         if str(FILE_PATH) in proc.cmdline():
             return True
-        # PID recycled by a different process — stale lock
+        # PID recycled by a different process - stale lock
         _LOCK_FILE.unlink(missing_ok=True)
         return False
     except (ValueError, OSError, psutil.NoSuchProcess, psutil.AccessDenied):

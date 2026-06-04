@@ -3,7 +3,7 @@
  *
  * Generates complete, standalone HTML files from Markdown docs.
  * Each output file is self-contained: inline CSS, baked-in sidebar, pre-rendered math.
- * No JS is required to read the content — JS only adds theme adaptation + app navigation.
+ * No JS is required to read the content - JS only adds theme adaptation + app navigation.
  *
  * Math rendering:
  *   katex   → MathML  (browser-native, no CSS or fonts needed)
@@ -13,9 +13,9 @@
  *   node doc_build.js <renderer> <docs_dir> <build_dir>
  *
  * Stdout protocol (read by Python builder):
- *   FILE <rel-path>        — file being written
- *   DONE <n> <elapsed_ms>  — finished
- *   ERROR <message>        — fatal error
+ *   FILE <rel-path>        - file being written
+ *   DONE <n> <elapsed_ms>  - finished
+ *   ERROR <message>        - fatal error
  */
 
 'use strict';
@@ -63,7 +63,7 @@ if (RENDERER === 'katex') {
 
 const CODE_FENCE_RE = /```[\s\S]*?```|~~~[\s\S]*?~~~/g;
 const CODE_SPAN_RE  = /`[^`\n]+`/g;
-const DISPLAY_RE    = /\$\$([\s\S]+?)\$\$/g;  // before INLINE_RE — avoids treating $$ as two $
+const DISPLAY_RE    = /\$\$([\s\S]+?)\$\$/g;  // before INLINE_RE - avoids treating $$ as two $
 const INLINE_RE     = /\$([^$\n]+?)\$/g;
 
 function convertMd(md) {

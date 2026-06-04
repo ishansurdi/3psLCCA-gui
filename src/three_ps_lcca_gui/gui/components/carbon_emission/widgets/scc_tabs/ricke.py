@@ -243,7 +243,7 @@ RICKE_FIELDS: list[FieldDef | Section] = [
         warn=(
             0.0001,
             None,
-            "CPI Ratio is 0 — no inflation adjustment will be applied to the SCC value",
+            "CPI Ratio is 0 - no inflation adjustment will be applied to the SCC value",
         ),
     ),
 ]
@@ -256,7 +256,7 @@ class RickeWidget(ScrollableForm):
         self._update_currency_suffix()
 
         # ── result labels (inside scroll, after last field) ───────────────────
-        self._lbl_scc = QLabel("—")
+        self._lbl_scc = QLabel("-")
         self._lbl_range = QLabel("")
         self._lbl_params = QLabel("")
         self._lbl_status = QLabel("Fill all fields above to compute.")
@@ -289,7 +289,7 @@ class RickeWidget(ScrollableForm):
     def _update_currency_suffix(self):
         currency = get_currency()
         if currency == "Currency":
-            print("[RickeWidget] project currency not found — usd_to_local_rate suffix not updated")
+            print("[RickeWidget] project currency not found - usd_to_local_rate suffix not updated")
         widget = self._field_map.get("usd_to_local_rate")
         if isinstance(widget, QDoubleSpinBox):
             widget.setSuffix(f" {currency}/USD")
@@ -349,7 +349,7 @@ class RickeWidget(ScrollableForm):
                 _clear_border_style(widget)
 
         if unfilled_names:
-            self._lbl_scc.setText("—")
+            self._lbl_scc.setText("-")
             self._lbl_scc.setStyleSheet(f"color: {get_token('text')};")
             self._lbl_range.setText("")
             self._lbl_params.setText("")
@@ -358,7 +358,7 @@ class RickeWidget(ScrollableForm):
             print(f"[RickeWidget] waiting for: {', '.join(unfilled_names)}")
             return
 
-        # ── exact lookups — no assumptions ────────────────────────────────────
+        # ── exact lookups - no assumptions ────────────────────────────────────
         ssp = _SSP_LABEL_MAP.get(ssp_label)
         rcp_raw = _RCP_LABEL_MAP.get(rcp_label)
         rcp = rcp_raw if rcp_raw is not None else _CLOSEST_RCP[ssp]
@@ -396,9 +396,9 @@ class RickeWidget(ScrollableForm):
 
         if reason in ("na", "missing"):
             msg = (
-                "No data available for this combination in the DB — please change one or more selections above."
+                "No data available for this combination in the DB - please change one or more selections above."
                 if reason == "na" else
-                "This combination was not found in the DB — please change one or more selections above."
+                "This combination was not found in the DB - please change one or more selections above."
             )
             self._lbl_scc.setText("No Result")
             self._lbl_scc.setStyleSheet(f"color: {get_token('danger')};")
@@ -460,7 +460,7 @@ class RickeWidget(ScrollableForm):
         if result["errors"]:
             return result
 
-        # all required fields filled — also validate the DB combination
+        # all required fields filled - also validate the DB combination
         fm = self._field_map
         ssp = _SSP_LABEL_MAP.get(fm["ssp"].currentText())
         rcp_raw = _RCP_LABEL_MAP.get(fm["rcp"].currentText())
@@ -476,7 +476,7 @@ class RickeWidget(ScrollableForm):
                 _, reason = _lookup(_get_db(), iso3, run, dmgfuncpar, climate, ssp, rcp, disc)
                 if reason in ("na", "missing"):
                     result["errors"].append(
-                        "Selected combination has no data in the DB — change this combination."
+                        "Selected combination has no data in the DB - change this combination."
                     )
             except Exception:
                 pass

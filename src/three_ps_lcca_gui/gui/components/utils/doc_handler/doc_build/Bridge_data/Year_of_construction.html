@@ -84,7 +84,7 @@ mjx-container{display:inline-block;vertical-align:middle}
 <p>The year of construction is defined as the specific point in time when the initial capital investment occurs and the asset&#39;s service life begins. Typically designated as Year 0 or base year.</p>
 </main>
 <script>(function(){
-  // Search — pure DOM, no pywebview needed
+  // Search - pure DOM, no pywebview needed
   var inp = document.getElementById('search');
   inp && (inp.oninput = function(){
     var t = this.value.toLowerCase();
@@ -99,7 +99,7 @@ mjx-container{display:inline-block;vertical-align:middle}
     });
   });
 
-  // Theme + navigation polling — requires pywebview (graceful no-op if absent)
+  // Theme + navigation polling - requires pywebview (graceful no-op if absent)
   window.addEventListener('pywebviewready', function(){
     pywebview.api.get_theme().then(function(t){
       var s = document.documentElement.style;

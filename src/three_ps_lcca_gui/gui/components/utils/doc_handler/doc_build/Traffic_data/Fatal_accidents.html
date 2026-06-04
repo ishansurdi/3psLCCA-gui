@@ -85,7 +85,7 @@ mjx-container{display:inline-block;vertical-align:middle}
 <p>A fatal accident is typically classified as one where death occurs immediately or within 30 days of the injury sustained in the incident. Death occurs through intracranial hemorrhage, laceration of vital organs, or traumatic asphyxia. It requires an autopsy to determine if the death was caused by the injury or other underlying factors.</p>
 </main>
 <script>(function(){
-  // Search — pure DOM, no pywebview needed
+  // Search - pure DOM, no pywebview needed
   var inp = document.getElementById('search');
   inp && (inp.oninput = function(){
     var t = this.value.toLowerCase();
@@ -100,7 +100,7 @@ mjx-container{display:inline-block;vertical-align:middle}
     });
   });
 
-  // Theme + navigation polling — requires pywebview (graceful no-op if absent)
+  // Theme + navigation polling - requires pywebview (graceful no-op if absent)
   window.addEventListener('pywebviewready', function(){
     pywebview.api.get_theme().then(function(t){
       var s = document.documentElement.style;
