@@ -127,6 +127,7 @@ BRIDGE_FIELDS = [
         "[Indicates whether the road allows one-way or two-way traffic.]",
         "combo",
         options=["One Way", "Two Way"],
+        combo_placeholder="",
     ),
     FieldDef(
         "footpath",
@@ -134,6 +135,7 @@ BRIDGE_FIELDS = [
         "[Indicates whether the dedicated pedestrian footpath is provided.]",
         "combo",
         options=["No footpath", "Footpath at one side", "Footpath at both sides"],
+        combo_placeholder="",
         doc_slug=["Bridge_data", "Footpath"],
     ),
     # FieldDef(

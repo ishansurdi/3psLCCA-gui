@@ -9,7 +9,7 @@ from three_ps_lcca_gui.gui.components.carbon_emission.widgets.machinery_emission
     MachineryEmissions,
 )
 from three_ps_lcca_gui.gui.components.carbon_emission.widgets.traffic_emissions import TrafficEmissions
-from three_ps_lcca_gui.gui.components.carbon_emission.widgets.social_cost import SocialCost
+from three_ps_lcca_gui.gui.components.carbon_emission.widgets.scc_widget import SCCWidget
 
 
 class CarbonEmissionTabView(QWidget):
@@ -31,7 +31,7 @@ class CarbonEmissionTabView(QWidget):
         palette.setColor(QPalette.Base, palette.color(QPalette.Window))
         self.tab_view.setPalette(palette)
 
-        self.tab_view.addTab(SocialCost(controller=controller), "Social Cost of Carbon")
+        self.tab_view.addTab(SCCWidget(controller=controller), "Social Cost of Carbon")
         self.tab_view.addTab(
             MaterialEmissions(controller=controller), "Material Emissions"
         )

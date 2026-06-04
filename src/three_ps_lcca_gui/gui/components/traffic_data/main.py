@@ -156,6 +156,7 @@ TRAFFIC_FIELDS = [
         options=_LANE_NAMES,
         required=True,
         default=_NONE_LANE,
+        combo_placeholder=""
     ),
     FieldDef(
         "carriage_width_in_m",
@@ -330,7 +331,7 @@ OUTSIDE_INDIA_FIELDS = [
 ]
 
 PROJECT_MODE_FIELDS = [
-    FieldDef("mode", "Calculation Mode", "", "combo", options=["INDIA", "GLOBAL"]),
+    FieldDef("mode", "Calculation Mode", "", "combo", options=["INDIA", "GLOBAL"], combo_placeholder=""),
 ]
 
 

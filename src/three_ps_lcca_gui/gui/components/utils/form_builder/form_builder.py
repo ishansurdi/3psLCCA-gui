@@ -45,6 +45,8 @@ from ..validation_helpers import confirm_clear_all
 from ..doc_link import doc_inline, doc_label
 
 
+
+_PLACEHOLDER = "-- select --"
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -339,8 +341,8 @@ def build_form(
         # ── combo ─────────────────────────────────────────────────────────
         elif f.field_type == "combo":
             widget = QComboBox()
-            placeholder = f.combo_placeholder if f.combo_placeholder is not None else "-- select --"
-            widget.addItem(placeholder)
+            if f.combo_placeholder != "":
+                widget.addItem(f.combo_placeholder if f.combo_placeholder is not None else _PLACEHOLDER)
             widget.addItems(f.options or [])
             if f.default is not None:
                 idx = widget.findText(str(f.default))

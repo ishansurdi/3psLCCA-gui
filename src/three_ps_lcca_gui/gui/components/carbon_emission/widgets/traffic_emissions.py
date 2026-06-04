@@ -283,7 +283,7 @@ class TrafficEmissions(ScrollableForm):
         # never fires for it and never writes a partial dict to the chunk.
         build_form(
             self,
-            [FieldDef("mode", "Calculation Mode", "", "combo", options=_MODES)],
+            [FieldDef("mode", "Calculation Mode", "", "combo", options=_MODES, combo_placeholder="")],
         )
         self._field_map.pop("mode", None)  # ← prevent base save loop from firing
 
