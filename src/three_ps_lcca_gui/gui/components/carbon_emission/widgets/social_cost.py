@@ -68,6 +68,7 @@ HEADER_FIELDS = [
         "Choose between government standards or peer-reviewed scientific models.",
         "combo",
         options=_SOURCES,
+        required=True,
         doc_slug=["Carbon_emissions_data", "SSC"],
     ),
 ]
@@ -108,7 +109,7 @@ RICKE_FIELDS = [
         "Assumptions on future population, GDP, and energy use.",
         "combo",
         options=_SSP_OPTIONS,
-        combo_placeholder="-- Select --",
+        required=True,
     ),
     FieldDef(
         "rcp_scenario",
@@ -116,7 +117,7 @@ RICKE_FIELDS = [
         "Representative Concentration Pathway for greenhouse gases.",
         "combo",
         options=_RCP_OPTIONS,
-        combo_placeholder="-- Select --",
+        required=True,
     ),
 ]
 CUSTOM_FIELDS = [
@@ -346,6 +347,7 @@ class SocialCost(ScrollableForm):
         if self._suppress_signals:
             return
         mode = self.source.currentText()
+        placeholder = self.source.itemText(0)
 
         # Clear any validation styles from the previous mode
         clear_field_styles(HEADER_FIELDS + NITI_FIELDS + RICKE_FIELDS + CUSTOM_FIELDS, self)
@@ -355,7 +357,10 @@ class SocialCost(ScrollableForm):
         self._stack.setMaximumHeight(16777215)
         self._stack.setMinimumHeight(0)
 
-        if _MODE_NITI in mode:
+        if mode == placeholder:
+            self._stack.setCurrentIndex(0)
+            self._result_lbl.setText("<b>Select a methodology to begin</b>")
+        elif _MODE_NITI in mode:
             self._stack.setCurrentIndex(0)
             self._update_niti_result()
         elif _MODE_RICKE in mode:
@@ -383,6 +388,10 @@ class SocialCost(ScrollableForm):
     def _update_niti_result(self):
         if self._suppress_signals:
             return
+        mode = self.source.currentText()
+        if mode == self.source.itemText(0):
+            return
+
         cur = str(self._project_currency or "INR").strip().upper()
         rate = self.inr_to_local_rate.value() if cur != "INR" else 1.0
         val = NITI_AAYOG_SCC_INR * rate
@@ -410,8 +419,18 @@ class SocialCost(ScrollableForm):
     def _update_ricke_result(self):
         if self._suppress_signals:
             return
+        mode = self.source.currentText()
+        if mode == self.source.itemText(0):
+            return
+
         ssp = self.ssp_scenario.currentText()
         rcp = self.rcp_scenario.currentText()
+        
+        if ssp == self.ssp_scenario.itemText(0) or rcp == self.rcp_scenario.itemText(0):
+            self._ricke_result_lbl.setText("<b>Select SSP and RCP scenarios</b>")
+            self._set_result(0.0)
+            return
+
         base = _RICKE_SCC_TABLE.get((ssp, rcp), 0.0)
         usd_rate = self.usd_to_local_rate.value()
         val = base * usd_rate
@@ -456,6 +475,10 @@ class SocialCost(ScrollableForm):
     def _update_custom_result(self):
         if self._suppress_signals:
             return
+        mode = self.source.currentText()
+        if mode == self.source.itemText(0):
+            return
+
         val = self.scc_value.value()
         cur = self._project_currency or ""
         self._set_result(
@@ -478,7 +501,7 @@ class SocialCost(ScrollableForm):
             ]
             
             # Only add the Conversion Rate line if it's a cross-currency conversion
-            if rate_unit not in ("INR/INR", "USD/USD"):
+            if rate_unit not in ("INR/INR", "USD/USD", "(direct entry)"):
                 lines.append(f"<b>Conversion Rate:</b> {fmt(conversion_rate)} {rate_unit}")
                 
             lines.append(f"<b>Effective SCC:</b> {fmt(value)} {cur}/kgCO₂e")
@@ -617,7 +640,7 @@ class SocialCost(ScrollableForm):
         self._loading = True
         try:
             self.source.blockSignals(True)
-            idx = self.source.findText(data.get("source", _MODE_NITI))
+            idx = self.source.findText(data.get("source", ""))
             self.source.setCurrentIndex(idx if idx >= 0 else 0)
             self.source.blockSignals(False)
 
@@ -632,12 +655,12 @@ class SocialCost(ScrollableForm):
             self.usd_to_local_rate.blockSignals(False)
 
             self.ssp_scenario.blockSignals(True)
-            i = self.ssp_scenario.findText(ricke.get("ssp", _SSP_OPTIONS[0]))
+            i = self.ssp_scenario.findText(ricke.get("ssp", ""))
             self.ssp_scenario.setCurrentIndex(i if i >= 0 else 0)
             self.ssp_scenario.blockSignals(False)
 
             self.rcp_scenario.blockSignals(True)
-            i = self.rcp_scenario.findText(ricke.get("rcp", _RCP_OPTIONS[0]))
+            i = self.rcp_scenario.findText(ricke.get("rcp", ""))
             self.rcp_scenario.setCurrentIndex(i if i >= 0 else 0)
             self.rcp_scenario.blockSignals(False)
 
@@ -648,7 +671,6 @@ class SocialCost(ScrollableForm):
         finally:
             self._loading = False
 
-        # Sync stack to loaded mode - suppressed so it doesn't trigger a save
         self._suppress_signals = True
         self._on_mode_changed()
         self._suppress_signals = False
@@ -656,23 +678,25 @@ class SocialCost(ScrollableForm):
     def validate(self) -> dict:
         data = self.collect_data()
         mode = data.get("source", "")
+        placeholder = self.source.itemText(0)
 
         # 1. Select fields and skip keys based on active methodology
         active_fields = HEADER_FIELDS.copy()
         skip = set()
 
-        if _MODE_RICKE in mode:
-            active_fields += RICKE_FIELDS
-            if str(self._project_currency).upper() == "USD":
-                skip.add("usd_to_local_rate")
-        elif _MODE_NITI in mode:
-            active_fields += NITI_FIELDS
-            if str(self._project_currency).upper() == "INR":
-                skip.add("inr_to_local_rate")
-        else:
-            active_fields += CUSTOM_FIELDS
+        if mode != placeholder:
+            if _MODE_RICKE in mode:
+                active_fields += RICKE_FIELDS
+                if str(self._project_currency).upper() == "USD":
+                    skip.add("usd_to_local_rate")
+            elif _MODE_NITI in mode:
+                active_fields += NITI_FIELDS
+                if str(self._project_currency).upper() == "INR":
+                    skip.add("inr_to_local_rate")
+            else:
+                active_fields += CUSTOM_FIELDS
 
-        # 2. Run standard validation (handles warn rules in FieldDefs)
+        # 2. Run standard validation (handles required combo placeholders automatically)
         result = validate_form(active_fields, self, skip_keys=skip)
         errors = result["errors"]
         warnings = result["warnings"]
@@ -681,22 +705,19 @@ class SocialCost(ScrollableForm):
         if _MODE_RICKE in mode:
             ssp = data.get("ricke", {}).get("ssp", "")
             rcp = data.get("ricke", {}).get("rcp", "")
-            if (ssp, rcp) not in _RICKE_SCC_TABLE:
-                errors.append(
-                    f"Invalid SSP/RCP combination: '{ssp}' + '{rcp}' is not in the Ricke et al. SCC table. "
-                    f"Valid pairs: "
-                    + ", ".join(f"{s} + {r}" for s, r in _RICKE_SCC_TABLE)
-                    + "."
-                )
+            # Only run cross-field check if methodology fields passed required check
+            if ssp != self.ssp_scenario.itemText(0) and rcp != self.rcp_scenario.itemText(0):
+                if (ssp, rcp) not in _RICKE_SCC_TABLE:
+                    errors.append(
+                        f"Invalid SSP/RCP combination: '{ssp}' + '{rcp}' is not in the Ricke et al. SCC table."
+                    )
 
         # 4. General fallback warning for zero-SCC results in non-custom modes
-        #    (e.g. if the scientific baseline is 0)
-        if _MODE_CUSTOM not in mode:
+        if mode != placeholder and _MODE_CUSTOM not in mode:
             scc = data.get("result", {}).get("cost_of_carbon_local", 0.0)
             if scc == 0.0:
                 warnings.append(
-                    "Social Cost of Carbon is 0 - the computed SCC for the selected source is 0, "
-                    "so no carbon cost will be applied to emissions; review the selected source or conversion rate"
+                    "Social Cost of Carbon is 0 - the computed SCC for the selected source is 0."
                 )
 
         return {"errors": errors, "warnings": warnings}

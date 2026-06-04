@@ -95,6 +95,6 @@ class FieldDef:
     default: Any = None  # explicit initial value; if None, the widget's lower bound is used
     blocked: bool = False  # permanently read-only regardless of project lock state
     placeholder_text: str = ""  # hint shown when the field is empty (text / textarea only)
-    combo_placeholder: str | None = None  # prepended as index-0 "-- Select --" item for combo fields
+    combo_placeholder: str | None = None  # prepended as index-0 item for combo fields; if None, defaults to "-- select --"
 
 

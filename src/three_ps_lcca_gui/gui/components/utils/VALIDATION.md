@@ -10,7 +10,7 @@ How to add errors and warnings to any data-entry page.
 
 | Concept | Purpose | Shown as |
 |---|---|---|
-| **Error** | Field is required and left blank (text fields only) | Red border + blocks calculation |
+| **Error** | Field is required and left blank or with placeholder | Red border + blocks calculation |
 | **Warning** | Value is filled but looks unusual | Orange border + allows proceed |
 
 > Numeric fields (`QSpinBox`, `QDoubleSpinBox`) are **never** considered "missing" -
@@ -21,7 +21,7 @@ How to add errors and warnings to any data-entry page.
 ## Step 1 - Mark required fields
 
 Set `required=True` on a `FieldDef` to make it mandatory.
-Only applies to `QLineEdit` fields (text input).
+Applies to `text`, `textarea`, and `combo` fields.
 
 ```python
 FieldDef(
@@ -30,6 +30,15 @@ FieldDef(
     "Name of the project.",
     "text",
     required=True,       # blank string → Error
+)
+
+FieldDef(
+    "bridge_type",
+    "Type of Bridge",
+    "",
+    "combo",
+    options=["Girder", "Arch"],
+    required=True,       # placeholder selected → Error
 )
 ```
 

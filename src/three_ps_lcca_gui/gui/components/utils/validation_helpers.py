@@ -191,6 +191,12 @@ def validate_form(
             _apply_border_style(widget, get_token("danger"))
             errors.append(f"'{f.title}' is required - enter a value above the minimum")
             error_keys.add(f.key)
+        elif isinstance(widget, QComboBox):
+            placeholder = f.combo_placeholder if f.combo_placeholder is not None else "-- select --"
+            if widget.currentText() == placeholder:
+                _apply_border_style(widget, get_token("danger"))
+                errors.append(f"'{f.title}' is required - please select an option")
+                error_keys.add(f.key)
         # QSpinBox/QDoubleSpinBox without default: 0 is a valid value - use warn_rules
         # QComboBox: always has a selection - no check needed
 

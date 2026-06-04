@@ -36,6 +36,20 @@ FieldDef(
 )
 ```
 
+### For Combo Boxes (`combo`)
+A combo box is in error if the currently selected text matches the `combo_placeholder` (which defaults to `"-- select --"` if not specified).
+
+```python
+FieldDef(
+    key="bridge_type",
+    title="Type of Bridge",
+    explanation="Select classification.",
+    field_type="combo",
+    options=["Girder", "Arch"],
+    required=True  # Triggers error if "-- select --" is chosen
+)
+```
+
 ---
 
 ## 2. Warnings (Range Checks)
@@ -94,5 +108,6 @@ class MyPage(ScrollableForm):
 | **Text** | `required=True` | `text().strip() == ""` | **Error** | Red |
 | **Numeric** | `required=True` & `default` | `value() == minimum()` | **Error** | Red |
 | **Numeric** | `warn=(low, high)` | `value() < low` or `> high` | **Warning** | Orange |
+| **Combo** | `required=True` | `currentText() == placeholder` | **Error** | Red |
 
 > **Note:** If a field has an **Error**, the **Warning** check is skipped for that field to keep the UI focused on the most critical issue.

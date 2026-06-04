@@ -15,3 +15,4 @@
 - Every component latex file must expose a single `<component>_to_latex(controller)` function and nothing else
 - Each component has its own `.py` file so output can be individually controlled — do not try to fully automate or over-generalize; `common_code.py` only exists for shared low-level utilities, not to eliminate per-component decisions
 - To register a new component in the Dev > LaTeX menu, add one entry to `_LATEX_ENTRIES` in `devmode.py` — do not duplicate the save/wrap logic
+- src\three_ps_lcca_gui\gui\devmode.py
