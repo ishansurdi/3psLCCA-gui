@@ -1,10 +1,21 @@
-from PySide6.QtWidgets import QPushButton, QHBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QTextEdit,
+    QWidget,
+)
 
 from ....base_widget import ScrollableForm
 from ....utils.form_builder.form_definitions import FieldDef, Section
 from ....utils.form_builder.form_builder import build_form
 from ....utils.display_format import DECIMAL_PLACES
 from ....utils.validation_helpers import freeze_form, validate_form, clear_field_styles, confirm_clear_all
+from ....utils.common_requested_data import get_currency
 
 CHUNK = "social_cost_data"
 
@@ -29,6 +40,13 @@ class CustomWidget(ScrollableForm):
     def __init__(self, controller=None):
         super().__init__(controller=controller, chunk_name=CHUNK)
         build_form(self, CUSTOM_FIELDS)
+        self._update_currency_suffix()
+
+    def _update_currency_suffix(self):
+        widget = self._field_map.get("scc_value")
+        if isinstance(widget, QDoubleSpinBox):
+            currency = get_currency()
+            widget.setSuffix(f" {currency}/kgCO₂e")
 
         btn_row = QWidget()
         btn_layout = QHBoxLayout(btn_row)
@@ -43,7 +61,6 @@ class CustomWidget(ScrollableForm):
         if not confirm_clear_all(self):
             return
         for widget in self._field_map.values():
-            from PySide6.QtWidgets import QComboBox, QDoubleSpinBox, QSpinBox, QLineEdit, QCheckBox, QTextEdit
             if isinstance(widget, QComboBox):
                 widget.setCurrentIndex(0)
             elif isinstance(widget, QDoubleSpinBox):
@@ -64,3 +81,10 @@ class CustomWidget(ScrollableForm):
 
     def clear_validation(self):
         clear_field_styles(self._field_map)
+
+    def refresh_from_engine(self):
+        super().refresh_from_engine()
+        self._update_currency_suffix()
+
+    def get_cost(self) -> float | None:
+        return self._field_map["scc_value"].value() if "scc_value" in self._field_map else None

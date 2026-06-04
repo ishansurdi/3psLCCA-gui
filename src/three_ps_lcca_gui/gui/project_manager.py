@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QApplication
 
 from three_ps_lcca_gui.gui.project_window import ProjectWindow
 from three_ps_lcca_gui.gui.project_controller import ProjectController
+from three_ps_lcca_gui.gui.components.utils.common_requested_data import set_controller
 from three_ps_lcca_gui.gui.components.new_project_dialog import NewProjectDialog
 
 import three_ps_lcca_gui.core.start_manager as sm
@@ -46,6 +47,7 @@ class ProjectManager:
 
     def _create_window(self):
         new_controller = ProjectController()
+        set_controller(new_controller)
         win = ProjectWindow(manager=self, controller=new_controller)
         self.windows.append(win)
         return win

@@ -1,13 +1,27 @@
 from pathlib import Path
 
-from PySide6.QtWidgets import QPushButton, QHBoxLayout, QWidget, QLabel
+import pandas as pd
+
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QTextEdit,
+    QWidget,
+)
 
 from three_ps_lcca_gui.gui.themes import get_token
 from ....base_widget import ScrollableForm
 from ....utils.form_builder.form_definitions import FieldDef, Section
 from ....utils.form_builder.form_builder import build_form, _PLACEHOLDER
 from ....utils.display_format import DECIMAL_PLACES
-from ....utils.validation_helpers import freeze_form, validate_form, clear_field_styles, confirm_clear_all
+from ....utils.validation_helpers import freeze_form, validate_form, clear_field_styles, confirm_clear_all, _apply_border_style, _clear_border_style
+from ....utils.common_requested_data import get_currency
 
 # ── DB helpers (mirrors cscc_explorer.py) ─────────────────────────────────────
 
@@ -69,7 +83,6 @@ _db = None
 def _get_db():
     global _db
     if _db is None:
-        import pandas as pd
         _db = pd.read_pickle(_PKL_PATH)
     return _db
 
@@ -78,7 +91,6 @@ def _lookup(df, iso3, run, dmgfuncpar, climate, ssp, rcp, disc):
     """Returns (values, reason) where values is (lo, med, hi) or None.
     reason: "ok" | "na" | "missing"
     """
-    import pandas as pd
     key = (iso3, run, dmgfuncpar, climate, ssp, rcp, disc["prtp"], disc["eta"], disc["dr"])
     try:
         row = df.loc[key]
@@ -241,6 +253,7 @@ class RickeWidget(ScrollableForm):
     def __init__(self, controller=None):
         super().__init__(controller=controller, chunk_name=CHUNK)
         build_form(self, RICKE_FIELDS)
+        self._update_currency_suffix()
 
         # ── result labels (inside scroll, after last field) ───────────────────
         self._lbl_scc = QLabel("—")
@@ -273,6 +286,18 @@ class RickeWidget(ScrollableForm):
         self._populate_iso3()
         self._connect_combo_logging()
 
+    def _update_currency_suffix(self):
+        currency = get_currency()
+        if currency == "Currency":
+            print("[RickeWidget] project currency not found — usd_to_local_rate suffix not updated")
+        widget = self._field_map.get("usd_to_local_rate")
+        if isinstance(widget, QDoubleSpinBox):
+            widget.setSuffix(f" {currency}/USD")
+
+    def refresh_from_engine(self):
+        super().refresh_from_engine()
+        self._update_currency_suffix()
+
     def _populate_iso3(self):
         try:
             df = _get_db()
@@ -285,7 +310,6 @@ class RickeWidget(ScrollableForm):
             print(f"[RickeWidget] failed to load ISO3 list: {e}")
 
     def _connect_combo_logging(self):
-        from PySide6.QtWidgets import QComboBox, QDoubleSpinBox
         for widget in self._field_map.values():
             if isinstance(widget, QComboBox):
                 widget.currentTextChanged.connect(lambda _: self._print_ricke_cost())
@@ -306,24 +330,32 @@ class RickeWidget(ScrollableForm):
 
         # ── guard: all required fields must be filled ─────────────────────────
         required = {
-            "Country":             iso3,
-            "SSP":                 ssp_label,
-            "RCP":                 rcp_label,
-            "Damage Function":     dmg_label,
-            "Damage Parameters":   par_label,
-            "Climate Uncertainty": cli_label,
-            "Discounting":         dis_label,
-            "Percentile":          pct_label,
+            "Country":             ("iso3",              iso3),
+            "SSP":                 ("ssp",               ssp_label),
+            "RCP":                 ("rcp",               rcp_label),
+            "Damage Function":     ("dmg_func",          dmg_label),
+            "Damage Parameters":   ("dmg_params",        par_label),
+            "Climate Uncertainty": ("climate_uncertainty", cli_label),
+            "Discounting":         ("discounting",       dis_label),
+            "Percentile":          ("percentile",        pct_label),
         }
-        unfilled = [name for name, val in required.items() if val == _PLACEHOLDER]
-        if unfilled:
+        unfilled_names = []
+        for label, (key, val) in required.items():
+            widget = fm[key]
+            if val == _PLACEHOLDER:
+                _apply_border_style(widget, get_token("danger"))
+                unfilled_names.append(label)
+            else:
+                _clear_border_style(widget)
+
+        if unfilled_names:
             self._lbl_scc.setText("—")
             self._lbl_scc.setStyleSheet(f"color: {get_token('text')};")
             self._lbl_range.setText("")
             self._lbl_params.setText("")
-            self._lbl_status.setText(f"Waiting for: {', '.join(unfilled)}")
+            self._lbl_status.setText(f"Waiting for: {', '.join(unfilled_names)}")
             self._lbl_status.setStyleSheet(f"color: {get_token('text_secondary')};")
-            print(f"[RickeWidget] waiting for: {', '.join(unfilled)}")
+            print(f"[RickeWidget] waiting for: {', '.join(unfilled_names)}")
             return
 
         # ── exact lookups — no assumptions ────────────────────────────────────
@@ -383,16 +415,17 @@ class RickeWidget(ScrollableForm):
             adjusted = displayed * cpi_ratio
             adj_lo, adj_hi = lo * cpi_ratio, hi * cpi_ratio
             cpi_applied = abs(cpi_ratio - 1.0) > 1e-6
+            currency = get_currency()
 
             if cpi_applied:
-                scc_text = f"{adjusted:,.4f} USD / tCO₂   (CPI-adjusted from {displayed:,.4f} in 2018 USD)"
+                scc_text = f"{adjusted:,.4f} {currency} / tCO₂   (CPI-adjusted from {displayed:,.4f} in 2018 USD)"
                 ci_text  = (
-                    f"66.7% Confidence Interval:  {adj_lo:,.4f}  –  {adj_hi:,.4f} USD / tCO₂  (CPI-adjusted)\n"
+                    f"66.7% Confidence Interval:  {adj_lo:,.4f}  –  {adj_hi:,.4f} {currency} / tCO₂  (CPI-adjusted)\n"
                     f"                             {lo:,.4f}  –  {hi:,.4f} USD / tCO₂  (2018 USD)"
                 )
             else:
-                scc_text = f"{displayed:,.4f} USD / tCO₂   (2018 USD)"
-                ci_text  = f"66.7% Confidence Interval:  {lo:,.4f}  –  {hi:,.4f} USD / tCO₂"
+                scc_text = f"{displayed:,.4f} {currency} / tCO₂   (2018 USD)"
+                ci_text  = f"66.7% Confidence Interval:  {lo:,.4f}  –  {hi:,.4f} {currency} / tCO₂"
 
             self._lbl_scc.setText(scc_text)
             self._lbl_scc.setStyleSheet(f"color: {get_token('success')};")
@@ -407,7 +440,6 @@ class RickeWidget(ScrollableForm):
         if not confirm_clear_all(self):
             return
         for widget in self._field_map.values():
-            from PySide6.QtWidgets import QComboBox, QDoubleSpinBox, QSpinBox, QLineEdit, QCheckBox, QTextEdit
             if isinstance(widget, QComboBox):
                 widget.setCurrentIndex(0)
             elif isinstance(widget, QDoubleSpinBox):
@@ -453,3 +485,40 @@ class RickeWidget(ScrollableForm):
 
     def clear_validation(self):
         clear_field_styles(self._field_map)
+
+    def get_cost(self) -> float | None:
+        fm = self._field_map
+        ssp_label = fm["ssp"].currentText()
+        rcp_label = fm["rcp"].currentText()
+        dmg_label = fm["dmg_func"].currentText()
+        par_label = fm["dmg_params"].currentText()
+        cli_label = fm["climate_uncertainty"].currentText()
+        dis_label = fm["discounting"].currentText()
+        pct_label = fm["percentile"].currentText()
+        iso3      = fm["iso3"].currentText()
+
+        if any(v == _PLACEHOLDER for v in (iso3, ssp_label, rcp_label, dmg_label, par_label, cli_label, dis_label, pct_label)):
+            return None
+
+        ssp        = _SSP_LABEL_MAP.get(ssp_label)
+        rcp_raw    = _RCP_LABEL_MAP.get(rcp_label)
+        rcp        = rcp_raw if rcp_raw is not None else _CLOSEST_RCP.get(ssp, "rcp60")
+        run        = _DMG_FUNC_LABEL_MAP.get(dmg_label)
+        dmgfuncpar = _DMG_PARAMS_LABEL_MAP.get(par_label)
+        climate    = _CLIMATE_LABEL_MAP.get(cli_label)
+        disc       = _DISC_MAP.get(dis_label)
+        pct_idx    = _PERCENTILE_MAP.get(pct_label)
+
+        if any(v is None for v in (ssp, run, dmgfuncpar, climate, disc, pct_idx)):
+            return None
+
+        try:
+            result, reason = _lookup(_get_db(), iso3, run, dmgfuncpar, climate, ssp, rcp, disc)
+        except Exception:
+            return None
+
+        if reason != "ok":
+            return None
+
+        cpi_ratio = fm["cpi_ratio"].value() if "cpi_ratio" in fm else 1.0
+        return result[pct_idx] * cpi_ratio

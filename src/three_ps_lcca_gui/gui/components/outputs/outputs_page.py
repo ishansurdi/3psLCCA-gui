@@ -1173,7 +1173,7 @@ class OutputsPage(ScrollableForm):
         #     _log.warning("DEBUG: failed to dump all_data: %s", _e)
         # ── END DEBUG ──────────────────────────────────────────
 
-        self._currency = all_data.get("general_info", {}).get("project_currency", "INR")
+        self._currency = all_data.get("general_info", {}).get("project_currency")
         self._show_calculating()
 
         self._calc_thread = QThread(self)

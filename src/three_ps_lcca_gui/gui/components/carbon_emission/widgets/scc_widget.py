@@ -54,17 +54,19 @@ class SCCWidget(BaseDataWidget):
 
     def get_data(self) -> dict:
         idx = self._field_map["selector"].currentIndex()
+        key = _KEYS[idx]
         return {
             "chunk": "social_cost_data",
             "data": {
-                "selected": _KEYS[idx],
+                "mode": key,
+                "cost": self._active().get_cost(),
                 "ricke": self._sub_a.get_data_dict(),
                 "custom": self._sub_b.get_data_dict(),
             },
         }
 
     def load_data(self, data: dict):
-        key = data.get("selected", "ricke")
+        key = data.get("mode", "ricke")
         idx = _KEYS.index(key) if key in _KEYS else 0
         self._field_map["selector"].setCurrentIndex(idx)
         self._sub_a.load_data_dict(data.get("ricke", {}))
