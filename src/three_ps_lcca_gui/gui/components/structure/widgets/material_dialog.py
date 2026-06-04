@@ -43,6 +43,7 @@ from ...utils.unit_resolver import (
     _UNIT_ALIASES as _SOR_UNIT_ALIASES,
 )
 from ...utils.input_fields.add_material import FIELD_DEFINITIONS
+from ...utils.form_builder.form_builder import _PLACEHOLDER
 from ...utils.unit_resolver import get_unit_info as _get_unit_info_impl
 from ...utils.doc_link import doc_inline, doc_label
 from ..registry.material_catalog import list_databases
@@ -882,7 +883,8 @@ class MaterialDialog(QDialog):
 
         # ── Item ID (Always visible) ──────────────────────────────────────
         root.addWidget(_lbl("Item ID / SOR Code"))
-        self.id_in = QLineEdit(v.get("id", ""))
+        _id_val = v.get("sor_src_id", "")
+        self.id_in = QLineEdit(_id_val)
         self.id_in.setPlaceholderText("e.g. 12.01 (Leave blank for manual)")
         self.id_in.setMinimumHeight(32)
         root.addWidget(self.id_in)
@@ -924,7 +926,7 @@ class MaterialDialog(QDialog):
         unit_col = QVBoxLayout()
         unit_col.setSpacing(3)
         unit_col.addWidget(_lbl("Unit *", "unit"))
-        current_unit = v.get("unit", "m3")
+        current_unit = v.get("unit", _PLACEHOLDER)
         self.unit_in = self._build_unit_dropdown(current_unit, None)
         self.unit_in.wheelEvent = lambda event: event.ignore()
         self.unit_in.currentIndexChanged.connect(self._on_unit_combobox_changed)
@@ -1260,19 +1262,21 @@ class MaterialDialog(QDialog):
 
         for _w in (
             self.name_in,
+            self.id_in,
             self.qty_in,
             self.rate_in,
             self.src_in,
             self.carbon_em_in,
+            self.carbon_src_in,
             self.conv_factor_in,
             self.scrap_in,
             self.recycling_perc_in,
         ):
             _w.textChanged.connect(self._on_field_manually_changed)
         self.unit_in.currentIndexChanged.connect(self._on_field_manually_changed)
-        self.carbon_denom_cb.currentIndexChanged.connect(
-            self._on_field_manually_changed
-        )
+        self.carbon_denom_cb.currentIndexChanged.connect(self._on_field_manually_changed)
+        self.carbon_chk.toggled.connect(self._on_field_manually_changed)
+        self.recycle_chk.toggled.connect(self._on_field_manually_changed)
 
         self._update_cf()
         self._ui_ready = True
@@ -1303,6 +1307,11 @@ class MaterialDialog(QDialog):
             self._allow_edit_chk.setChecked(saved_allow_edit)
             self._allow_edit_chk.blockSignals(False)
             self._lock_autofilled_fields(not saved_allow_edit)
+            # emissions_only mode must be able to edit carbon fields regardless of lock state
+            if self.emissions_only:
+                self.carbon_em_in.setReadOnly(False)
+                self.carbon_denom_cb.setEnabled(True)
+                self.carbon_src_in.setReadOnly(False)
 
     # ── SOR / suggestion helpers ──────────────────────────────────────────
 
@@ -1387,8 +1396,13 @@ class MaterialDialog(QDialog):
                 self._on_suggestion_selected(q)
             return
         # Name no longer matches the autofilled suggestion → clear stale DB values.
+        # For excel-sourced materials, preserve the snapshot and just mark as modified
+        # so renaming doesn't silently wipe source attribution or field values.
         if self._ui_ready and self._sor_item is not None and q != self._sor_filled_name:
-            self._reset_sor_state()
+            if self._db_original.get("action") == "excel":
+                self._is_customized = True
+            else:
+                self._reset_sor_state()
         if self._active_completer is None:
             return
         if not q or q == "?":
@@ -1407,6 +1421,7 @@ class MaterialDialog(QDialog):
         """Clear DB-autofilled values when the user edits the name away from a suggestion."""
         self._sor_filling = True
         try:
+            self.id_in.clear()
             self.rate_in.clear()
             self.src_in.clear()
             self.carbon_em_in.clear()
@@ -1512,7 +1527,7 @@ class MaterialDialog(QDialog):
                 self._sor_filling = True
                 try:
                     snap = self._user_edited_snapshot
-                    self.id_in.setText(snap.get("id", ""))
+                    self.id_in.setText(snap.get("sor_src_id", ""))
                     self.rate_in.setText(snap.get("rate", ""))
                     if snap.get("unit_idx", -1) >= 0:
                         self.unit_in.setCurrentIndex(snap["unit_idx"])
@@ -1538,7 +1553,7 @@ class MaterialDialog(QDialog):
             if self._sor_item is not None:
                 # Snapshot all current user-edited values before overwriting with DB values
                 self._user_edited_snapshot = {
-                    "id": self.id_in.text(),
+                    "sor_src_id": self.id_in.text(),
                     "rate": self.rate_in.text(),
                     "unit_idx": self.unit_in.currentIndex(),
                     "src": self.src_in.text(),
@@ -1660,7 +1675,10 @@ class MaterialDialog(QDialog):
             QMessageBox.critical(self, "Save Failed", str(e))
 
     def _on_field_manually_changed(self):
-        if not self._sor_filling and self._sor_item is not None:
+        if not self._sor_filling and (
+            self._sor_item is not None
+            or self._db_original.get("action") == "excel"
+        ):
             self._is_customized = True
 
     # ── Suggestion auto-fill ──────────────────────────────────────────────
@@ -1758,6 +1776,10 @@ class MaterialDialog(QDialog):
 
     def _build_full_unit_model(self) -> QStandardItemModel:
         model = QStandardItemModel()
+
+        placeholder = QStandardItem("─ Select unit ─")
+        placeholder.setData(_PLACEHOLDER, Qt.UserRole)
+        model.appendRow(placeholder)
 
         for dim, units in _CONSTRUCTION_UNITS.units.items():
             sep = QStandardItem(f"── {dim} ──")
@@ -1939,6 +1961,8 @@ class MaterialDialog(QDialog):
 
     def _on_unit_combobox_changed(self):
         code = self.unit_in.currentData()
+        if code in (_PLACEHOLDER, None):
+            return
         if code == self._CUSTOM_CODE:
             self._add_custom_unit(self.unit_in)
             return
@@ -1952,6 +1976,8 @@ class MaterialDialog(QDialog):
 
     def _on_denom_combobox_changed(self):
         code = self.carbon_denom_cb.currentData()
+        if code in (_PLACEHOLDER, None):
+            return
         if code == self._CUSTOM_CODE:
             self._add_custom_unit(self.carbon_denom_cb)
             return
@@ -2033,6 +2059,10 @@ class MaterialDialog(QDialog):
             QMessageBox.critical(self, "Validation Error", "Material Name is required.")
             return
 
+        if self.unit_in.currentData() == _PLACEHOLDER:
+            QMessageBox.critical(self, "Validation Error", "Please select a unit.")
+            return
+
         try:
             qty = float(self.qty_in.text() or 0)
         except ValueError:
@@ -2040,6 +2070,26 @@ class MaterialDialog(QDialog):
         if qty <= 0:
             QMessageBox.critical(
                 self, "Validation Error", "Quantity must be greater than zero."
+            )
+            return
+
+        try:
+            rate = float(self.rate_in.text() or 0)
+        except ValueError:
+            rate = 0
+        if rate <= 0:
+            reply = QMessageBox.warning(
+                self,
+                "Rate",
+                "Rate (unit cost) is 0 - this material will contribute no cost.\n\nContinue?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            if reply == QMessageBox.No:
+                return
+
+        if self.carbon_chk.isChecked() and self.carbon_denom_cb.currentData() == _PLACEHOLDER:
+            QMessageBox.critical(
+                self, "Validation Error", "Please select a unit for the emission factor denominator."
             )
             return
 
@@ -2159,7 +2209,8 @@ class MaterialDialog(QDialog):
           recycling.main._open_recyclability_edit()
           custom_material_db.save_material()
         """
-        actual_unit = self.unit_in.currentData() or ""
+        _raw_unit = self.unit_in.currentData() or ""
+        actual_unit = "" if _raw_unit == _PLACEHOLDER else _raw_unit
         unit_to_si, _ = self._get_unit_info(actual_unit)
 
         carbon_on = self.carbon_chk.isChecked()
@@ -2179,7 +2230,7 @@ class MaterialDialog(QDialog):
 
         return {
             "values": {
-                "id": self.id_in.text().strip(),
+                "sor_src_id": self.id_in.text().strip(),
                 "material_name": self.name_in.text().strip(),
                 "quantity": float(self.qty_in.text() or 0),
                 "unit": actual_unit,

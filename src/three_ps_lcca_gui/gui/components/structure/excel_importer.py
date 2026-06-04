@@ -111,7 +111,7 @@ CID_FIELDS: set[str] = {
 # All keys are lowercase - lookup uses field_part.lower() for case-insensitive matching.
 # Required columns: name, unit, rate.  All others (including id) are optional.
 CID_TO_INTERNAL: dict[str, str] = {
-    "id": "id",  # optional
+    "id": "sor_src_id",  # optional — Excel column CID#ID maps to internal sor_src_id
     "name": "name",
     "quantity": "quantity",
     "unit": "unit",
@@ -478,7 +478,7 @@ def verify_schema(parsed: dict[str, list[dict]]) -> dict[str, list[dict]]:
                     pass
 
             # EC13: duplicate CID#ID across all sheets
-            id_val = record.get("id", "").strip()
+            id_val = record.get("sor_src_id", "").strip()
             if id_val:
                 loc = f"{sheet_name}:row {record.get('_row_num', '?')}"
                 if id_val in seen_ids:
@@ -545,7 +545,7 @@ def record_to_material_dict(record: dict) -> dict:
 
     return {
         "values": {
-            "id": record.get("id", "").strip(),
+            "sor_src_id": record.get("sor_src_id", "").strip(),
             "material_name": record.get("name", "").strip(),
             "quantity": _float("quantity"),
             "unit": raw_unit,
@@ -693,7 +693,7 @@ def _validate_for_engine(
 
 # (internal_field, header_label, numeric_only)
 IMPORT_COLUMNS: list[tuple[str, str, bool]] = [
-    ("id", "ID", False),
+    ("sor_src_id", "ID", False),
     ("name", "Name *", False),
     ("quantity", "Quantity", True),
     ("unit", "Unit *", False),
@@ -1979,7 +1979,7 @@ def _emit_result(
                             ):
                                 _item["values"] = dict(values_dict["values"])
                                 _item["meta"]["modified_on"] = _dt.datetime.now().isoformat()
-                                _item["meta"]["source"] = "excel"
+                                _item["meta"]["source"] = "excel"  # re-import resets to clean excel
                                 _item["meta"]["db_original"] = values_dict["meta"].get("db_original", {})
                                 _item["state"]["included_in_carbon_emission"] = included_carbon
                                 _item["state"]["included_in_recyclability"] = included_recycle

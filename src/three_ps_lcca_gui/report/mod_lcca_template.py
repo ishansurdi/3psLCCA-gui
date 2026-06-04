@@ -267,6 +267,8 @@ class LCCATemplate:
                         source_display = source_db_key or "Custom DB"
                     elif meta_source == "excel":
                         source_display = "Excel"
+                    elif meta_source == "excel_modified":
+                        source_display = "Excel (modified)"
                     elif meta_source == "manual":
                         source_display = "Manual"
                     else:

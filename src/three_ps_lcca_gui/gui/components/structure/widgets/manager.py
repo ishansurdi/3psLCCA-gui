@@ -188,8 +188,7 @@ class StructureManagerWidget(QWidget):
         meta_in = mat_dict.get("meta", {})
         state_in = mat_dict.get("state", {})
 
-        # SOR reference code in values["id"] is not a stored value field
-        sor_ref_id = values.pop("id", None)
+        sor_ref_id = values.pop("sor_src_id", None)
         db_original = dict(meta_in.get("db_original") or {})
         if sor_ref_id and "sor_ref_id" not in db_original:
             db_original["sor_ref_id"] = str(sor_ref_id)
@@ -287,7 +286,7 @@ class StructureManagerWidget(QWidget):
 
     def open_edit_dialog(self, comp_name, original_index):
         try:
-            current_data = self.controller.engine.fetch_chunk(self.chunk_name) or {}
+            current_data = self.data  # use in-memory state — always reflects latest saves
             items = current_data.get(comp_name, [])
 
             if original_index < len(items):
@@ -306,8 +305,7 @@ class StructureManagerWidget(QWidget):
                     new_meta = new_data.get("meta", {})
                     new_state = new_data.get("state", {})
 
-                    # SOR reference code is not a stored value field
-                    sor_ref_id = new_values.pop("id", None)
+                    sor_ref_id = new_values.pop("sor_src_id", None)
                     new_db_original = new_meta.get("db_original")
                     if sor_ref_id and new_db_original is not None and "sor_ref_id" not in new_db_original:
                         new_db_original = dict(new_db_original)

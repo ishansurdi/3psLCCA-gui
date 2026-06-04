@@ -115,7 +115,7 @@ def _chunk_to_rows(engine, chunk_key: str) -> list[dict]:
             v = item.get("values", {})
             db_orig = item.get("meta", {}).get("db_original", {})
             rows.append({
-                "CID#ID":                     db_orig.get("sor_ref_id") or db_orig.get("id") or "",
+                "CID#ID":                     db_orig.get("sor_ref_id") or db_orig.get("id") or v.get("sor_src_id") or "",
                 "CID#Name":                   v.get("material_name", ""),
                 "CID#Quantity":               v.get("quantity", ""),
                 "CID#Unit":                   v.get("unit", ""),

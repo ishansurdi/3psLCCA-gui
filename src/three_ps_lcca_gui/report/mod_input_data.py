@@ -161,10 +161,11 @@ def add_input_data(doc, config, data):
 
                 # Map meta.source values to LaTeX colour names
                 _SOURCE_COLORS = {
-                    "db_modified":    "srcDbModified",
-                    "excel":          "srcExcel",
-                    "manual":         "srcManual",
-                    "custom_db":      "srcCustomDb",
+                    "db_modified":       "srcDbModified",
+                    "excel":             "srcExcel",
+                    "excel_modified":    "srcExcel",
+                    "manual":            "srcManual",
+                    "custom_db":         "srcCustomDb",
                 }
 
                 for cat_name, components in construction.items():
