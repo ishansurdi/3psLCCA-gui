@@ -111,7 +111,7 @@ CID_FIELDS: set[str] = {
 # All keys are lowercase - lookup uses field_part.lower() for case-insensitive matching.
 # Required columns: name, unit, rate.  All others (including id) are optional.
 CID_TO_INTERNAL: dict[str, str] = {
-    "id": "sor_src_id",  # optional — Excel column CID#ID maps to internal sor_src_id
+    "id": "src_id",  # optional — Excel column CID#ID maps to internal src_id
     "name": "name",
     "quantity": "quantity",
     "unit": "unit",
@@ -478,7 +478,7 @@ def verify_schema(parsed: dict[str, list[dict]]) -> dict[str, list[dict]]:
                     pass
 
             # EC13: duplicate CID#ID across all sheets
-            id_val = record.get("sor_src_id", "").strip()
+            id_val = record.get("src_id", "").strip()
             if id_val:
                 loc = f"{sheet_name}:row {record.get('_row_num', '?')}"
                 if id_val in seen_ids:
@@ -516,45 +516,41 @@ def record_to_material_dict(record: dict) -> dict:
     structure produced by MaterialDialog.get_values().
     """
 
-    def _float(key: str) -> float:
+    def _float_or_none(key: str):
+        raw = record.get(key)
+        if raw is None or str(raw).strip() == "":
+            return None
         try:
-            return float(record.get(key, 0) or 0)
+            return float(raw)
         except (ValueError, TypeError):
-            return 0.0
+            return None
 
     raw_unit = record.get("unit", "").strip()
-    carbon_ef = _float("carbon_emission")
+    carbon_ef = _float_or_none("carbon_emission")
     carbon_denom = record.get("carbon_emission_units_den", "").strip()
-    scrap = _float("scrap_rate")
-    recovery = _float("recovery_pct")
-    has_carbon = carbon_ef > 0 and bool(carbon_denom)
-    has_recycle = scrap > 0 or recovery > 0
+    scrap = _float_or_none("scrap_rate")
+    recovery = _float_or_none("recovery_pct")
+    has_carbon = (carbon_ef or 0) > 0 and bool(carbon_denom)
+    has_recycle = (scrap or 0) > 0 or (recovery or 0) > 0
 
-    # Resolve unit via get_unit_info - handles canonical, aliases, custom units.
-    # If unknown, unit_to_si defaults to 1.0 (safe fallback).
     unit_to_si, _ = get_unit_info(raw_unit)
     if unit_to_si is None:
         unit_to_si = 1.0
 
-    # CF blank → default to 1.0 (1:1 conversion assumption)
-    cf_raw = record.get("conversion_factor", "")
-    try:
-        cf = float(cf_raw) if cf_raw else 1.0
-    except (ValueError, TypeError):
-        cf = 1.0
+    cf = _float_or_none("conversion_factor")
 
     return {
         "values": {
-            "sor_src_id": record.get("sor_src_id", "").strip(),
+            "src_id": record.get("src_id", "").strip() or None,
             "material_name": record.get("name", "").strip(),
-            "quantity": _float("quantity"),
+            "quantity": _float_or_none("quantity"),
             "unit": raw_unit,
             "unit_to_si": unit_to_si,
-            "rate": _float("rate"),
-            "rate_source": record.get("rate_src", "").strip(),
+            "rate": _float_or_none("rate"),
+            "rate_source": record.get("rate_src", "").strip() or None,
             "carbon_emission": carbon_ef,
-            "carbon_unit": f"kgCO₂e/{carbon_denom}" if carbon_denom else "",
-            "carbon_emission_src": record.get("carbon_emission_src", "").strip(),
+            "carbon_unit": f"kgCO₂e/{carbon_denom}" if carbon_denom else None,
+            "carbon_emission_src": record.get("carbon_emission_src", "").strip() or None,
             "conversion_factor": cf,
             "scrap_rate": scrap,
             "post_demolition_recovery_percentage": recovery,
@@ -616,7 +612,7 @@ def _validate_for_engine(
 
     # ── 2. quantity ──────────────────────────────────────────────────────────
     try:
-        qty = float(v.get("quantity", 0) or 0)
+        qty = float(v.get("quantity") or 0)
     except (ValueError, TypeError):
         qty = 0.0
     if qty <= 0:
@@ -628,15 +624,18 @@ def _validate_for_engine(
         reasons.append("unit is empty - every material must have a unit")
 
     # ── 2c. rate ─────────────────────────────────────────────────────────────
-    rate_raw = v.get("rate", None)
-    try:
-        rate = float(rate_raw) if rate_raw not in (None, "") else 0.0
-    except (ValueError, TypeError):
-        rate = 0.0
-    if rate < 0:
-        reasons.append(
-            f"rate must be >= 0 (got {rate_raw!r}) - negative rate is not allowed"
-        )
+    rate_raw = v.get("rate")
+    if rate_raw is None:
+        reasons.append("rate is required")
+    else:
+        try:
+            rate = float(rate_raw)
+        except (ValueError, TypeError):
+            rate = 0.0
+        if rate < 0:
+            reasons.append(
+                f"rate must be >= 0 (got {rate_raw!r}) - negative rate is not allowed"
+            )
 
     # ── 3. duplicate name ────────────────────────────────────────────────────
     # Skipped when force_overwrite=True (user explicitly checked a duplicate row)
@@ -665,11 +664,11 @@ def _validate_for_engine(
     # ── 4. carbon auto-exclusion ─────────────────────────────────────────────
     if state.get("included_in_carbon_emission") is True:
         try:
-            ef = float(v.get("carbon_emission", 0) or 0)
+            ef = float(v.get("carbon_emission") or 0)
         except (ValueError, TypeError):
             ef = 0.0
         try:
-            cf = float(v.get("conversion_factor", 0) or 0)
+            cf = float(v.get("conversion_factor") or 0)
         except (ValueError, TypeError):
             cf = 0.0
         if ef <= 0 or cf <= 0:
@@ -678,11 +677,11 @@ def _validate_for_engine(
     # ── 5. recyclability auto-exclusion ──────────────────────────────────────
     if state.get("included_in_recyclability"):
         try:
-            scrap = float(v.get("scrap_rate", 0) or 0)
+            scrap = float(v.get("scrap_rate") or 0)
         except (ValueError, TypeError):
             scrap = 0.0
         try:
-            recovery = float(v.get("post_demolition_recovery_percentage", 0) or 0)
+            recovery = float(v.get("post_demolition_recovery_percentage") or 0)
         except (ValueError, TypeError):
             recovery = 0.0
         if scrap <= 0 and recovery <= 0:
@@ -693,7 +692,7 @@ def _validate_for_engine(
 
 # (internal_field, header_label, numeric_only)
 IMPORT_COLUMNS: list[tuple[str, str, bool]] = [
-    ("sor_src_id", "ID", False),
+    ("src_id", "ID", False),
     ("name", "Name *", False),
     ("quantity", "Quantity", True),
     ("unit", "Unit *", False),
@@ -861,11 +860,11 @@ class ImportComponentTable(QTableWidget):
         for rows_idx, record in enumerate(self._rows):
             if self._valid_core_only:
                 try:
-                    qty = float(record.get("quantity", 0) or 0)
+                    qty = float(record.get("quantity") or 0)
                 except (ValueError, TypeError):
                     qty = 0.0
                 try:
-                    rate = float(record.get("rate", 0) or 0)
+                    rate = float(record.get("rate") or 0)
                 except (ValueError, TypeError):
                     rate = 0.0
                 name = str(record.get("name", "") or "").strip()
@@ -1959,7 +1958,7 @@ def _emit_result(
                         included_recycle = values_dict["state"].get("included_in_recyclability", False)
 
                         # Preserve SOR reference ID
-                        _ref_id = values_dict.get("values", {}).get("id")
+                        _ref_id = values_dict.get("values", {}).get("src_id")
 
                         _engine = manager.controller.engine
                         _chunk_data = _engine.fetch_chunk(chunk_key) or {}

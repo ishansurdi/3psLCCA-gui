@@ -479,12 +479,12 @@ _REQUIRED_ITEM_KEYS = (
     "carbon_emission_src",
 )
 _ITEM_DEFAULTS = {
-    "rate": "not_available",
-    "rate_src": "not_available",
-    "carbon_emission": "not_available",
-    "carbon_emission_units_den": "not_available",
-    "conversion_factor": "not_available",
-    "carbon_emission_src": "not_available",
+    "rate": None,
+    "rate_src": None,
+    "carbon_emission": None,
+    "carbon_emission_units_den": None,
+    "conversion_factor": None,
+    "carbon_emission_src": None,
 }
 
 
@@ -505,10 +505,16 @@ def build_excel_snapshot(values_dict: dict) -> dict:
     """
     Build a complete snapshot from an Excel-imported values_dict.
     Captures all parsed fields to ensure 100% data parity for audit logs.
+    Blank strings are normalized to None so db_original stays consistent
+    with the values dict.
     """
-    snapshot = dict(values_dict)
+    snapshot = {}
+    for k, v in values_dict.items():
+        if k.startswith("_"):
+            continue
+        snapshot[k] = None if (isinstance(v, str) and v.strip() == "") else v
     snapshot["action"] = "excel"
-    return {k: v for k, v in snapshot.items() if not k.startswith("_")}
+    return snapshot
 
 
 def convert_sor_item_to_material(dict_b: dict) -> dict:
@@ -520,7 +526,7 @@ def convert_sor_item_to_material(dict_b: dict) -> dict:
     Consumed by the dialog autofill pipeline (future step).
     """
     def _valid(val):
-        return val not in ("not_available", None, "", 0, 0.0)
+        return val not in (None, "", 0, 0.0)
 
     carbon_eligible = all(
         _valid(dict_b.get(k))
@@ -883,8 +889,8 @@ class MaterialDialog(QDialog):
 
         # ── Item ID (Always visible) ──────────────────────────────────────
         root.addWidget(_lbl("Item ID / SOR Code"))
-        _id_val = v.get("sor_src_id", "")
-        self.id_in = QLineEdit(_id_val)
+        _id_val = v.get("src_id") or _meta.get("db_original", {}).get("src_id", "")
+        self.id_in = QLineEdit(str(_id_val) if _id_val else "")
         self.id_in.setPlaceholderText("e.g. 12.01 (Leave blank for manual)")
         self.id_in.setMinimumHeight(32)
         root.addWidget(self.id_in)
@@ -972,21 +978,26 @@ class MaterialDialog(QDialog):
         carbon_hdr.addWidget(carbon_title)
         carbon_hdr.addStretch()
         self.carbon_chk = QCheckBox("Include")
+
+        # Authoritative check: DB/custom_db source with no carbon data in values
+        # overrides whatever state was saved — carbon cannot be enabled.
+        _is_db_source = _meta.get("source", "") in ("db", "excel")
+        _values_carbon = v.get("carbon_emission")
+        _db_has_no_carbon = _is_db_source and _values_carbon in MaterialDialog._DB_NA
+
         _carbon_state = s.get("included_in_carbon_emission", True)
-        if _carbon_state == "not_available":
-            # New format - explicit.
+        if _db_has_no_carbon:
+            self.carbon_chk.setChecked(False)
+            self.carbon_chk.setEnabled(False)
+            self._sor_carbon_available = False
+        elif _carbon_state is None:
             self.carbon_chk.setChecked(False)
             self.carbon_chk.setEnabled(False)
             self._sor_carbon_available = False
         elif _carbon_state is False and self.is_edit:
-            # Old project format stored False for both "user unchecked" and
-            # "SOR had no carbon data".  Infer which case applies:
-            # if the item came from a DB source AND the DB snapshot shows no
-            # carbon data, the False was really "not_available".
-            _db_source = _meta.get("source", "") in ("db", "custom_db")
-            _db_carbon = self._db_original.get("carbon_emission", "not_available")
-            _db_no_carbon = _db_carbon in MaterialDialog._DB_NA
-            if _db_source and _db_no_carbon:
+            # Old project format: infer if False meant "no carbon" or "user unchecked".
+            _db_carbon = self._db_original.get("carbon_emission")
+            if _is_db_source and _db_carbon in MaterialDialog._DB_NA:
                 self.carbon_chk.setChecked(False)
                 self.carbon_chk.setEnabled(False)
                 self._sor_carbon_available = False
@@ -1030,7 +1041,7 @@ class MaterialDialog(QDialog):
             didx = _resolve_unit_code(saved_denom, self.carbon_denom_cb)
             if didx >= 0:
                 self.carbon_denom_cb.setCurrentIndex(didx)
-        else:
+        elif self._sor_carbon_available:
             didx = self.carbon_denom_cb.findData(current_unit)
             if didx >= 0:
                 self.carbon_denom_cb.setCurrentIndex(didx)
@@ -1527,7 +1538,7 @@ class MaterialDialog(QDialog):
                 self._sor_filling = True
                 try:
                     snap = self._user_edited_snapshot
-                    self.id_in.setText(snap.get("sor_src_id", ""))
+                    self.id_in.setText(snap.get("src_id", ""))
                     self.rate_in.setText(snap.get("rate", ""))
                     if snap.get("unit_idx", -1) >= 0:
                         self.unit_in.setCurrentIndex(snap["unit_idx"])
@@ -1553,7 +1564,7 @@ class MaterialDialog(QDialog):
             if self._sor_item is not None:
                 # Snapshot all current user-edited values before overwriting with DB values
                 self._user_edited_snapshot = {
-                    "sor_src_id": self.id_in.text(),
+                    "src_id": self.id_in.text(),
                     "rate": self.rate_in.text(),
                     "unit_idx": self.unit_in.currentIndex(),
                     "src": self.src_in.text(),
@@ -1568,7 +1579,7 @@ class MaterialDialog(QDialog):
                 self._sor_filling = True
                 try:
                     item = self._sor_item
-                    self.id_in.setText(str(item.get("id", "") or ""))
+                    self.id_in.setText(str(item.get("src_id", "") or ""))
 
                     unit = item.get("unit", "")
                     if unit:
@@ -1578,28 +1589,24 @@ class MaterialDialog(QDialog):
 
                     rate = item.get("rate", "")
                     self.rate_in.setText(
-                        fmt(rate) if rate not in ("", "not_available", None) else ""
+                        fmt(rate) if rate not in ("", None) else ""
                     )
 
                     src = item.get("rate_src", "")
                     self.src_in.setText(
-                        str(src) if src not in ("", "not_available", None) else ""
+                        str(src) if src not in ("", None) else ""
                     )
 
                     carbon_src = item.get("carbon_emission_src", "")
                     self.carbon_src_in.setText(
                         str(carbon_src)
-                        if carbon_src not in ("", "not_available", None)
+                        if carbon_src not in ("", None)
                         else ""
                     )
 
-                    carbon = item.get("carbon_emission", "not_available")
-                    denom = item.get("carbon_emission_units_den", "not_available")
-                    carbon_available = carbon not in (
-                        "not_available",
-                        "",
-                        None,
-                    ) and denom not in ("not_available", "", None)
+                    carbon = item.get("carbon_emission")
+                    denom = item.get("carbon_emission_units_den")
+                    carbon_available = carbon not in ("", None) and denom not in ("", None)
                     self._sor_carbon_available = carbon_available
                     if carbon_available:
                         self.carbon_em_in.setText(fmt(carbon))
@@ -1608,12 +1615,15 @@ class MaterialDialog(QDialog):
                             self.carbon_denom_cb.setCurrentIndex(didx)
                     else:
                         self.carbon_em_in.setText("")
+                        self.carbon_denom_cb.setCurrentIndex(
+                            self.carbon_denom_cb.findData(_PLACEHOLDER)
+                        )
                     self.carbon_chk.setChecked(carbon_available)
                     self.carbon_chk.setEnabled(carbon_available)
 
-                    cf = item.get("conversion_factor", "not_available")
+                    cf = item.get("conversion_factor")
                     self.conv_factor_in.setText(
-                        fmt(cf) if cf not in ("not_available", "", None, 0, 0.0) else ""
+                        fmt(cf) if cf not in ("", None, 0, 0.0) else ""
                     )
 
                     self.recycle_chk.setChecked(False)
@@ -1689,7 +1699,7 @@ class MaterialDialog(QDialog):
             return
 
         # New suggestion - discard any snapshot from a previous suggestion's edit session
-        self.id_in.setText(str(item.get("id", "")))
+        self.id_in.setText(str(item.get("src_id", "")))
         self._user_edited_snapshot = {}
         self._sor_filling = True
         try:
@@ -1701,22 +1711,18 @@ class MaterialDialog(QDialog):
                     self.unit_in.setCurrentIndex(idx)
 
             rate = item.get("rate", "")
-            rate_filled = rate not in ("", "not_available", None)
+            rate_filled = rate not in ("", None)
             if rate_filled:
                 self.rate_in.setText(fmt(rate))
 
             src = item.get("rate_src", "")
-            src_filled = src not in ("", "not_available", None)
+            src_filled = src not in ("", None)
             if src_filled:
                 self.src_in.setText(str(src))
 
-            carbon = item.get("carbon_emission", "not_available")
-            denom = item.get("carbon_emission_units_den", "not_available")
-            carbon_available = carbon not in (
-                "not_available",
-                "",
-                None,
-            ) and denom not in ("not_available", "", None)
+            carbon = item.get("carbon_emission")
+            denom = item.get("carbon_emission_units_den")
+            carbon_available = carbon not in ("", None) and denom not in ("", None)
             self._sor_carbon_available = carbon_available
 
             if carbon_available:
@@ -1726,16 +1732,19 @@ class MaterialDialog(QDialog):
                     self.carbon_denom_cb.setCurrentIndex(didx)
             else:
                 self.carbon_em_in.setText("")
+                self.carbon_denom_cb.setCurrentIndex(
+                    self.carbon_denom_cb.findData(_PLACEHOLDER)
+                )
             self.carbon_chk.setChecked(carbon_available)
             self.carbon_chk.setEnabled(carbon_available)
 
             carbon_src = item.get("carbon_emission_src", "")
             self.carbon_src_in.setText(
-                str(carbon_src) if carbon_src not in ("", "not_available", None) else ""
+                str(carbon_src) if carbon_src not in ("", None) else ""
             )
 
-            cf = item.get("conversion_factor", "not_available")
-            if cf not in ("not_available", "", None, 0, 0.0):
+            cf = item.get("conversion_factor")
+            if cf not in ("", None, 0, 0.0):
                 self.conv_factor_in.setText(fmt(cf))
             else:
                 self.conv_factor_in.setText("")
@@ -1843,7 +1852,7 @@ class MaterialDialog(QDialog):
     def _get_unit_info(self, code: str):
         return _get_unit_info_impl(code)
 
-    _DB_NA = frozenset({"not_available", "", None})
+    _DB_NA = frozenset({"", None})
 
     def _compute_modified_fields(self) -> list:
         """
@@ -2073,11 +2082,18 @@ class MaterialDialog(QDialog):
             )
             return
 
+        _rate_text = self.rate_in.text().strip()
+        if not _rate_text:
+            QMessageBox.critical(self, "Validation Error", "Rate (unit cost) is required.")
+            return
         try:
-            rate = float(self.rate_in.text() or 0)
+            rate = float(_rate_text)
         except ValueError:
             rate = 0
-        if rate <= 0:
+        if rate < 0:
+            QMessageBox.critical(self, "Validation Error", "Rate cannot be negative.")
+            return
+        if rate == 0:
             reply = QMessageBox.warning(
                 self,
                 "Rate",
@@ -2136,23 +2152,39 @@ class MaterialDialog(QDialog):
                         return
 
         if self.recycle_chk.isChecked():
+            _scrap_text   = self.scrap_in.text().strip()
+            _recycle_text = self.recycling_perc_in.text().strip()
             try:
-                scrap = float(self.scrap_in.text() or 0)
-                recycle = float(self.recycling_perc_in.text() or 0)
+                scrap = float(_scrap_text) if _scrap_text else None
             except ValueError:
-                scrap, recycle = 0, 0
+                scrap = None
+            try:
+                recycle = float(_recycle_text) if _recycle_text else None
+            except ValueError:
+                recycle = None
 
-            if recycle > 100:
+            recycle_val = recycle or 0
+            if recycle_val > 100:
                 QMessageBox.critical(
                     self, "Validation Error", "Recovery percentage cannot exceed 100%."
                 )
                 return
 
-            if scrap <= 0 and recycle <= 0:
+            scrap_blank   = scrap is None
+            recycle_blank = recycle is None
+            scrap_zero    = scrap is not None and scrap <= 0
+            recycle_zero  = recycle is not None and recycle <= 0
+
+            if (scrap_blank or scrap_zero) and (recycle_blank or recycle_zero):
+                _detail = (
+                    "Both scrap rate and recovery percentage are blank"
+                    if scrap_blank and recycle_blank
+                    else "Both scrap rate and recovery percentage are zero or blank"
+                )
                 reply = QMessageBox.warning(
                     self,
                     "Recyclability",
-                    "Both scrap rate and recovery percentage are zero - recyclability will be excluded.\n\nContinue?",
+                    f"{_detail} - recyclability will be excluded.\n\nContinue?",
                     QMessageBox.Yes | QMessageBox.No,
                 )
                 if reply == QMessageBox.No:
@@ -2228,24 +2260,38 @@ class MaterialDialog(QDialog):
             source = "manual"
             source_db_key = ""
 
+        _src_id   = self.id_in.text().strip() or None
+        _rate_src = self.src_in.text().strip() or None
+        _c_src    = self.carbon_src_in.text().strip() or None
+        _cf_text  = self.conv_factor_in.text().strip()
+        _em_text  = self.carbon_em_in.text().strip()
+        _carbon_denom = self.carbon_denom_cb.currentData()
+
         return {
             "values": {
-                "sor_src_id": self.id_in.text().strip(),
+                "src_id": _src_id,
                 "material_name": self.name_in.text().strip(),
                 "quantity": float(self.qty_in.text() or 0),
                 "unit": actual_unit,
                 "unit_to_si": unit_to_si or 1.0,
-                "rate": float(self.rate_in.text() or 0),
-                "rate_source": self.src_in.text().strip(),
-                # Zero-out when checkbox is off so downstream sees clean 0.
-                "carbon_emission": float(self.carbon_em_in.text() or 0) if carbon_on else 0.0,
-                "carbon_unit": f"kgCO₂e/{self.carbon_denom_cb.currentData() or ''}",
-                "carbon_emission_src": self.carbon_src_in.text().strip(),
-                "conversion_factor": float(self.conv_factor_in.text() or 0),
-                "scrap_rate": float(self.scrap_in.text() or 0) if recycle_on else 0.0,
-                "post_demolition_recovery_percentage": float(
-                    self.recycling_perc_in.text() or 0
-                ) if recycle_on else 0.0,
+                "rate": float(self.rate_in.text()) if self.rate_in.text().strip() else None,
+                "rate_source": _rate_src,
+                "carbon_emission": (
+                    float(_em_text) if carbon_on and _em_text else None
+                ),
+                "carbon_unit": (
+                    f"kgCO₂e/{_carbon_denom}"
+                    if carbon_on and _carbon_denom not in (_PLACEHOLDER, None, "")
+                    else None
+                ),
+                "carbon_emission_src": _c_src if carbon_on else None,
+                "conversion_factor": float(_cf_text) if _cf_text else None,
+                "scrap_rate": (
+                    float(self.scrap_in.text()) if recycle_on and self.scrap_in.text().strip() else None
+                ),
+                "post_demolition_recovery_percentage": (
+                    float(self.recycling_perc_in.text()) if recycle_on and self.recycling_perc_in.text().strip() else None
+                ),
             },
             "meta": {
                 "source": source,
@@ -2255,7 +2301,7 @@ class MaterialDialog(QDialog):
             "state": {
                 "included_in_carbon_emission": (
                     True if carbon_on
-                    else ("not_available" if not self._sor_carbon_available else False)
+                    else (None if not self._sor_carbon_available else False)
                 ),
                 "included_in_recyclability": recycle_on,
                 "allow_edit_checked": self._allow_edit_chk.isChecked(),

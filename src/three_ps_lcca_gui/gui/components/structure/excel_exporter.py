@@ -115,18 +115,18 @@ def _chunk_to_rows(engine, chunk_key: str) -> list[dict]:
             v = item.get("values", {})
             db_orig = item.get("meta", {}).get("db_original", {})
             rows.append({
-                "CID#ID":                     db_orig.get("sor_ref_id") or db_orig.get("id") or v.get("sor_src_id") or "",
+                "CID#ID":                     v.get("src_id") or db_orig.get("src_id") or "",
                 "CID#Name":                   v.get("material_name", ""),
                 "CID#Quantity":               v.get("quantity", ""),
                 "CID#Unit":                   v.get("unit", ""),
                 "CID#Rate":                   v.get("rate", ""),
                 "CID#Rate_Src":               v.get("rate_source", ""),
-                "CID#Carbon_Emission_Factor": _blank_if_zero(v.get("carbon_emission", 0)),
+                "CID#Carbon_Emission_Factor": _blank_if_zero(v.get("carbon_emission")),
                 "CID#Carbon_Emission_units":  _carbon_denom(v.get("carbon_unit", "")),
-                "CID#Conversion_Factor":      _blank_if_zero(v.get("conversion_factor", 0)),
+                "CID#Conversion_Factor":      _blank_if_zero(v.get("conversion_factor")),
                 "CID#Carbon_Emission_Src":    db_orig.get("carbon_emission_src") or "",
-                "CID#Scrap_Rate":             _blank_if_zero(v.get("scrap_rate", 0)),
-                "CID#Recovery_Pct":           _blank_if_zero(v.get("post_demolition_recovery_percentage", 0)),
+                "CID#Scrap_Rate":             _blank_if_zero(v.get("scrap_rate")),
+                "CID#Recovery_Pct":           _blank_if_zero(v.get("post_demolition_recovery_percentage")),
                 "CID#Component":              comp_name,
             })
     return rows

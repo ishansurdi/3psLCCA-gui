@@ -14,10 +14,10 @@ Output format (array of section objects):
           "unit": "...",
           "rate": 239,
           "rate_src": "...",
-          "carbon_emission": "not_available" | <float>,
-          "carbon_emission_units_den": "not_available" | "<unit>",
-          "conversion_factor": "not_available" | <float>,
-          "carbon_emission_src": "not_available" | "IFC" | "ICE" | ...
+          "carbon_emission": null | <float>,
+          "carbon_emission_units_den": null | "<unit>",
+          "conversion_factor": null | <float>,
+          "carbon_emission_src": null | "IFC" | "ICE" | ...
         },
         ...
       ]
@@ -70,7 +70,7 @@ CID_PREFIX = "cid#"
 # All keys are lowercase - lookup uses field_part.lower() for case-insensitive matching.
 # Required columns: name, unit, rate.  All others (including id) are optional.
 CID_TO_INTERNAL: dict[str, str] = {
-    "id": "id",  # optional
+    "id": "src_id",  # optional
     "name": "name",
     "quantity": "quantity",
     "unit": "unit",
@@ -103,7 +103,7 @@ SHEET_TO_SHEET_NAME: dict[str, str] = {
     "miscellaneous": "Miscellaneous",
 }
 
-NA = "not_available"
+NA = None
 
 # ---------------------------------------------------------------------------
 # CID# parsing helpers (same logic as excel_importer.py, no PySide6)
@@ -224,9 +224,9 @@ def parse_excel(path: str) -> dict[str, list[dict]]:
 def _make_field(value: str) -> Any:
     """
     Return a numeric value if the string is a valid number, else the string
-    itself, or "not_available" if empty.
+    itself, or None if empty or explicitly 'not_available'.
     """
-    if not value:
+    if not value or value.strip().lower() == "not_available":
         return NA
     num = _to_num(value)
     if num is not None:
@@ -266,13 +266,13 @@ def build_sor_json(parsed: dict[str, list[dict]]) -> list[dict]:
                 section_order.append(key)
                 sections[key] = []
 
-            id_val = record.get("id", "").strip()
+            id_val = record.get("src_id", "").strip()
             entry: dict[str, Any] = {
-                **({"id": id_val} if id_val else {}),
+                **({"src_id": id_val} if id_val else {}),
                 "name": name,
                 "unit": unit,
                 "rate": int(rate_num) if rate_num == int(rate_num) else rate_num,
-                "rate_src": record.get("rate_src", "").strip() or NA,
+                "rate_src": _make_field(record.get("rate_src", "").strip()),
                 "carbon_emission": _make_field(record.get("carbon_emission", "")),
                 "carbon_emission_units_den": _make_field(record.get("carbon_emission_units_den", "")),
                 "conversion_factor": _make_field(record.get("conversion_factor", "")),

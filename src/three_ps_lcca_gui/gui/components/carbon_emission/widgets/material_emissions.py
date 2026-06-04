@@ -76,12 +76,12 @@ TEXT_DARK     = get_token("text")
 # ---------------------------------------------------------------------------
 
 
-_NA = {"not_available", None, ""}
+_NA = {None, ""}
 
 
 def _cf_value(v: dict) -> float:
     """Return the conversion factor, defaulting to 1.0 when not explicitly set."""
-    raw = v.get("conversion_factor", "not_available")
+    raw = v.get("conversion_factor")
     if raw in _NA:
         return 1.0
     try:
@@ -95,7 +95,7 @@ def is_carbon_valid(item) -> bool:
     """Valid when carbon_emission is non-zero and CF (if explicitly set) is positive."""
     v = item.get("values", {})
     # Explicitly stored CF of 0 or negative is invalid (not just suspicious)
-    cf_raw = v.get("conversion_factor", "not_available")
+    cf_raw = v.get("conversion_factor")
     if cf_raw not in _NA:
         try:
             if float(cf_raw) <= 0:
@@ -103,7 +103,7 @@ def is_carbon_valid(item) -> bool:
         except (TypeError, ValueError):
             pass  # unparseable CF treated as not_available → default 1.0
     try:
-        emission_raw = v.get("carbon_emission", "not_available")
+        emission_raw = v.get("carbon_emission")
         if emission_raw in _NA:
             return False
         return float(emission_raw) != 0
@@ -116,9 +116,9 @@ def calc_carbon(item: dict) -> float:
     v = item.get("values", {})
     try:
         return (
-            float(v.get("quantity", 0) or 0)
+            float(v.get("quantity") or 0)
             * _cf_value(v)
-            * float(v.get("carbon_emission", 0) or 0)
+            * float(v.get("carbon_emission") or 0)
         )
     except (TypeError, ValueError):
         return 0.0
@@ -655,9 +655,9 @@ class MaterialEmissions(QWidget):
             t.setItem(row, 1, QTableWidgetItem(v.get("material_name", "")))
             t.setItem(row, 2, _ri(fmt(v.get("quantity", 0))))
             t.setItem(row, 3, QTableWidgetItem(_fmt_unit(v.get("unit", ""))))
-            _cf_raw = v.get("conversion_factor", "not_available")
+            _cf_raw = v.get("conversion_factor")
             t.setItem(row, 4, _ri(fmt(_cf_raw) if _cf_raw not in _NA else "-"))
-            t.setItem(row, 5, _ri(fmt(v.get("carbon_emission", 0))))
+            t.setItem(row, 5, _ri(fmt(v.get("carbon_emission"))))
             t.setItem(
                 row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit", "")))
             )
@@ -720,9 +720,9 @@ class MaterialEmissions(QWidget):
             t.setItem(row, 1, QTableWidgetItem(v.get("material_name", "")))
             t.setItem(row, 2, _ri(fmt(v.get("quantity", 0))))
             t.setItem(row, 3, QTableWidgetItem(_fmt_unit(v.get("unit", ""))))
-            _cf_raw = v.get("conversion_factor", "not_available")
+            _cf_raw = v.get("conversion_factor")
             t.setItem(row, 4, _ri(fmt(_cf_raw) if _cf_raw not in _NA else "-"))
-            t.setItem(row, 5, _ri(fmt(v.get("carbon_emission", 0))))
+            t.setItem(row, 5, _ri(fmt(v.get("carbon_emission"))))
             t.setItem(
                 row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit", "")))
             )
@@ -815,7 +815,7 @@ class MaterialEmissions(QWidget):
         v = item_data.get("values", {})
         carbon_denom = v.get("carbon_unit", "").split("/")[-1] if "/" in v.get("carbon_unit", "") else ""
         analysis = _cached_analysis(v.get("unit", ""), carbon_denom, _cf_value(v))
-        _cf_raw = v.get("conversion_factor", "not_available")
+        _cf_raw = v.get("conversion_factor")
 
         if include:
             t = self.included_table
@@ -827,7 +827,7 @@ class MaterialEmissions(QWidget):
             t.setItem(row, 2, _ri(fmt(v.get("quantity", 0))))
             t.setItem(row, 3, QTableWidgetItem(_fmt_unit(v.get("unit", ""))))
             t.setItem(row, 4, _ri(fmt(_cf_raw) if _cf_raw not in _NA else "-"))
-            t.setItem(row, 5, _ri(fmt(v.get("carbon_emission", 0))))
+            t.setItem(row, 5, _ri(fmt(v.get("carbon_emission"))))
             t.setItem(row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit", ""))))
             carbon_item = QTableWidgetItem(fmt(carbon))
             carbon_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -855,7 +855,7 @@ class MaterialEmissions(QWidget):
             t.setItem(row, 2, _ri(fmt(v.get("quantity", 0))))
             t.setItem(row, 3, QTableWidgetItem(_fmt_unit(v.get("unit", ""))))
             t.setItem(row, 4, _ri(fmt(_cf_raw) if _cf_raw not in _NA else "-"))
-            t.setItem(row, 5, _ri(fmt(v.get("carbon_emission", 0))))
+            t.setItem(row, 5, _ri(fmt(v.get("carbon_emission"))))
             t.setItem(row, 6, QTableWidgetItem(_fmt_carbon_unit(v.get("carbon_unit", ""))))
             t.setItem(row, 7, QTableWidgetItem("User Excluded"))
             row_data = {"btns": ["edit", "include"], "chunk_id": chunk_id,
@@ -1057,7 +1057,7 @@ class MaterialEmissions(QWidget):
                     item.get("values", {}).get("conversion_factor", 1) or 1
                 ),
                 "carbon_emission": float(
-                    item.get("values", {}).get("carbon_emission", 0) or 0
+                    item.get("values", {}).get("carbon_emission") or 0
                 ),
                 "carbon_unit": item.get("values", {}).get("carbon_unit", ""),
                 "total_kgCO2e": carbon,

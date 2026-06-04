@@ -87,6 +87,78 @@ def setup_dev_menu(parent_window, menubar):
         latex_menu.addAction(action)
     dev_menu.addMenu(latex_menu)
 
+    # --- Save All Chunks ---
+    def _save_all_chunks():
+        try:
+            import json
+            from pathlib import Path
+            import three_ps_lcca_gui.gui.components.utils.common_requested_data as crd
+
+            raw = crd.get_all_fresh_data()
+
+            helpers = {
+                # general_info
+                "get_general_info":                  crd.get_general_info(),
+                "get_currency":                      crd.get_currency(),
+                "get_project_country":               crd.get_project_country(),
+                "get_project_name":                  crd.get_project_name(),
+                # bridge_data
+                "get_bridge_data":                   crd.get_bridge_data(),
+                "get_design_life":                   crd.get_design_life(),
+                "get_analysis_period":               crd.get_analysis_period(),
+                "get_construction_duration_months":  crd.get_construction_duration_months(),
+                # financial_data
+                "get_financial_data":                crd.get_financial_data(),
+                "get_discount_rate":                 crd.get_discount_rate(),
+                # maintenance_data
+                "get_maintenance_data":              crd.get_maintenance_data(),
+                # demolition_data
+                "get_demolition_data":               crd.get_demolition_data(),
+                # traffic_and_road_data
+                "get_traffic_and_road_data":         crd.get_traffic_and_road_data(),
+                # str_foundation
+                "get_str_foundation":                crd.get_str_foundation(),
+                # str_sub_structure
+                "get_str_sub_structure":             crd.get_str_sub_structure(),
+                # str_super_structure
+                "get_str_super_structure":           crd.get_str_super_structure(),
+                # str_misc
+                "get_str_misc":                      crd.get_str_misc(),
+                # transport_data
+                "get_transport_data":                crd.get_transport_data(),
+                # machinery_emissions_data
+                "get_machinery_emissions_data":      crd.get_machinery_emissions_data(),
+                # social_cost_data
+                "get_social_cost_data":              crd.get_social_cost_data(),
+                "get_social_cost_mode":              crd.get_social_cost_mode(),
+                "get_social_cost":                   crd.get_social_cost(),
+                "get_social_cost_ricke":             crd.get_social_cost_ricke(),
+                "get_social_cost_usd_to_local_rate": crd.get_social_cost_usd_to_local_rate(),
+                "get_social_cost_cpi_ratio":         crd.get_social_cost_cpi_ratio(),
+                "get_social_cost_custom_scc_value":  crd.get_social_cost_custom_scc_value(),
+                # diversion_emissions
+                "get_diversion_emissions_data":      crd.get_diversion_emissions_data(),
+                "get_diversion_emissions_cost":      list(crd.get_diversion_emissions_cost()),
+                # str_summary
+                "get_str_summary":                   crd.get_str_summary(),
+                "get_str_summary_grand_total":       crd.get_str_summary_grand_total(),
+            }
+
+            out = {"chunks": raw, "helpers": helpers}
+
+            tests_dir = Path(__file__).parent.parent / "code_to_latex" / "tests" / "chunks"
+            tests_dir.mkdir(parents=True, exist_ok=True)
+            out_path = tests_dir / "chunk.json"
+            out_path.write_text(json.dumps(out, indent=2), encoding="utf-8")
+            print(f"[Dev] Chunks saved to: {out_path}")
+            QMessageBox.information(parent_window, "Chunks", f"Saved to:\n{out_path}")
+        except Exception as exc:
+            QMessageBox.critical(parent_window, "Chunk Error", str(exc))
+
+    action_chunks = QAction("Save All Chunks (tests/chunks/)", parent_window)
+    action_chunks.triggered.connect(_save_all_chunks)
+    dev_menu.addAction(action_chunks)
+
     # --- Add to Menubar ---
     menubar.addMenu(dev_menu)
     return dev_menu

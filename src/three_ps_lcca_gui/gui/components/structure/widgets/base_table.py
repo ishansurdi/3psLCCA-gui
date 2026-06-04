@@ -327,7 +327,7 @@ class StructureTableWidget(TooltipTableMixin, QTableWidget):
 
         self.setItem(row, 0, QTableWidgetItem(v.get("material_name", "New Item")))
 
-        qty_item = QTableWidgetItem(fmt(v.get("quantity", 0)))
+        qty_item = QTableWidgetItem(fmt(v.get("quantity")))
         qty_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.setItem(row, 1, qty_item)
 
@@ -335,15 +335,15 @@ class StructureTableWidget(TooltipTableMixin, QTableWidget):
         unit = UNIT_DISPLAY.get(unit.lower(), unit) if unit else unit
         self.setItem(row, 2, QTableWidgetItem(unit))
 
-        rate_item = QTableWidgetItem(fmt_comma(v.get("rate", 0)))
+        rate_item = QTableWidgetItem(fmt_comma(v.get("rate")))
         rate_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.setItem(row, 3, rate_item)
 
         self.setItem(row, 4, QTableWidgetItem(v.get("rate_source", "Manual")))
 
         try:
-            rate = float(v.get("rate", 0) or 0)
-            qty = float(v.get("quantity", 0) or 0)
+            rate = float(v.get("rate") or 0)
+            qty = float(v.get("quantity") or 0)
             total = rate * qty
         except (ValueError, TypeError):
             total = 0.0

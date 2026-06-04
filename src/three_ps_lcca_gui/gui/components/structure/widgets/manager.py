@@ -137,7 +137,7 @@ class StructureManagerWidget(QWidget):
             for item in items:
                 if not item.get("state", {}).get("in_trash", False):
                     v = item.get("values", {})
-                    total += float(v.get("quantity", 0) or 0) * float(v.get("rate", 0) or 0)
+                    total += (v.get("quantity") or 0) * (v.get("rate") or 0)
                     count += 1
                     comp_has_items = True
             if comp_has_items:
@@ -188,10 +188,7 @@ class StructureManagerWidget(QWidget):
         meta_in = mat_dict.get("meta", {})
         state_in = mat_dict.get("state", {})
 
-        sor_ref_id = values.pop("sor_src_id", None)
         db_original = dict(meta_in.get("db_original") or {})
-        if sor_ref_id and "sor_ref_id" not in db_original:
-            db_original["sor_ref_id"] = str(sor_ref_id)
 
         new_entry = {
             "id": str(uuid.uuid4()),
@@ -305,12 +302,7 @@ class StructureManagerWidget(QWidget):
                     new_meta = new_data.get("meta", {})
                     new_state = new_data.get("state", {})
 
-                    sor_ref_id = new_values.pop("sor_src_id", None)
                     new_db_original = new_meta.get("db_original")
-                    if sor_ref_id and new_db_original is not None and "sor_ref_id" not in new_db_original:
-                        new_db_original = dict(new_db_original)
-                        new_db_original["sor_ref_id"] = str(sor_ref_id)
-
                     item_to_edit["values"] = new_values
                     now = datetime.datetime.now().isoformat()
                     item_to_edit["meta"]["modified_on"] = now
@@ -344,9 +336,9 @@ class StructureManagerWidget(QWidget):
                                 cells_updated = 0
                                 for col, text in [
                                     (0, v.get("material_name", "New Item")),
-                                    (1, fmt(v.get("quantity", 0))),
+                                    (1, fmt(v.get("quantity"))),
                                     (2, UNIT_DISPLAY.get(v.get("unit", "").lower(), v.get("unit", ""))),
-                                    (3, fmt_comma(v.get("rate", 0))),
+                                    (3, fmt_comma(v.get("rate"))),
                                     (4, v.get("rate_source", "Manual")),
                                 ]:
                                     it = table.item(visual_row, col)
@@ -355,8 +347,8 @@ class StructureManagerWidget(QWidget):
                                         cells_updated += 1
 
                                 try:
-                                    rate = float(v.get("rate", 0) or 0)
-                                    qty = float(v.get("quantity", 0) or 0)
+                                    rate = float(v.get("rate") or 0)
+                                    qty = float(v.get("quantity") or 0)
                                     total = rate * qty
                                 except (ValueError, TypeError):
                                     total = 0.0

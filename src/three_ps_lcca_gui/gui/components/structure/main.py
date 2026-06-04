@@ -397,8 +397,8 @@ class StructureTabView(QWidget):
                         trash_count += 1
                         continue
                     v = item.get("values", {})
-                    qty = float(v.get("quantity", 0) or 0)
-                    rate = float(v.get("rate", 0) or 0)
+                    qty = float(v.get("quantity") or 0)
+                    rate = float(v.get("rate") or 0)
                     comp_total += qty * rate
                 page_total += comp_total
 

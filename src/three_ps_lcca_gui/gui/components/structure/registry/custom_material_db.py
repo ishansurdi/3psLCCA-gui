@@ -114,12 +114,12 @@ class CustomMaterialDB:
             {
                 "name":                           r["name"],
                 "unit":                           r["unit"] or "",
-                "rate":                           r["rate"] if r["rate"] is not None else "not_available",
+                "rate":                           r["rate"] if r["rate"] is not None else None,
                 "rate_src":                       r["rate_src"] or "",
-                "carbon_emission":                r["carbon_emission"] or "not_available",
-                "carbon_emission_units_den":      r["carbon_emission_units_den"] or "not_available",
+                "carbon_emission":                r["carbon_emission"] or None,
+                "carbon_emission_units_den":      r["carbon_emission_units_den"] or None,
                 "carbon_emission_src":            r["carbon_emission_src"] or "",
-                "conversion_factor":              r["conversion_factor"] or "not_available",
+                "conversion_factor":              r["conversion_factor"] or None,
                 "scrap_rate":                     r["scrap_rate"] or "",
                 "post_demolition_recovery_pct":   r["post_demolition_recovery_pct"] or "",
                 "recycleable":                    r["recycleable"] or "",
@@ -150,10 +150,10 @@ class CustomMaterialDB:
         denom = carbon_unit.split("/")[-1].strip() if "/" in carbon_unit else ""
 
         carbon_em = v.get("carbon_emission", None)
-        carbon_em_str = str(carbon_em) if carbon_em else "not_available"
+        carbon_em_str = str(carbon_em) if carbon_em else None
 
         cf = v.get("conversion_factor", None)
-        cf_str = str(cf) if cf else "not_available"
+        cf_str = str(cf) if cf else None
 
         scrap = v.get("scrap_rate", None)
         scrap_str = str(scrap) if scrap else ""

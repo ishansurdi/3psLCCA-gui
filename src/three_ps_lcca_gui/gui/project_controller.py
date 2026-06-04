@@ -97,6 +97,19 @@ class ProjectController(QObject):
             self._chunk_cache[chunk_name] = self.engine.fetch_chunk(chunk_name)
         return self._chunk_cache[chunk_name]
 
+    def get_fresh_chunk(self, chunk_name: str) -> dict:
+        """Force-flushes staged data to disk then reads the chunk from file.
+
+        Ensures any engine.stage_update() calls made outside save_chunk_data()
+        are committed before reading, so the returned data is always current.
+        Also invalidates the controller cache entry for chunk_name.
+        """
+        if not self.engine or not self.engine.is_active():
+            return {}
+        self.engine.force_sync()
+        self._chunk_cache.pop(chunk_name, None)
+        return self.engine.fetch_chunk(chunk_name)
+
     def is_dirty(self) -> bool:
         return self.engine.is_dirty() if self.engine else False
 

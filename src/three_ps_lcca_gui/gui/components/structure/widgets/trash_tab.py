@@ -98,33 +98,37 @@ class TrashTabWidget(QWidget):
     def permanent_delete(self, comp_name, data_index):
         """Permanently remove an item from the data store."""
         for chunk_id in self.chunks:
-            data = self.controller.engine.fetch_chunk(chunk_id) or {}
-            if comp_name in data and data_index < len(data[comp_name]):
-                del data[comp_name][data_index]
-                self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
+            data = self.controller.get_fresh_chunk(chunk_id) or {}
+            items = data.get(comp_name, [])
+            if data_index >= len(items):
+                continue
+            if not items[data_index].get("state", {}).get("in_trash", False):
+                continue
+            del data[comp_name][data_index]
+            self.controller.save_chunk_data(chunk_id, data)
 
-                table = self._trash_tables.get((chunk_id, comp_name))
+            table = self._trash_tables.get((chunk_id, comp_name))
 
-                def _do(t=table, di=data_index):
-                    if t:
-                        t.remove_row_by_index(di, reindex=True)
-                        if t.rowCount() == 0:
-                            self.on_refresh()
-                    else:
+            def _do(t=table, di=data_index):
+                if t:
+                    t.remove_row_by_index(di, reindex=True)
+                    if t.rowCount() == 0:
                         self.on_refresh()
-                    main_view = self.window().findChild(QWidget, "StructureTabView")
-                    if main_view:
-                        main_view.update_trash_count()
+                else:
+                    self.on_refresh()
+                main_view = self.window().findChild(QWidget, "StructureTabView")
+                if main_view:
+                    main_view.update_trash_count()
 
-                QTimer.singleShot(0, _do)
-                return
+            QTimer.singleShot(0, _do)
+            return
 
     def toggle_trash_status(self, comp_name, data_index, should_trash):
         """
         Restores (should_trash=False) or re-trashes (should_trash=True) an item.
         """
         for chunk_id in self.chunks:
-            data = self.controller.engine.fetch_chunk(chunk_id) or {}
+            data = self.controller.get_fresh_chunk(chunk_id) or {}
 
             if comp_name in data and data_index < len(data[comp_name]):
                 item = data[comp_name][data_index]
@@ -154,7 +158,7 @@ class TrashTabWidget(QWidget):
                     item["state"] = {}
                 item["state"]["in_trash"] = should_trash
 
-                self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
+                self.controller.save_chunk_data(chunk_id, data)
 
                 table = self._trash_tables.get((chunk_id, comp_name))
                 item_data = data[comp_name][data_index]

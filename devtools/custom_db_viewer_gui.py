@@ -269,8 +269,8 @@ class CustomDbViewerDialog(QDialog):
                 text = "" if val is None else str(val)
                 item = QTableWidgetItem(text)
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                # Dim "not_available" values
-                if text in ("not_available", ""):
+                # Dim unavailable values
+                if val is None or text == "":
                     item.setForeground(QColor(_DIM))
                 self._table.setItem(r_idx, c_idx, item)
 

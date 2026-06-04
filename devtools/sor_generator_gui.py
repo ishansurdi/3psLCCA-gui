@@ -178,6 +178,55 @@ class _ParseWorker(QThread):
             self.error.emit(f"{type(exc).__name__}: {exc}")
 
 
+class _BatchWorker(QThread):
+    """Recursively converts all .xlsx files in a folder to JSON in-place."""
+
+    progress = Signal(str, bool)   # (message, is_error)
+    finished = Signal(int, int)    # (ok_count, fail_count)
+
+    def __init__(self, folder: str):
+        super().__init__()
+        self._folder = folder
+
+    def run(self):
+        import json as _json
+        folder = Path(self._folder)
+        ok = fail = 0
+
+        all_xlsx = sorted(folder.rglob("*.xlsx"))
+        xlsx_files = []
+        for p in all_xlsx:
+            if p.name.startswith("~$"):
+                self.progress.emit(f"⚠ {p.relative_to(folder)}: cannot open this file (locked by Excel)", True)
+                fail += 1
+            else:
+                xlsx_files.append(p)
+
+        if not xlsx_files:
+            self.progress.emit("No .xlsx files found.", True)
+            self.finished.emit(0, 0)
+            return
+        for xlsx_path in xlsx_files:
+            json_path = xlsx_path.with_suffix(".json")
+            rel = xlsx_path.relative_to(folder)
+            try:
+                from sor_json_generator import build_sor_json, parse_excel
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    parsed = parse_excel(str(xlsx_path))
+                    sor = build_sor_json(parsed)
+                json_path.write_text(
+                    _json.dumps(sor, indent=2, ensure_ascii=False), encoding="utf-8"
+                )
+                self.progress.emit(f"✓ {rel}", False)
+                ok += 1
+            except Exception as exc:
+                self.progress.emit(f"✗ {rel}: cannot open this file ({exc})", True)
+                fail += 1
+
+        self.finished.emit(ok, fail)
+
+
 class _RegistryWorker(QThread):
     """Runs build_registry() in a background thread."""
 
@@ -311,6 +360,17 @@ class SorGeneratorDialog(QDialog):
         self._parse_btn.setStyleSheet(_BTN_STYLE)
         self._parse_btn.clicked.connect(self._run_parse)
         parse_row.addWidget(self._parse_btn)
+
+        self._batch_btn = QPushButton("Batch Convert Folder...")
+        self._batch_btn.setFixedHeight(32)
+        self._batch_btn.setStyleSheet(_BTN_STYLE)
+        self._batch_btn.setToolTip(
+            "Pick a root folder - all .xlsx files found recursively will be\n"
+            "converted to JSON and saved alongside each Excel file."
+        )
+        self._batch_btn.clicked.connect(self._run_batch)
+        parse_row.addWidget(self._batch_btn)
+
         parse_row.addStretch()
         root.addLayout(parse_row)
 
@@ -473,6 +533,45 @@ class SorGeneratorDialog(QDialog):
     def _on_output_changed(self, text: str):
         self._generate_btn.setEnabled(bool(self._sor) and bool(text.strip()))
 
+    # ── Batch convert ──────────────────────────────────────────────────────────
+
+    def _run_batch(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Root Folder")
+        if not folder:
+            return
+
+        self._log.clear()
+        self._table.setRowCount(0)
+        self._sor = []
+        self._stats_lbl.setText("")
+        self._generate_btn.setEnabled(False)
+        if self._rebuild_btn:
+            self._rebuild_btn.setEnabled(False)
+        self._parse_btn.setEnabled(False)
+        self._batch_btn.setEnabled(False)
+        self._batch_btn.setText("Converting...")
+        self._log_line(f"Batch folder: {folder}")
+
+        self._worker = _BatchWorker(folder)
+        self._worker.progress.connect(self._on_batch_progress)
+        self._worker.finished.connect(self._on_batch_done)
+        self._worker.start()
+
+    def _on_batch_progress(self, msg: str, is_error: bool):
+        self._log_line(msg, color=_RED if is_error else _GREEN)
+
+    def _on_batch_done(self, ok: int, fail: int):
+        self._batch_btn.setText("Batch Convert Folder...")
+        self._batch_btn.setEnabled(True)
+        self._parse_btn.setEnabled(bool(self._input_edit.text().strip()))
+        self._worker = None
+        total = ok + fail
+        self._stats_lbl.setText(f"Batch: {ok}/{total} converted")
+        color = _GREEN if fail == 0 else (_YELLOW if ok > 0 else _RED)
+        self._log_line(f"Batch done — {ok} OK, {fail} failed.", color=color)
+        if self._rebuild_btn:
+            self._rebuild_btn.setEnabled(True)
+
     # ── Parse ──────────────────────────────────────────────────────────────────
 
     def _run_parse(self):
@@ -486,7 +585,8 @@ class SorGeneratorDialog(QDialog):
         self._sor = []
         self._stats_lbl.setText("")
         self._generate_btn.setEnabled(False)
-        self._rebuild_btn.setEnabled(False)
+        if self._rebuild_btn:
+            self._rebuild_btn.setEnabled(False)
         self._parse_btn.setEnabled(False)
         self._parse_btn.setText("Parsing…")
         self._log_line(f"Parsing: {path}")
@@ -614,7 +714,8 @@ class SorGeneratorDialog(QDialog):
             reg_mod = _load_catalog(str(dest))
             if reg_mod is not None:
                 self._reg_mod = reg_mod
-                self._rebuild_btn.setEnabled(True)
+                if self._rebuild_btn:
+                    self._rebuild_btn.setEnabled(True)
             else:
                 self._log_line(
                     "Note: material_catalog.py not found relative to output path - "
@@ -670,7 +771,7 @@ class SorGeneratorDialog(QDialog):
             )
             return
 
-        self._rebuild_btn.setEnabled(False)
+        self._rebuild_btn.setEnabled(False)  # only reachable in standalone mode
         self._rebuild_btn.setText("Rebuilding…")
         self._log_line("--- Rebuilding registry ---", color=_DIM)
 
@@ -680,8 +781,9 @@ class SorGeneratorDialog(QDialog):
         self._worker.start()
 
     def _on_registry_done(self, manifest: dict):
-        self._rebuild_btn.setText("Rebuild Registry")
-        self._rebuild_btn.setEnabled(True)
+        if self._rebuild_btn:
+            self._rebuild_btn.setText("Rebuild Registry")
+            self._rebuild_btn.setEnabled(True)
         self._worker = None
 
         meta  = manifest.get("_meta", {})
@@ -719,8 +821,9 @@ class SorGeneratorDialog(QDialog):
             )
 
     def _on_registry_error(self, msg: str):
-        self._rebuild_btn.setText("Rebuild Registry")
-        self._rebuild_btn.setEnabled(True)
+        if self._rebuild_btn:
+            self._rebuild_btn.setText("Rebuild Registry")
+            self._rebuild_btn.setEnabled(True)
         self._worker = None
         self._log_line(f"Registry rebuild failed: {msg}", color=_RED)
         QMessageBox.critical(self, "Registry Rebuild Failed", msg)

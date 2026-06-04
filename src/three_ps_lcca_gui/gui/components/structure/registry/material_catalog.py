@@ -155,7 +155,9 @@ def _validate_data(data, db_key: str) -> tuple[list[str], list[str]]:
             warnings.append(f"{ref}: 'data' array is empty.")
 
         for i_idx, item in enumerate(items):
-            iref = f"{ref} › Item[{i_idx}] ('{item.get('name','?')}')"
+            _src_id = item.get("src_id", "")
+            _item_label = f"[{_src_id}] {item.get('name', '?')}" if _src_id else item.get("name", "?")
+            iref = f"{ref} › Item[{i_idx}] ('{_item_label}')"
 
             for key in required_item:
                 if key not in item:
@@ -165,14 +167,14 @@ def _validate_data(data, db_key: str) -> tuple[list[str], list[str]]:
                 val = item.get(field)
                 if val is None:
                     continue
-                if val != "not_available" and not isinstance(val, (int, float)):
+                if val is not None and not isinstance(val, (int, float)):
                     errors.append(
-                        f"{iref}: '{field}' must be numeric or 'not_available', "
+                        f"{iref}: '{field}' must be numeric or null, "
                         f"got {type(val).__name__} ({val!r})."
                     )
 
-            if item.get("carbon_emission") == "not_available":
-                warnings.append(f"{iref}: carbon_emission is 'not_available'.")
+            if item.get("carbon_emission") is None:
+                warnings.append(f"{iref}: carbon_emission is not available.")
 
     return errors, warnings
 

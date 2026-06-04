@@ -66,8 +66,8 @@ def is_recyclable_valid(item: dict) -> bool:
         return all(
             [
                 _recycle_pct(v) > 0,
-                float(v.get("scrap_rate", 0) or 0) > 0,
-                float(v.get("quantity", 0) or 0) > 0,
+                float(v.get("scrap_rate") or 0) > 0,
+                float(v.get("quantity") or 0) > 0,
             ]
         )
     except (TypeError, ValueError):
@@ -87,7 +87,7 @@ def calc_recovered_value(item: dict) -> float:
     """Recovered Value = Recyclable Qty × scrap_rate"""
     v = item.get("values", {})
     try:
-        return calc_recyclable_qty(item) * float(v.get("scrap_rate", 0) or 0)
+        return calc_recyclable_qty(item) * float(v.get("scrap_rate") or 0)
     except (TypeError, ValueError):
         return 0.0
 
@@ -597,7 +597,7 @@ class Recycling(QWidget):
             t.setItem(row, 3, QTableWidgetItem(unit))
             t.setItem(row, 4, _ri(f"{_recycle_pct(v):.1f}%"))
             t.setItem(row, 5, _ri(recyclable_qty))
-            t.setItem(row, 6, _ri(fmt(v.get("scrap_rate", 0))))
+            t.setItem(row, 6, _ri(fmt(v.get("scrap_rate"))))
             val_item = QTableWidgetItem(value_str)
             val_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             t.setItem(row, 7, val_item)
@@ -652,7 +652,7 @@ class Recycling(QWidget):
             t.setItem(row, 2, _ri(fmt(v.get("quantity", 0))))
             t.setItem(row, 3, QTableWidgetItem(unit))
             t.setItem(row, 4, _ri(f"{_recycle_pct(v):.1f}%"))
-            t.setItem(row, 5, _ri(fmt(v.get("scrap_rate", 0))))
+            t.setItem(row, 5, _ri(fmt(v.get("scrap_rate"))))
             t.setItem(row, 6, QTableWidgetItem(reason))
 
             btn_keys = ["edit"] if reason == "Missing Data" else ["edit", "include"]
@@ -852,11 +852,11 @@ class Recycling(QWidget):
                 "category": cat,
                 "component": comp,
                 "material": item.get("values", {}).get("material_name", ""),
-                "quantity": float(item.get("values", {}).get("quantity", 0) or 0),
+                "quantity": float(item.get("values", {}).get("quantity") or 0),
                 "unit": item.get("values", {}).get("unit", ""),
                 "recyclability_pct": _recycle_pct(item.get("values", {})),
                 "recyclable_qty": calc_recyclable_qty(item),
-                "scrap_rate": float(item.get("values", {}).get("scrap_rate", 0) or 0),
+                "scrap_rate": float(item.get("values", {}).get("scrap_rate") or 0),
                 "recovered_value": value,
             }
             for cat, chunk_id, comp, idx, item, value in result["included_items"]
