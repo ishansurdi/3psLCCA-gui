@@ -4,11 +4,14 @@ from three_ps_lcca_gui.gui.version import DEV_MODE
 from ...base_widget import BaseDataWidget
 from ...utils.form_builder.form_definitions import FieldDef
 from ...utils.form_builder.form_builder import build_form
+from ...utils.common_requested_data import get_currency
 from .scc_tabs.ricke import RickeWidget
 from .scc_tabs.custom import CustomWidget
 
+_SELECTOR_LABELS = ["K. Ricke et al. (Country-Level)", "Custom / Manual Override"]
+
 _SELECTOR_FIELDS = [
-    FieldDef("selector", "Mode", "", "combo", options=["K. Ricke et al. (Country-Level)", "Custom / Manual Override"], combo_placeholder=""),
+    FieldDef("selector", "Mode", "", "combo", options=_SELECTOR_LABELS, combo_placeholder=""),
 ]
 
 _KEYS = ["ricke", "custom"]
@@ -59,12 +62,25 @@ class SCCWidget(BaseDataWidget):
 
     def get_data_dict(self) -> dict:
         idx = self._field_map["selector"].currentIndex()
-        key = _KEYS[idx]
+        label = _SELECTOR_LABELS[idx]
+        currency = get_currency()
+        unit = f"{currency}/kgCO₂e"
+        cost = self._active().get_cost()
+        raw_custom = self._sub_b.get_data_dict()
         return {
-            "mode": key,
-            "cost": self._active().get_cost(),
+            "source": label,
             "ricke": self._sub_a.get_data_dict(),
-            "custom": self._sub_b.get_data_dict(),
+            "custom": {
+                "entered_value": raw_custom.get("scc_value", 0.0),
+                "currency": currency,
+                "unit": unit,
+            },
+            "result": {
+                "selected_mode": label,
+                "cost_of_carbon_local": cost if cost is not None else 0.0,
+                "currency": currency,
+                "unit": unit,
+            },
         }
 
     def get_data(self) -> dict:
@@ -74,11 +90,19 @@ class SCCWidget(BaseDataWidget):
         return chunk
 
     def load_data(self, data: dict):
-        key = data.get("mode", "ricke")
-        idx = _KEYS.index(key) if key in _KEYS else 0
+        source = data.get("source") or data.get("mode", "ricke")
+        if source in _SELECTOR_LABELS:
+            idx = _SELECTOR_LABELS.index(source)
+        elif source in _KEYS:
+            idx = _KEYS.index(source)
+        else:
+            idx = 0
         self._field_map["selector"].setCurrentIndex(idx)
         self._sub_a.load_data_dict(data.get("ricke", {}))
-        self._sub_b.load_data_dict(data.get("custom", {}))
+        custom_data = data.get("custom", {})
+        if "entered_value" in custom_data and "scc_value" not in custom_data:
+            custom_data = {"scc_value": custom_data["entered_value"]}
+        self._sub_b.load_data_dict(custom_data)
 
     def load_data_dict(self, data: dict):
         self.load_data(data)
