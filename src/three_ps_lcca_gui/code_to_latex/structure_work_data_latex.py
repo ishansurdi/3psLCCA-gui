@@ -9,7 +9,7 @@ from .SETTINGS import DECIMAL_PLACES_FOR_LATEX
 
 _EMDASH   = NoEscape(r"\textemdash")
 _N_COLS   = 6
-_COL_SPEC = "lrlrlr"
+_COL_SPEC = "p{4cm}rp{1.2cm}rp{2.5cm}r"
 
 _SOURCE_MARK = {
     "db":             "",

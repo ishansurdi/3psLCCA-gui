@@ -17,9 +17,37 @@
 - To register a new component in the Dev > LaTeX menu, add one entry to `_LATEX_ENTRIES` in `devmode.py` - do not duplicate the save/wrap logic
 - src\three_ps_lcca_gui\gui\devmode.py
 
+## Table overflow — tables must never bleed off the page
+
+**Wide tables (many columns)**
+- Devmode wraps every `tabular` in `\begin{adjustbox}{max width=\linewidth}` automatically via `\BeforeBeginEnvironment` / `\AfterEndEnvironment` — no per-table adjustbox needed in component files
+- Do NOT use `p{Xcm}` column widths that sum to more than `\linewidth` — use `l`/`r`/`c` and let adjustbox scale the table down
+- If a table is inherently wide (e.g. WPI 16-column matrix), keep it — adjustbox handles the shrink; do not split it into multiple smaller tables unless the data genuinely separates
+
+**Tall tables (many rows — risk of running off the bottom of the page)**
+- Use `LongTable` (pylatex) or `environment="longtable"` (pandas styler) for any table that may exceed one page
+- `LongTable` / `longtable` must define a repeating header (`\endhead`) and a "continued on next page" footer (`\endfoot`) so the reader is never left without column labels
+- Do NOT use a `table` float for long tables — floats cannot page-break; use `longtable` which flows with the text
+- Do NOT pass `position` or `position_float` when using `environment="longtable"` — those are `table` float parameters and will raise an error with `longtable`
+- `\usepackage{longtable}` is already in the devmode preamble
+
+**Column spec discipline**
+- Text columns: `l`
+- Numeric columns: `r` (required — see general rules above)
+- Wide free-text columns (e.g. descriptions, notes): `p{Xcm}` or `X` (tabularx) — never `l` for content that may wrap
+- Do not mix fixed `p{}` widths and `l`/`r` in the same table unless you have verified the total fits within `\linewidth`
+
+**`table` float vs `longtable`**
+- Short tables (≤ ~25 rows, ≤ 1 page): use `Table` float + `Tabular` (pylatex) or `position="h!"` (pandas)
+- Long tables (> ~25 rows or unknown length): use `LongTable` / `longtable` — no `Table` float wrapper
+
 ## Decimal precision
 - Never hardcode decimal place counts — import `DECIMAL_PLACES_FOR_LATEX` (general values) and `DECIMAL_PLACES_FOR_LATEX_RATIO` (ratio/index values) from `SETTINGS.py`
 - `src\three_ps_lcca_gui\code_to_latex\SETTINGS.py`
+
+## Font size
+- Never hardcode font size declarations (`\small`, `\footnotesize`, etc.) in component files — the document-level font size is set via `LATEX_FONT_SIZE` in `SETTINGS.py` and applied once by devmode after `\begin{document}`
+- Exception: element-level annotations (e.g. legend footnotes, "continued on next page" footers) may use `\footnotesize` locally since they are intentionally smaller than body text
 
 ## Units
 - Never hardcode unit display strings from raw chunk data — use `UNIT_DISPLAY` from `src\three_ps_lcca_gui\gui\components\utils\definitions.py` to resolve unit codes (e.g. `"m3"` → `"m³"`)

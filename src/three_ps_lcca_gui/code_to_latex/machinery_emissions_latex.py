@@ -1,0 +1,91 @@
+import pandas as pd
+from ..gui.components.utils.common_requested_data import get_machinery_emissions_data
+from .SETTINGS import DECIMAL_PLACES_FOR_LATEX
+
+_FMT = f"{{:.{DECIMAL_PLACES_FOR_LATEX}f}}"
+_EMDASH = r"\textemdash"
+
+
+def _fmt(val, decimals=None) -> float | None:
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def _detailed_to_latex(data: dict) -> str:
+    rows = []
+    for row in data.get("detailed", {}).get("rows", []):
+        rate = _fmt(row.get("rate", 0))
+        hrs  = _fmt(row.get("hrs", 0))
+        days = _fmt(row.get("days", 0))
+        ef   = _fmt(row.get("ef", 0))
+        consumption = (rate or 0) * (hrs or 0) * (days or 0)
+        emission    = consumption * (ef or 0)
+        rows.append({
+            "Equipment Name":                row.get("name", ""),
+            "Energy Source":                 row.get("source", ""),
+            "Fuel / Power Rating":           rate,
+            "Avg Hrs / Day":                 hrs,
+            "No. of Days":                   days,
+            "Emission Factor (kgCO₂e/unit)": ef,
+            "Consumption":                   consumption,
+            "Emissions (kgCO₂e)":           emission,
+        })
+
+    df = pd.DataFrame(rows)
+    return (
+        df.style.hide(axis="index")
+        .format(_FMT, subset=["Fuel / Power Rating", "Avg Hrs / Day", "No. of Days",
+                               "Emission Factor (kgCO₂e/unit)", "Consumption",
+                               "Emissions (kgCO₂e)"], na_rep=_EMDASH)
+        .to_latex(
+            caption="Machinery and Equipment Emissions (Detailed)",
+            label="tab:machinery_equipment_emissions",
+            hrules=True,
+            column_format=r"p{3cm}p{1.8cm}>{\raggedleft\arraybackslash}p{1.3cm}>{\raggedleft\arraybackslash}p{1.1cm}>{\raggedleft\arraybackslash}p{1.1cm}>{\raggedleft\arraybackslash}p{1.8cm}>{\raggedleft\arraybackslash}p{1.3cm}>{\raggedleft\arraybackslash}p{1.8cm}",
+            environment="longtable",
+        )
+    ) or ""
+
+
+def _lumpsum_to_latex(data: dict) -> str:
+    ls = data.get("lumpsum", {})
+    rows = []
+    for label, cons_key, days_key, ef_key in [
+        ("Electricity", "elec_consumption_per_day", "elec_days", "elec_ef"),
+        ("Fuel",        "fuel_consumption_per_day", "fuel_days", "fuel_ef"),
+    ]:
+        cons = _fmt(ls.get(cons_key, 0))
+        days = _fmt(ls.get(days_key, 0))
+        ef   = _fmt(ls.get(ef_key, 0))
+        emission = (cons or 0) * (days or 0) * (ef or 0)
+        rows.append({
+            "Source":                        label,
+            "Consumption / Day":             cons,
+            "Days":                          days,
+            "Emission Factor (kgCO₂e/unit)": ef,
+            "Emissions (kgCO₂e)":           emission,
+        })
+
+    df = pd.DataFrame(rows)
+    return (
+        df.style.hide(axis="index")
+        .format(_FMT, subset=["Consumption / Day", "Days",
+                               "Emission Factor (kgCO₂e/unit)", "Emissions (kgCO₂e)"],
+                na_rep=_EMDASH)
+        .to_latex(
+            caption="Machinery and Equipment Emissions (Lump Sum)",
+            label="tab:lumpsum_machinery_equipment_emissions",
+            hrules=True,
+            column_format="p{3cm}rrrr",
+            position="h!",
+        )
+    ) or ""
+
+
+def machinery_emissions_to_latex(controller=None) -> str:
+    data = get_machinery_emissions_data()
+    if data.get("mode", "detailed") == "lumpsum":
+        return _lumpsum_to_latex(data)
+    return _detailed_to_latex(data)

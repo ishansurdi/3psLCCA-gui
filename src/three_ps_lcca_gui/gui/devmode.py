@@ -53,13 +53,18 @@ def setup_dev_menu(parent_window, menubar):
         ("Bridge Data",    "three_ps_lcca_gui.code_to_latex.bridge_data_latex",    "bridge_data_to_latex",    "bridge_data.tex"),
         ("Financial Data",    "three_ps_lcca_gui.code_to_latex.financial_data_latex",    "financial_data_to_latex",    "financial_data.tex"),
         ("Maintenance Data", "three_ps_lcca_gui.code_to_latex.maintenance_data_latex", "maintenance_data_to_latex", "maintenance_data.tex"),
-        ("Vehicle Traffic Data", "three_ps_lcca_gui.code_to_latex.traffic_data_latex", "vehicle_traffic_data_to_latex", "vehicle_traffic_data.tex"),
+        ("Vehicle Traffic Data",  "three_ps_lcca_gui.code_to_latex.traffic_data_latex",                                "vehicle_traffic_data_to_latex",  "vehicle_traffic_data.tex"),
+        ("Material Emissions",    "three_ps_lcca_gui.code_to_latex.material_emissions_latex",                          "material_emissions_to_latex",    "material_emissions.tex"),
+        ("Transport Emissions",   "three_ps_lcca_gui.code_to_latex.transport_emissions_latex",                         "transport_emissions_to_latex",   "transport_emissions.tex"),
+        ("Machinery Emissions",   "three_ps_lcca_gui.code_to_latex.machinery_emissions_latex",                         "machinery_emissions_to_latex",   "machinery_emissions.tex"),
+        ("Final Report",         "three_ps_lcca_gui.code_to_latex.final_report",                           "final_report_to_latex",          "final_report.tex"),
         ("LCCA Results",         "three_ps_lcca_gui.code_to_latex.results_latex",                          "results_to_latex",               "results.tex"),
         ("Structure Work Data",  "three_ps_lcca_gui.code_to_latex.structure_work_data_latex",              "structure_work_data_to_latex",   "structure_work_data.tex"),
         ("Traffic & Road Data",   "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "traffic_and_road_data_to_latex", "traffic_and_road_data.tex"),
         ("Traffic Fields",        "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "traffic_fields_to_latex",        "traffic_fields.tex"),
         ("Peak Hour Distribution","three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "peak_hour_distribution_to_latex","peak_hour_distribution.tex"),
         ("Vehicle Data",         "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "vehicle_data_to_latex",          "vehicle_data.tex"),
+        ("WPI Combined",         "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_tables_to_latex",            "wpi_tables.tex"),
         ("WPI Base Factors",     "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_base_to_latex",              "wpi_base.tex"),
         ("WPI Selected Factors", "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_selected_to_latex",          "wpi_selected.tex"),
         ("WPI Ratios",           "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_ratio_to_latex",             "wpi_ratio.tex"),
@@ -75,19 +80,8 @@ def setup_dev_menu(parent_window, menubar):
                 tests_dir = Path(__file__).parent.parent / "code_to_latex" / "tests"
                 tests_dir.mkdir(exist_ok=True)
                 out_path = tests_dir / filename
-                doc = "\n".join([
-                    r"\documentclass{article}",
-                    r"\usepackage{booktabs}",
-                    r"\usepackage[landscape, margin=0.5in]{geometry}",
-                    r"\usepackage{adjustbox}",
-                    r"\usepackage{longtable}",
-                    r"\usepackage{etoolbox}",
-                    r"\BeforeBeginEnvironment{tabular}{\begin{adjustbox}{max width=\linewidth}}",
-                    r"\AfterEndEnvironment{tabular}{\end{adjustbox}}",
-                    r"\begin{document}",
-                    fn(parent_window.controller),
-                    r"\end{document}",
-                ])
+                from three_ps_lcca_gui.code_to_latex.final_report import build_document
+                doc = build_document(fn(parent_window.controller))
                 out_path.write_text(doc, encoding="utf-8")
                 QMessageBox.information(parent_window, "LaTeX", f"Saved to:\n{out_path}")
             except Exception as exc:
