@@ -571,4 +571,5 @@ class RickeWidget(ScrollableForm):
 
         cpi_ratio        = fm["cpi_ratio"].value()        if "cpi_ratio"        in fm else 1.0
         usd_to_local     = fm["usd_to_local_rate"].value() if "usd_to_local_rate" in fm else 1.0
-        return result[pct_idx] * cpi_ratio * usd_to_local
+        # DB values are USD/tCO₂; system expects currency/kgCO₂e → divide by 1000
+        return result[pct_idx] * cpi_ratio * usd_to_local / 1000

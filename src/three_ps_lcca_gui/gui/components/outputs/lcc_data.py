@@ -36,15 +36,15 @@ _CREDIT_KEYS = {"total_scrap_value"}
 _MASTER_ROWS = [
     # Initial Stage
     ("initial_stage",  "economic",      "initial_construction_cost",
-     "Initial Construction Costs"),
+     "Initial Construction Cost"),
     ("initial_stage",  "economic",      "time_cost_of_loan",
      "Time Costs"),
     ("initial_stage",  "environmental", "initial_material_carbon_emission_cost",
      "Initial Carbon Emissions"),
     ("initial_stage",  "environmental", "initial_vehicular_emission_cost",
-     "Carbon Emissions due to Rerouting (Construction)"),
+     "Carbon emissions due to Rerouting (Construction)"),
     ("initial_stage",  "social",        "initial_road_user_cost",
-     "Road User Cost (Construction)"),
+     "Road User Costs (Construction)"),
 
     # Use Stage
     ("use_stage",      "economic",      "routine_inspection_costs",
@@ -55,35 +55,33 @@ _MASTER_ROWS = [
      "Major Inspection Costs"),
     ("use_stage",      "economic",      "major_repair_cost",
      "Major Repair Costs"),
-    ("use_stage",      "environmental", "vehicular_emission_costs_for_replacement_of_bearing_and_expansion_joint",
-     "Carbon Emissions due to Rerouting during Demolition and Disposal"),
-
+    ("use_stage",      "economic",      "replacement_costs_for_bearing_and_expansion_joint",
+     "Replacement Costs of Bearings and Expansion joints"),
     ("use_stage",      "environmental", "periodic_carbon_costs",
      "Periodic Maintenance related Carbon Emissions"),
     ("use_stage",      "environmental", "major_repair_material_carbon_emission_costs",
      "Major Repair related Carbon Emissions"),
     ("use_stage",      "environmental", "major_repair_vehicular_emission_costs",
      "Carbon Emissions due to Rerouting during Major Repairs"),
-    ("use_stage",      "economic",      "replacement_costs_for_bearing_and_expansion_joint",
+    ("use_stage",      "environmental", "vehicular_emission_costs_for_replacement_of_bearing_and_expansion_joint",
      "Carbon Emissions due to Rerouting during Replacement of Bearings and Expansion joints"),
-
-
-
     ("use_stage",      "social",        "major_repair_road_user_costs",
-     "Road User Costs during Major Repair"),
+     "Road User Costs during Major Repairs"),
     ("use_stage",      "social",        "road_user_costs_for_replacement_of_bearing_and_expansion_joint",
      "Road User Costs during Replacement of Bearings and Expansion joints"),
-    ("end_of_life",    "economic",      "total_demolition_and_disposal_costs",
-     "Demolition & Disposal Costs"),
+
+    # Reconstruction Stage
+    ("reconstruction", "economic",      "total_demolition_and_disposal_costs",
+     "Demolition and Disposal Costs"),
     ("reconstruction", "economic",      "total_scrap_value",
      "Recycling Costs"),
     ("reconstruction", "economic",      "cost_of_reconstruction_after_demolition",
      "Reconstruction Costs"),
     ("reconstruction", "economic",      "time_cost_of_loan",
      "Time Costs"),
-    ("reconstruction", "environmental", "demolition_vehicular_emission_cost",
+    ("reconstruction", "environmental", "carbon_costs_demolition_and_disposal",
      "Demolition and Disposal related Carbon Emissions"),
-    ("end_of_life",    "environmental", "demolition_vehicular_emission_cost",
+    ("reconstruction", "environmental", "demolition_vehicular_emission_cost",
      "Carbon Emissions due to Rerouting during Demolition and Disposal"),
     ("reconstruction", "environmental", "carbon_cost_of_reconstruction_after_demolition",
      "Reconstruction related Carbon Emissions"),
@@ -93,17 +91,18 @@ _MASTER_ROWS = [
      "Road User Costs related to Demolition and Disposal during Reconstruction"),
     ("reconstruction", "social",        "ruc_reconstruction",
      "Road User Costs during Reconstruction"),
-    ("reconstruction", "economic",      "total_demolition_and_disposal_costs",
-     "Demolition & Disposal Costs"),
+
+    # End of Life Stage
+    ("end_of_life",    "economic",      "total_demolition_and_disposal_costs",
+     "Demolition and Disposal Costs"),
     ("end_of_life",    "economic",      "total_scrap_value",
      "Recycling Costs"),
     ("end_of_life",    "environmental", "carbon_costs_demolition_and_disposal",
      "Demolition and Disposal related Carbon Emissions"),
-    ("reconstruction", "environmental", "carbon_costs_demolition_and_disposal",
+    ("end_of_life",    "environmental", "demolition_vehicular_emission_cost",
      "Carbon Emissions due to Rerouting during Demolition and Disposal"),
     ("end_of_life",    "social",        "ruc_demolition",
      "Road User Costs due to Demolition and Disposal"),
-
 ]
 
 # (stage_key, chart_title, breakdown_label, color, tick_color, stage_color, optional)

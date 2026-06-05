@@ -535,7 +535,7 @@ class LCCBreakdownTable(QWidget):
             else:
                 text_rect = fm.boundingRect(0, 0, item_w, 2000,
                                             Qt.TextWordWrap | Qt.AlignLeft, label)
-                h = max(self._MIN_ROW_H, text_rect.height() + 10)
+                h = max(self._MIN_ROW_H, text_rect.height() + self._ITEM_PAD_Y * 2)
             self._row_layouts.append((curr_y, h))
             curr_y += h
 
@@ -681,6 +681,7 @@ class LCCBreakdownTable(QWidget):
         color_text      = QColor(get_token("text"))
         color_header_bg = QColor(get_token("surface_mid"))
         color_success   = QColor(get_token("success"))
+        color_row_sep   = QColor(get_token("border", "pressed"))
 
         pillar_colors = {k: QColor(v) for k, v in self._PILLAR_COLORS.items()}
 
@@ -810,6 +811,10 @@ class LCCBreakdownTable(QWidget):
                     val_text,
                 )
             p.setFont(row_font)
+
+            # row separator
+            p.setPen(color_row_sep)
+            p.drawLine(self._STAGE_W, ry + rh - 1, W, ry + rh - 1)
 
         # ── stage blocks ──────────────────────────────────────────────────────
         p.setFont(QFont(FONT_FAMILY, FS_MD, FW_BOLD))
