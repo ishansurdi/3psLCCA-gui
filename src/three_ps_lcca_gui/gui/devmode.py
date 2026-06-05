@@ -56,6 +56,7 @@ def setup_dev_menu(parent_window, menubar):
         ("Vehicle Traffic Data", "three_ps_lcca_gui.code_to_latex.traffic_data_latex", "vehicle_traffic_data_to_latex", "vehicle_traffic_data.tex"),
         ("Material Emissions", "three_ps_lcca_gui.code_to_latex.material_emissions_latex", "material_emissions_to_latex", "material_emissions.tex"),
         ("Transport Emissions", "three_ps_lcca_gui.code_to_latex.transport_emissions_latex", "transport_emissions_to_latex", "transport_emissions.tex"),
+        ("Traffic Routing Emissions", "three_ps_lcca_gui.code_to_latex.traffic_routing_emissions_latex", "traffic_routing_emissions_to_latex", "traffic_routing_emissions.tex"),
         ("Machinery Emissions", "three_ps_lcca_gui.code_to_latex.machinery_emissions_latex", "machinery_emissions_to_latex", "machinery_emissions.tex"),
         ("Structure Work Data",  "three_ps_lcca_gui.code_to_latex.structure_work_data_latex",              "structure_work_data_to_latex",   "structure_work_data.tex"),
         ("Traffic & Road Data",   "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "traffic_and_road_data_to_latex", "traffic_and_road_data.tex"),

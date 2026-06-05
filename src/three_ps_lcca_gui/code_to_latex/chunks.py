@@ -9,3 +9,5 @@ TRANSPORT_DATA_CHUNK = "transport_data"
 
 
 STRUCTURE_MATERIAL_CHUNKS = STRUCTURE_CHUNKS
+DIVERSION_EMISSIONS_CHUNK = "diversion_emissions"
+TRAFFIC_AND_ROAD_DATA_CHUNK = "traffic_and_road_data"
