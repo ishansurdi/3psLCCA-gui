@@ -16,3 +16,15 @@
 - Each component has its own `.py` file so output can be individually controlled - do not try to fully automate or over-generalize; `common_code.py` only exists for shared low-level utilities, not to eliminate per-component decisions
 - To register a new component in the Dev > LaTeX menu, add one entry to `_LATEX_ENTRIES` in `devmode.py` - do not duplicate the save/wrap logic
 - src\three_ps_lcca_gui\gui\devmode.py
+
+## Decimal precision
+- Never hardcode decimal place counts — import `DECIMAL_PLACES_FOR_LATEX` (general values) and `DECIMAL_PLACES_FOR_LATEX_RATIO` (ratio/index values) from `SETTINGS.py`
+- `src\three_ps_lcca_gui\code_to_latex\SETTINGS.py`
+
+## Units
+- Never hardcode unit display strings from raw chunk data — use `UNIT_DISPLAY` from `src\three_ps_lcca_gui\gui\components\utils\definitions.py` to resolve unit codes (e.g. `"m3"` → `"m³"`)
+- `UNIT_DISPLAY.get(code, code)` — falls back to the raw code if unknown
+- Only applies where unit codes come directly from chunk data (e.g. structure work items); `FieldDef.unit` strings are already human-readable and do not need resolving
+
+## Currency
+- Never hardcode currency strings (e.g. `"INR"`) — call `get_currency()` from `src\three_ps_lcca_gui\gui\components\utils\common_requested_data.py` at function call time, not at module level

@@ -54,6 +54,14 @@ def setup_dev_menu(parent_window, menubar):
         ("Financial Data",    "three_ps_lcca_gui.code_to_latex.financial_data_latex",    "financial_data_to_latex",    "financial_data.tex"),
         ("Maintenance Data", "three_ps_lcca_gui.code_to_latex.maintenance_data_latex", "maintenance_data_to_latex", "maintenance_data.tex"),
         ("Vehicle Traffic Data", "three_ps_lcca_gui.code_to_latex.traffic_data_latex", "vehicle_traffic_data_to_latex", "vehicle_traffic_data.tex"),
+        ("Structure Work Data",  "three_ps_lcca_gui.code_to_latex.structure_work_data_latex",              "structure_work_data_to_latex",   "structure_work_data.tex"),
+        ("Traffic & Road Data",   "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "traffic_and_road_data_to_latex", "traffic_and_road_data.tex"),
+        ("Traffic Fields",        "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "traffic_fields_to_latex",        "traffic_fields.tex"),
+        ("Peak Hour Distribution","three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "peak_hour_distribution_to_latex","peak_hour_distribution.tex"),
+        ("Vehicle Data",         "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "vehicle_data_to_latex",          "vehicle_data.tex"),
+        ("WPI Base Factors",     "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_base_to_latex",              "wpi_base.tex"),
+        ("WPI Selected Factors", "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_selected_to_latex",          "wpi_selected.tex"),
+        ("WPI Ratios",           "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_ratio_to_latex",             "wpi_ratio.tex"),
     ]
 
     def _make_save_latex(module_path, fn_name, filename):
@@ -69,7 +77,11 @@ def setup_dev_menu(parent_window, menubar):
                 doc = "\n".join([
                     r"\documentclass{article}",
                     r"\usepackage{booktabs}",
-                    r"\usepackage[margin=1in]{geometry}",
+                    r"\usepackage[landscape, margin=0.5in]{geometry}",
+                    r"\usepackage{adjustbox}",
+                    r"\usepackage{etoolbox}",
+                    r"\AtBeginEnvironment{tabular}{\begin{adjustbox}{max width=\linewidth}}",
+                    r"\AtEndEnvironment{tabular}{\end{adjustbox}}",
                     r"\begin{document}",
                     fn(parent_window.controller),
                     r"\end{document}",
