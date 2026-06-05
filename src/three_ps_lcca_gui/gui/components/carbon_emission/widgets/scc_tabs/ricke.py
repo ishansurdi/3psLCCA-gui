@@ -26,7 +26,7 @@ from ....utils.form_builder.form_definitions import FieldDef, Section
 from ....utils.form_builder.form_builder import build_form, _PLACEHOLDER
 from ....utils.display_format import DECIMAL_PLACES
 from ....utils.validation_helpers import freeze_form, validate_form, clear_field_styles, confirm_clear_all, _apply_border_style, _clear_border_style
-from ....utils.common_requested_data import get_currency
+from ....utils.common_requested_data import get_currency, get_project_iso3
 
 # ── DB helpers (mirrors cscc_explorer.py) ─────────────────────────────────────
 
@@ -313,6 +313,7 @@ class RickeWidget(ScrollableForm):
 
     def refresh_from_engine(self):
         self._update_currency_suffix()
+        self._apply_country_lock()
 
     def _populate_iso3(self):
         try:
@@ -324,6 +325,24 @@ class RickeWidget(ScrollableForm):
             combo.addItems(iso3_list)
         except Exception as e:
             print(f"[RickeWidget] failed to load ISO3 list: {e}")
+        self._apply_country_lock()
+
+    def _apply_country_lock(self):
+        """Set iso3 to project country if it exists in the DB and lock it; else default to WLD."""
+        combo = self._field_map.get("iso3")
+        if combo is None:
+            return
+        iso3_code = get_project_iso3()
+        idx = combo.findText(iso3_code) if iso3_code else -1
+        if idx >= 0:
+            combo.setCurrentIndex(idx)
+            combo.setEnabled(False)
+        else:
+            combo.setEnabled(True)
+            if combo.currentText() == "-- select --":
+                wld_idx = combo.findText("WLD")
+                if wld_idx >= 0:
+                    combo.setCurrentIndex(wld_idx)
 
     def _connect_combo_logging(self):
         for widget in self._field_map.values():

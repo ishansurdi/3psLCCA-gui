@@ -90,6 +90,13 @@ def get_project_country() -> str:
     return get_general_info().get("project_country", "")
 
 
+def get_project_iso3() -> str:
+    """Return the ISO3 code for the project country, or '' if not found."""
+    from .countries_data import COUNTRY_TO_CODE
+    country = get_project_country()
+    return COUNTRY_TO_CODE.get(country.upper(), "")
+
+
 def get_project_name() -> str:
     return get_general_info().get("project_name", "")
 

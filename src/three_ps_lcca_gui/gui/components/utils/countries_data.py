@@ -1692,4 +1692,10 @@ COUNTRY_TO_CURRENCY = {
     for item in data
 }
 
+# COUNTRY -> ISO3 COUNTRY_CODE with uppercase country keys
+COUNTRY_TO_CODE = {
+    item["COUNTRY"].upper(): item["COUNTRY_CODE"]
+    for item in data
+}
+
 
