@@ -176,7 +176,7 @@ Component names e.g. `"Railing"`, `"Wearing Coat"`.
             "meta": {
                 "created_on":    str,   # ISO 8601 datetime
                 "modified_on":   str,   # ISO 8601 datetime
-                "source":        str,   # "db" | "excel" | "db_modified" | "excel_modified"
+                "source":        str,   # "manual" | "db" | "excel" | "db_modified" | "excel_modified"
                 "source_db_key": str,   # e.g. "INDIA/Bihar/Darbhanga-2025"; "" if not from DB
                 "db_original":   dict,  # snapshot of the record as ingested
             },
