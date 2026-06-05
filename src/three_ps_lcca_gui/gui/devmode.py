@@ -54,6 +54,9 @@ def setup_dev_menu(parent_window, menubar):
         ("Financial Data",    "three_ps_lcca_gui.code_to_latex.financial_data_latex",    "financial_data_to_latex",    "financial_data.tex"),
         ("Maintenance Data", "three_ps_lcca_gui.code_to_latex.maintenance_data_latex", "maintenance_data_to_latex", "maintenance_data.tex"),
         ("Vehicle Traffic Data", "three_ps_lcca_gui.code_to_latex.traffic_data_latex", "vehicle_traffic_data_to_latex", "vehicle_traffic_data.tex"),
+        ("Material Emissions", "three_ps_lcca_gui.code_to_latex.material_emissions_latex", "material_emissions_to_latex", "material_emissions.tex"),
+        ("Transport Emissions", "three_ps_lcca_gui.code_to_latex.transport_emissions_latex", "transport_emissions_to_latex", "transport_emissions.tex"),
+        ("Machinery Emissions", "three_ps_lcca_gui.code_to_latex.machinery_emissions_latex", "machinery_emissions_to_latex", "machinery_emissions.tex"),
         ("Structure Work Data",  "three_ps_lcca_gui.code_to_latex.structure_work_data_latex",              "structure_work_data_to_latex",   "structure_work_data.tex"),
         ("Traffic & Road Data",   "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "traffic_and_road_data_to_latex", "traffic_and_road_data.tex"),
         ("Traffic Fields",        "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "traffic_fields_to_latex",        "traffic_fields.tex"),
@@ -76,18 +79,30 @@ def setup_dev_menu(parent_window, menubar):
                 out_path = tests_dir / filename
                 doc = "\n".join([
                     r"\documentclass{article}",
+                    r"\usepackage{longtable}",
                     r"\usepackage{booktabs}",
-                    r"\usepackage[landscape, margin=0.5in]{geometry}",
-                    r"\usepackage{adjustbox}",
-                    r"\usepackage{etoolbox}",
-                    r"\AtBeginEnvironment{tabular}{\begin{adjustbox}{max width=\linewidth}}",
-                    r"\AtEndEnvironment{tabular}{\end{adjustbox}}",
+                    r"\usepackage[margin=1in]{geometry}",
+                    r"\setlength{\tabcolsep}{3pt}",
+                    r"\small",
+                    r"\usepackage[utf8]{inputenc}",
+                    r"\DeclareUnicodeCharacter{2082}{\textsubscript{2}}",
                     r"\begin{document}",
                     fn(parent_window.controller),
                     r"\end{document}",
                 ])
                 out_path.write_text(doc, encoding="utf-8")
                 QMessageBox.information(parent_window, "LaTeX", f"Saved to:\n{out_path}")
+                # for testing pdf generation
+                # import subprocess
+
+                # subprocess.run(
+                #     ["pdflatex", "-interaction=nonstopmode", out_path.name],
+                #     cwd=tests_dir,
+                #     check=True,
+                #     capture_output=True,
+                # )
+                # pdf_path = out_path.with_suffix(".pdf")
+                # QMessageBox.information(parent_window, "LaTeX", f"Saved to:\n{out_path}\n{pdf_path}")
             except Exception as exc:
                 QMessageBox.critical(parent_window, "LaTeX Error", str(exc))
         return _handler
