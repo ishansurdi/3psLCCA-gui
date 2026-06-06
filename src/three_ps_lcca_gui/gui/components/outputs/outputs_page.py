@@ -2,9 +2,13 @@
 gui/components/outputs/outputs_page.py
 """
 
+import datetime
+import json
 import logging
+import traceback as _tb_mod
 
 from PySide6.QtWidgets import (
+    QFileDialog,
     QFormLayout,
     QFrame,
     QGridLayout,
@@ -980,6 +984,20 @@ class OutputsPage(ScrollableForm):
 
     # ── State: calculation error ──────────────────────────────
 
+    @staticmethod
+    def _extract_relevant_frame(tb: str) -> str:
+        """Return the last traceback frame that belongs to project code (not site-packages)."""
+        if not tb:
+            return ""
+        frames = []
+        lines = tb.splitlines()
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith("File ") and i + 1 < len(lines):
+                if "site-packages" not in line and "lib\\python" not in line.lower():
+                    frames.append(f"{stripped}\n    {lines[i + 1].strip()}")
+        return frames[-1] if frames else ""
+
     def _show_calculation_error(self, error: Exception, tb: str = ""):
         self._current_status = "calc_error"
         self._status_args = {"error": error, "tb": tb}
@@ -1009,8 +1027,8 @@ class OutputsPage(ScrollableForm):
         )
         v.addWidget(title_lbl)
 
-        msg = str(error).splitlines()[0] if str(error) else "An unknown error occurred."
-        msg_lbl = QLabel(msg)
+        full_msg = str(error).strip() or "An unknown error occurred."
+        msg_lbl = QLabel(full_msg)
         msg_lbl.setFont(_f(FS_BASE))
         msg_lbl.setWordWrap(True)
         msg_lbl.setStyleSheet(
@@ -1018,15 +1036,104 @@ class OutputsPage(ScrollableForm):
         )
         v.addWidget(msg_lbl)
 
+        relevant_frame = self._extract_relevant_frame(tb)
+        if relevant_frame:
+            frame_box = QFrame()
+            frame_box.setStyleSheet(
+                f"QFrame {{ background-color: {get_token('surface_pressed')};"
+                f"  border: 1px solid {get_token('surface_mid')};"
+                f"  border-radius: {RADIUS_MD}px; }}"
+            )
+            fb_v = QVBoxLayout(frame_box)
+            fb_v.setContentsMargins(SP3, SP2, SP3, SP2)
+
+            origin_lbl = QLabel("Origin")
+            origin_lbl.setFont(_f(FS_XS, FW_MEDIUM))
+            origin_lbl.setStyleSheet(
+                f"color: {get_token('text_disabled')}; letter-spacing: 1px; background: transparent; border: none;"
+            )
+            fb_v.addWidget(origin_lbl)
+
+            frame_lbl = QLabel(relevant_frame)
+            frame_lbl.setFont(QFont("Courier New", FS_XS))
+            frame_lbl.setWordWrap(True)
+            frame_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            frame_lbl.setStyleSheet(
+                f"color: {get_token('danger')}; background: transparent; border: none;"
+            )
+            fb_v.addWidget(frame_lbl)
+            v.addWidget(frame_box)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(SP3)
+        btn_row.setContentsMargins(0, SP2, 0, 0)
+
         retry_btn = QPushButton("Retry")
         retry_btn.setFixedHeight(BTN_MD)
         retry_btn.setFont(_f(FS_BASE, FW_MEDIUM))
         retry_btn.setStyleSheet(btn_primary())
         retry_btn.clicked.connect(self.validate_requested.emit)
-        v.addWidget(retry_btn, 0, Qt.AlignLeft)
+        btn_row.addWidget(retry_btn)
+
+        dl_btn = QPushButton("Download Error Log")
+        dl_btn.setFixedHeight(BTN_MD)
+        dl_btn.setFont(_f(FS_BASE, FW_MEDIUM))
+        dl_btn.setStyleSheet(
+            f"QPushButton {{ border: 1px solid {get_token('danger')}; border-radius: {RADIUS_MD}px;"
+            f"  padding: 0 16px; background: transparent; color: {get_token('danger')};"
+            f"  font-weight: {get_token('weight-semibold')}; }}"
+            f"QPushButton:hover {{ border-width: 1.5px; }}"
+        )
+        dl_btn.clicked.connect(lambda: self._download_error_log(error, tb))
+        btn_row.addWidget(dl_btn)
+
+        btn_row.addStretch()
+        v.addLayout(btn_row)
 
         self._status_layout.addWidget(card)
         self._status_layout.addStretch()
+
+    def _download_error_log(self, error: Exception, tb: str):
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_name = f"lcca_error_{ts}.txt"
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Error Log", default_name, "Text Files (*.txt);;All Files (*)"
+        )
+        if not path:
+            return
+
+        lines = [
+            f"3psLCCA Error Log",
+            f"Generated : {datetime.datetime.now().isoformat()}",
+            f"{'='*60}",
+            f"",
+            f"Error Type : {type(error).__name__}",
+            f"Error      : {error}",
+            f"",
+            f"{'='*60}",
+            f"Traceback",
+            f"{'='*60}",
+            tb or _tb_mod.format_exc() or "(no traceback available)",
+            f"",
+            f"{'='*60}",
+            f"Input Data Snapshot",
+            f"{'='*60}",
+        ]
+
+        all_data = getattr(self, "_last_all_data", None)
+        if all_data:
+            try:
+                lines.append(json.dumps(all_data, indent=2, default=str))
+            except Exception as e:
+                lines.append(f"(could not serialise input data: {e})")
+        else:
+            lines.append("(no input data captured — error occurred before calculation started)")
+
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join(lines))
+        except Exception as e:
+            _log.error("Failed to write error log: %s", e)
 
     # ── State: calculation success ────────────────────────────
 
@@ -1174,6 +1281,7 @@ class OutputsPage(ScrollableForm):
         #     _log.warning("DEBUG: failed to dump all_data: %s", _e)
         # ── END DEBUG ──────────────────────────────────────────
 
+        self._last_all_data = all_data
         self._currency = get_currency()
         self._show_calculating()
 

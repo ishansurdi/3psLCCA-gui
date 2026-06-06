@@ -5,6 +5,7 @@ Helper class to map raw UI data dictionaries to Core LCCA objects.
 
 import datetime
 
+from three_ps_lcca_gui.gui.version import DEV_MODE
 from three_ps_lcca_core.inputs.input import (
     InputMetaData,
     GeneralParameters,
@@ -33,12 +34,36 @@ from three_ps_lcca_core.inputs.input_global import (
 from three_ps_lcca_core.inputs.wpi import WPIMetaData
 
 
+def print_dev(*args) -> None:
+    """Print a loud dev warning — only fires when DEV_MODE is True."""
+    if DEV_MODE:
+        msg = " ".join(str(a) for a in args)
+        print(f"\n{'='*60}")
+        print(f"  [DEV] DATA PREPARER WARNING")
+        print(f"  {msg}")
+        print(f"{'='*60}\n")
+
+
+def _check(value, field: str, section: str = "") -> None:
+    """Warn loudly in dev mode when a required field resolved to None."""
+    if value is None:
+        loc = f"{section}.{field}" if section else field
+        print_dev(f"MISSING VALUE: '{loc}' is None — float/int conversion will crash!")
+
+
 class DataPreparer:
     @staticmethod
     def prepare_life_cycle_construction_cost(data: dict):
         """
         Creates the life cycle construction cost breakdown dict.
         """
+        if data.get("carbon_emission_data") is None:
+            print_dev("'carbon_emission_data' missing in prepare_life_cycle_construction_cost!")
+        if data.get("construction_work_data") is None:
+            print_dev("'construction_work_data' missing in prepare_life_cycle_construction_cost!")
+        if data.get("recycling_data") is None:
+            print_dev("'recycling_data' missing in prepare_life_cycle_construction_cost!")
+
         carbon_emissions = data.get("carbon_emission_data")
         carbon_cost_per_kg = (
             carbon_emissions.get("social_cost_data")
@@ -89,11 +114,16 @@ class DataPreparer:
         """
         _financial_data = data.get("financial_data")
         if _financial_data is None:
+            print_dev("'financial_data' section is entirely missing from inputs!")
             raise ValueError(
                 "Financial Data is missing from the calculation inputs.\n"
                 "Fill in the Financial Data page and try again."
             )
 
+        _check(_financial_data.get("discount_rate"), "discount_rate", "financial_data")
+        _check(_financial_data.get("inflation_rate"), "inflation_rate", "financial_data")
+        _check(_financial_data.get("interest_rate"), "interest_rate", "financial_data")
+        _check(_financial_data.get("investment_ratio"), "investment_ratio", "financial_data")
         discount_rate_percent = float(_financial_data.get("discount_rate"))
         inflation_rate_percent = float(_financial_data.get("inflation_rate"))
         interest_rate_percent = float(_financial_data.get("interest_rate"))
@@ -115,6 +145,13 @@ class DataPreparer:
         currency_conversion = float(_financial_data.get("currency_conversion", 1.0))
 
         _bridge_data = data.get("bridge_data")
+        if _bridge_data is None:
+            print_dev("'bridge_data' section is entirely missing from inputs!")
+        else:
+            _check(_bridge_data.get("design_life"), "design_life", "bridge_data")
+            _check(_bridge_data.get("duration_construction_months"), "duration_construction_months", "bridge_data")
+            _check(_bridge_data.get("working_days_per_month"), "working_days_per_month", "bridge_data")
+            _check(_bridge_data.get("days_per_month"), "days_per_month", "bridge_data")
         service_life_years = int(_bridge_data.get("design_life"))
         construction_period_months = float(
             _bridge_data.get("duration_construction_months")
@@ -143,6 +180,25 @@ class DataPreparer:
 
         _maintenance_data = data.get("maintenance_data")
         _demolition_data = data.get("demolition_data")
+
+        if _maintenance_data is None:
+            print_dev("'maintenance_data' section is entirely missing from inputs!")
+        else:
+            for _mf in (
+                "routine_inspection_cost", "routine_inspection_freq",
+                "periodic_maintenance_cost", "periodic_maintenance_carbon_cost", "periodic_maintenance_freq",
+                "major_inspection_cost", "major_inspection_freq",
+                "major_repair_cost", "major_repair_carbon_cost", "major_repair_freq",
+                "major_repair_duration", "bearing_exp_joint_cost",
+                "bearing_exp_joint_freq", "bearing_exp_joint_duration",
+            ):
+                _check(_maintenance_data.get(_mf), _mf, "maintenance_data")
+
+        if _demolition_data is None:
+            print_dev("'demolition_data' section is entirely missing from inputs!")
+        else:
+            for _df in ("demolition_cost_pct", "demolition_carbon_cost_pct", "demolition_duration"):
+                _check(_demolition_data.get(_df), _df, "demolition_data")
 
         routine_inspection_picc_per_year = float(
             _maintenance_data.get("routine_inspection_cost")

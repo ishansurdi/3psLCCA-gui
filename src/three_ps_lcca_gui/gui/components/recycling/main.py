@@ -385,19 +385,6 @@ class RecyclingTable(TooltipTableMixin, QTableWidget):
         self._frozen_overlay.clear_rows()
         self.update_height()
 
-    def get_data(self) -> dict:
-        result = self._compute()
-        return {
-            "chunk": "recycling_data",
-            "data": {
-                "total_recovered_value": result["total_recovered_value"],
-                "included_count": result["included_count"],
-                "total_count": result["total_count"],
-                "cat_totals": result["cat_totals"],
-                "currency": result["currency"],
-            },
-        }
-
     def showEvent(self, event):
         super().showEvent(event)
         self._frozen_overlay.reposition()
@@ -876,6 +863,18 @@ class Recycling(QWidget):
 
         return {"errors": [], "warnings": warnings}
 
+    def get_data(self) -> dict:
+        result = self._compute()
+        return {
+            "chunk": "recycling_data",
+            "data": {
+                "total_recovered_value": result["total_recovered_value"],
+                "included_count": result["included_count"],
+                "total_count": result["total_count"],
+                "cat_totals": result["cat_totals"],
+                "currency": result["currency"],
+            },
+        }
 
     def showEvent(self, event):
         super().showEvent(event)
