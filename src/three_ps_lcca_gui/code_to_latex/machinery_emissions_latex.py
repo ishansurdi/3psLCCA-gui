@@ -1,6 +1,7 @@
 import pandas as pd
 from ..gui.components.utils.common_requested_data import get_machinery_emissions_data
 from .SETTINGS import DECIMAL_PLACES_FOR_LATEX
+from .html_to_latex import format_remarks_latex
 
 _FMT = f"{{:.{DECIMAL_PLACES_FOR_LATEX}f}}"
 _EMDASH = r"\textemdash"
@@ -87,5 +88,11 @@ def _lumpsum_to_latex(data: dict) -> str:
 def machinery_emissions_to_latex(controller=None) -> str:
     data = get_machinery_emissions_data()
     if data.get("mode", "detailed") == "lumpsum":
-        return _lumpsum_to_latex(data)
-    return _detailed_to_latex(data)
+        out = _lumpsum_to_latex(data)
+    else:
+        out = _detailed_to_latex(data)
+    
+    remarks = format_remarks_latex(data)
+    if remarks:
+        out += "\n\n" + remarks
+    return out

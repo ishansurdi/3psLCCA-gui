@@ -63,6 +63,7 @@ def setup_dev_menu(parent_window, menubar):
         ("Traffic & Road Data",   "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "traffic_and_road_data_to_latex", "traffic_and_road_data.tex"),
         ("Traffic Fields",        "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "traffic_fields_to_latex",        "traffic_fields.tex"),
         ("Peak Hour Distribution","three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "peak_hour_distribution_to_latex","peak_hour_distribution.tex"),
+        ("Diversion Emissions", "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "diversion_emissions_to_latex", "diversion_emissions.tex"),
         ("Vehicle Data",         "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "vehicle_data_to_latex",          "vehicle_data.tex"),
         ("WPI Combined",         "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_tables_to_latex",            "wpi_tables.tex"),
         ("WPI Base Factors",     "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_base_to_latex",              "wpi_base.tex"),
@@ -75,6 +76,10 @@ def setup_dev_menu(parent_window, menubar):
             try:
                 from pathlib import Path
                 import importlib
+                import three_ps_lcca_gui.gui.components.utils.common_requested_data as crd
+                # Force engine save + clear cache (the same way "Save All Chunks" does)
+                crd.get_all_fresh_data()
+                
                 mod = importlib.import_module(module_path)
                 fn = getattr(mod, fn_name)
                 tests_dir = Path(__file__).parent.parent / "code_to_latex" / "tests"

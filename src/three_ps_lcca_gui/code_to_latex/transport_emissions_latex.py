@@ -3,6 +3,7 @@ import pandas as pd
 from ..gui.components.utils.common_requested_data import get_chunk, get_transport_data
 from ..gui.components.utils.definitions import STRUCTURE_CHUNKS, UNIT_DIMENSION, UNIT_DISPLAY
 from .SETTINGS import DECIMAL_PLACES_FOR_LATEX
+from .html_to_latex import format_remarks_latex
 
 _FMT    = f"{{:.{DECIMAL_PLACES_FOR_LATEX}f}}"
 _EMDASH = r"\textemdash"
@@ -124,4 +125,8 @@ def transport_emissions_to_latex(controller=None) -> str:
         tables.append(_vehicle_table_to_latex(entry, mat_index, table_no))
         table_no += 1
 
-    return "\n\n".join(t for t in tables if t)
+    out = "\n\n".join(t for t in tables if t)
+    remarks = format_remarks_latex(data)
+    if remarks:
+        out += "\n\n" + remarks
+    return out

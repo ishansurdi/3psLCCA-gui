@@ -217,6 +217,38 @@ def get_demolition_data() -> dict:
 # ── traffic_and_road_data ─────────────────────────────────────────────────────
 
 def get_traffic_and_road_data() -> dict:
+    """Return the traffic and road data chunk.
+
+    Expected schema::
+
+        {
+            "alternate_road_carriageway": str,    # e.g. "SL"
+            "additional_reroute_distance_km": float,
+            "mode":                      str,    # e.g. "India"
+            "remarks":                   str,    # HTML-formatted rich text
+            "vehicle_data": {
+                "small_cars": {
+                    "vehicles_per_day": int,
+                    "accident_percentage": float,
+                    "pwr": float,
+                },
+                # ... other vehicles
+            },
+            "peak_hour_distribution": {
+                "peak_hour_1": float,
+                # ... up to num_peak_hours
+            },
+            "num_peak_hours": int,
+            "wpi": {
+                "selected_profile_name": str,
+                "data_snapshot": {
+                    "base": dict,
+                    "selected": dict,
+                    "ratio": dict,
+                }
+            }
+        }
+    """
     return get_chunk("traffic_and_road_data")
 
 

@@ -6,6 +6,7 @@ from pylatex.utils import bold, escape_latex
 from ..gui.components.utils.common_requested_data import get_chunk
 from ..gui.components.utils.definitions import STRUCTURE_CHUNKS, UNIT_DISPLAY
 from .SETTINGS import DECIMAL_PLACES_FOR_LATEX
+from .html_to_latex import format_remarks_latex
 
 _EMDASH = r"\textemdash"
 
@@ -159,4 +160,11 @@ def _get_excluded_table(excluded: dict) -> str:
 def material_emissions_to_latex(controller=None) -> str:
     included, excluded = _collect()
     parts = [_get_included_table(included), _get_excluded_table(excluded)]
-    return "\n\n".join(t for t in parts if t)
+    out = "\n\n".join(t for t in parts if t)
+    
+    # Material emissions remarks are stored in 'material_emissions_data'
+    data = get_chunk("material_emissions_data")
+    remarks = format_remarks_latex(data)
+    if remarks:
+        out += "\n\n" + remarks
+    return out

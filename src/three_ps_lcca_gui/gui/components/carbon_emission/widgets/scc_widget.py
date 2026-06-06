@@ -5,6 +5,7 @@ from ...base_widget import BaseDataWidget
 from ...utils.form_builder.form_definitions import FieldDef
 from ...utils.form_builder.form_builder import build_form
 from ...utils.common_requested_data import get_currency
+from ...utils.validation_helpers import freeze_form, clear_field_styles
 from .scc_tabs.ricke import RickeWidget
 from .scc_tabs.custom import CustomWidget
 
@@ -50,7 +51,7 @@ class SCCWidget(BaseDataWidget):
         return self._stack.currentWidget()
 
     def freeze(self, frozen: bool = True):
-        self._field_map["selector"].setEnabled(not frozen)
+        freeze_form(_SELECTOR_FIELDS, self, frozen)
         for sub in (self._sub_a, self._sub_b):
             sub.freeze(frozen)
 
@@ -59,6 +60,11 @@ class SCCWidget(BaseDataWidget):
         if isinstance(result, dict):
             return result
         return {"errors": [], "warnings": []}
+
+    def clear_validation(self):
+        clear_field_styles(_SELECTOR_FIELDS, self)
+        self._sub_a.clear_validation()
+        self._sub_b.clear_validation()
 
     def get_data_dict(self) -> dict:
         idx = self._field_map["selector"].currentIndex()

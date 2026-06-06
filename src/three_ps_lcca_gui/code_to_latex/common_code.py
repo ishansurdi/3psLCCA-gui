@@ -1,6 +1,7 @@
 from pylatex import Table, Tabular, MultiColumn, NoEscape
 from pylatex.utils import bold
 from ..gui.components.utils.form_builder.form_definitions import Section, FieldDef
+from .html_to_latex import format_remarks_latex
 
 
 def fields_to_latex(fields: list, data: dict, caption: str, label: str) -> str:
@@ -42,4 +43,8 @@ def fields_to_latex(fields: list, data: dict, caption: str, label: str) -> str:
     table.append(NoEscape(rf"\label{{{label}}}"))
     table.append(tabular)
 
-    return table.dumps()
+    out = table.dumps()
+    remarks = format_remarks_latex(data)
+    if remarks:
+        out += "\n\n" + remarks
+    return out

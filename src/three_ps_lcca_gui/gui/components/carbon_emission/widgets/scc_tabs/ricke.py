@@ -456,14 +456,14 @@ class RickeWidget(ScrollableForm):
             currency     = get_currency()
 
             if cpi_applied:
-                scc_text = f"{final:,.4f} {currency} / tCO₂   (CPI-adjusted from {displayed:,.4f} in 2018 USD)"
+                scc_text = f"{final:,.{DECIMAL_PLACES}f} {currency} / tCO₂   (CPI-adjusted from {displayed:,.{DECIMAL_PLACES}f} in 2018 USD)"
                 ci_text  = (
-                    f"66.7% Confidence Interval:  {adj_lo:,.4f}  –  {adj_hi:,.4f} {currency} / tCO₂  (adjusted)\n"
-                    f"                             {lo:,.4f}  –  {hi:,.4f} USD / tCO₂  (2018 USD)"
+                    f"66.7% Confidence Interval:  {adj_lo:,.{DECIMAL_PLACES}f}  –  {adj_hi:,.{DECIMAL_PLACES}f} {currency} / tCO₂  (adjusted)\n"
+                    f"                             {lo:,.{DECIMAL_PLACES}f}  –  {hi:,.{DECIMAL_PLACES}f} USD / tCO₂  (2018 USD)"
                 )
             else:
-                scc_text = f"{final:,.4f} {currency} / tCO₂   (2018 USD)"
-                ci_text  = f"66.7% Confidence Interval:  {lo:,.4f}  –  {hi:,.4f} {currency} / tCO₂"
+                scc_text = f"{final:,.{DECIMAL_PLACES}f} {currency} / tCO₂   (2018 USD)"
+                ci_text  = f"66.7% Confidence Interval:  {lo:,.{DECIMAL_PLACES}f}  –  {hi:,.{DECIMAL_PLACES}f} {currency} / tCO₂"
 
             self._lbl_scc.setText(scc_text)
             self._lbl_scc.setStyleSheet(f"color: {get_token('success')}; font-size: {FS_LG}pt; font-weight: {FW_SEMIBOLD};")
@@ -473,17 +473,17 @@ class RickeWidget(ScrollableForm):
             self._lbl_params.setStyleSheet(f"color: {get_token('text_secondary')}; font-size: {FS_SM}pt; font-weight: {FW_NORMAL};")
 
             breakdown = (
-                f"① Raw (2018 USD):           {displayed:,.4f} USD/tCO₂\n"
-                f"② After CPI (× {cpi_ratio}):     {after_cpi:,.4f} USD/tCO₂\n"
-                f"③ Final (× {usd_to_local} {currency}/USD):  {final:,.4f} {currency}/tCO₂"
+                f"① Raw (2018 USD):           {displayed:,.{DECIMAL_PLACES}f} USD/tCO₂\n"
+                f"② After CPI (× {cpi_ratio}):     {after_cpi:,.{DECIMAL_PLACES}f} USD/tCO₂\n"
+                f"③ Final (× {usd_to_local} {currency}/USD):  {final:,.{DECIMAL_PLACES}f} {currency}/tCO₂"
             )
             self._lbl_status.setText(breakdown)
             self._lbl_status.setStyleSheet(f"color: {get_token('text_secondary')}; font-size: {FS_SM}pt; font-weight: {FW_NORMAL};")
 
             if DEV_MODE:
-                print(f"[RickeWidget] raw (2018 USD):        {displayed:,.4f} USD/tCO₂  CI=[{lo:,.4f}–{hi:,.4f}]")
-                print(f"[RickeWidget] after CPI (ratio={cpi_ratio}): {after_cpi:,.4f} USD/tCO₂")
-                print(f"[RickeWidget] final ({currency}, rate={usd_to_local}): {final:,.4f} {currency}/tCO₂  CI=[{adj_lo:,.4f}–{adj_hi:,.4f}]")
+                print(f"[RickeWidget] raw (2018 USD):        {displayed:,.{DECIMAL_PLACES}f} USD/tCO₂  CI=[{lo:,.{DECIMAL_PLACES}f}–{hi:,.{DECIMAL_PLACES}f}]")
+                print(f"[RickeWidget] after CPI (ratio={cpi_ratio}): {after_cpi:,.{DECIMAL_PLACES}f} USD/tCO₂")
+                print(f"[RickeWidget] final ({currency}, rate={usd_to_local}): {final:,.{DECIMAL_PLACES}f} {currency}/tCO₂  CI=[{adj_lo:,.{DECIMAL_PLACES}f}–{adj_hi:,.{DECIMAL_PLACES}f}]")
 
     def _clear_all(self):
         if not confirm_clear_all(self):
@@ -501,7 +501,9 @@ class RickeWidget(ScrollableForm):
                 widget.setChecked(False)
 
     def freeze(self, frozen: bool = True):
-        freeze_form(self._field_map, frozen)
+        freeze_form(RICKE_FIELDS, self, frozen)
+        if not frozen:
+            self._apply_country_lock()
         self._btn_clear.setEnabled(not frozen)
 
     def validate(self):
@@ -533,7 +535,7 @@ class RickeWidget(ScrollableForm):
         return result
 
     def clear_validation(self):
-        clear_field_styles(self._field_map)
+        clear_field_styles(RICKE_FIELDS, self)
 
     def get_cost(self) -> float | None:
         fm = self._field_map

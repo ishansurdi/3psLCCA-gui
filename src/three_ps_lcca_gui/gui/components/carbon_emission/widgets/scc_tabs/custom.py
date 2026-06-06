@@ -73,14 +73,14 @@ class CustomWidget(ScrollableForm):
                 widget.setChecked(False)
 
     def freeze(self, frozen: bool = True):
-        freeze_form(self._field_map, frozen)
+        freeze_form(CUSTOM_FIELDS, self, frozen)
         self._btn_clear.setEnabled(not frozen)
 
     def validate(self):
         return validate_form(CUSTOM_FIELDS, self)
 
     def clear_validation(self):
-        clear_field_styles(self._field_map)
+        clear_field_styles(CUSTOM_FIELDS, self)
 
     def refresh_from_engine(self):
         self._update_currency_suffix()

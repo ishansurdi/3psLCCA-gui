@@ -11,3 +11,4 @@ platformdirs
 pywebview
 -e ./3psLCCA-core
 odfpy
+beautifulsoup4
