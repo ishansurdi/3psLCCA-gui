@@ -17,7 +17,7 @@ import uuid
 import datetime
 import traceback
 
-from .base_table import StructureTableWidget
+from .base_table import StructureTableWidget, _make_msgbox
 from .material_dialog import MaterialDialog
 from ...utils.definitions import UNIT_DISPLAY
 from ...utils.validation_helpers import freeze_widgets
@@ -114,6 +114,9 @@ class StructureManagerWidget(QWidget):
         currency = getattr(self, "_currency", "")
 
         for comp_name, items in self.data.items():
+            active = [i for i in items if not i.get("state", {}).get("in_trash", False)]
+            if not active:
+                continue
             self.create_section(comp_name)
             table = self.sections.get(comp_name)
             if table:
@@ -498,24 +501,23 @@ class StructureManagerWidget(QWidget):
 
         msg = f'Delete component "{name}"?'
         if active_count:
-            msg += f"\n\n{active_count} material(s) inside will be permanently removed."
+            msg += f"\n\n{active_count} material(s) will be moved to trash."
 
-        reply = QMessageBox.question(
-            self,
-            "Delete Component",
-            msg,
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
-        if reply != QMessageBox.Yes:
+        box = _make_msgbox(self, QMessageBox.Warning, "Delete Component", msg)
+        if box.exec() != QMessageBox.Yes:
             return
 
-        current_data.pop(name, None)
+        for item in items:
+            item.setdefault("state", {})["in_trash"] = True
         self.controller.engine.stage_update(chunk_name=self.chunk_name, data=current_data)
         self.controller.chunk_updated.emit(self.chunk_name)
         self.save_current_state()
         self.data = current_data
         self.refresh_ui()
+
+        main_view = self.window().findChild(QWidget, "StructureTabView")
+        if main_view:
+            main_view.update_trash_count()
 
     def freeze(self, frozen: bool = True):
         self._frozen = frozen

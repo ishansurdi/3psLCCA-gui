@@ -1,15 +1,17 @@
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
+    QHBoxLayout,
     QLabel,
     QScrollArea,
     QGroupBox,
     QSizePolicy,
     QMessageBox,
+    QPushButton,
 )
 from PySide6.QtCore import QTimer
 from three_ps_lcca_gui.gui.themes import get_token
-from .base_table import StructureTableWidget
+from .base_table import StructureTableWidget, _make_msgbox
 
 
 class TrashTabWidget(QWidget):
@@ -25,12 +27,21 @@ class TrashTabWidget(QWidget):
         self._trash_tables: dict[tuple, StructureTableWidget] = {}
         self.layout = QVBoxLayout(self)
 
-        # Header
+        # Header row
+        header_row = QHBoxLayout()
         header = QLabel(
             "<b>Trash Bin</b><br>Items here are excluded from all calculations."
         )
         header.setStyleSheet(f"color: {get_token('text_secondary')}; margin-bottom: 10px;")
-        self.layout.addWidget(header)
+        self.delete_all_btn = QPushButton("Delete All")
+        self.delete_all_btn.setStyleSheet(
+            f"QPushButton {{ background-color: {get_token('danger')}; color: white; }}"
+            f"QPushButton:disabled {{ background-color: {get_token('danger', 'disabled')}; color: white; }}"
+        )
+        self.delete_all_btn.clicked.connect(self._delete_all)
+        header_row.addWidget(header, 1)
+        header_row.addWidget(self.delete_all_btn)
+        self.layout.addLayout(header_row)
 
         # Scroll Area for multiple group boxes
         self.scroll = QScrollArea()
@@ -48,6 +59,37 @@ class TrashTabWidget(QWidget):
             "str_misc",
         ]
 
+    def _delete_all(self):
+        box = _make_msgbox(
+            self, QMessageBox.Critical,
+            "Delete All",
+            "Permanently delete all items in trash? This cannot be undone.",
+        )
+        if box.exec() != QMessageBox.Yes:
+            return
+
+        if not self.controller or not self.controller.engine:
+            return
+
+        for chunk_id in self.chunks:
+            data = self.controller.get_fresh_chunk(chunk_id) or {}
+            changed = False
+            for comp_name in list(data.keys()):
+                before = len(data[comp_name])
+                data[comp_name] = [
+                    item for item in data[comp_name]
+                    if not item.get("state", {}).get("in_trash", False)
+                ]
+                if len(data[comp_name]) != before:
+                    changed = True
+            if changed:
+                self.controller.save_chunk_data(chunk_id, data)
+
+        self.on_refresh()
+        main_view = self.window().findChild(QWidget, "StructureTabView")
+        if main_view:
+            main_view.update_trash_count()
+
     def on_refresh(self):
         """Clears the view and re-populates based on nested state['in_trash']."""
         self._trash_tables.clear()
@@ -62,6 +104,7 @@ class TrashTabWidget(QWidget):
             return
 
         has_content = False
+        self.delete_all_btn.setEnabled(False)
 
         for chunk_id in self.chunks:
             data = self.controller.engine.fetch_chunk(chunk_id) or {}
@@ -75,6 +118,7 @@ class TrashTabWidget(QWidget):
 
                 if trashed_items:
                     has_content = True
+                    self.delete_all_btn.setEnabled(True)
                     group = QGroupBox(f"Deleted from: {comp_name}")
                     g_layout = QVBoxLayout(group)
 
@@ -131,6 +175,8 @@ class TrashTabWidget(QWidget):
         for chunk_id in self.chunks:
             data = self.controller.get_fresh_chunk(chunk_id) or {}
 
+            if comp_name not in data:
+                data[comp_name] = []
             if comp_name in data and data_index < len(data[comp_name]):
                 item = data[comp_name][data_index]
 

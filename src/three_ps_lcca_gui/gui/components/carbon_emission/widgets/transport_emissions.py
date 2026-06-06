@@ -236,11 +236,11 @@ class VehicleCard(QGroupBox):
     ):
         v = entry.get("vehicle", {})
         r = entry.get("route", {})
-        origin = r.get("origin", "").strip()
-        origin_part = f"{origin}  |  " if origin else ""
+        from_loc   = r.get("origin", "").strip()
+        route_part = f"{from_loc}  |  " if from_loc else ""
         title = (
-            f"{v.get('name', 'Vehicle')}  -  "
-            f"{origin_part}"
+            f"{v.get('name', 'Delivery')}  -  "
+            f"{route_part}"
             f"{fmt(r.get('distance_km', 0))} km  |  "
             f"{fmt_comma(total_emission)} kgCO₂e"
         )
@@ -749,8 +749,7 @@ class TransportEmissions(QWidget):
         entries_out = [
             {
                 "vehicle_name": e["entry"].get("vehicle", {}).get("name", ""),
-                "origin": e["entry"].get("route", {}).get("origin", ""),
-                "destination": e["entry"].get("route", {}).get("destination", ""),
+                "from-to": e["entry"].get("route", {}).get("origin", ""),
                 "distance_km": e["entry"].get("route", {}).get("distance_km", 0),
                 "emission_kgCO2e": e["emission"],
                 "materials": e["mat_results"],

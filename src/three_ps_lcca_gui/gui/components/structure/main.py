@@ -215,13 +215,15 @@ class StructureTabView(QWidget):
     def toggle_trash_view(self):
         """Swaps between normal tabs and the Trash list."""
         if self.content_stack.currentIndex() == 0:
-            # Entering Trash View
             self.trash_view.on_refresh()
             self.content_stack.setCurrentIndex(1)
+            self.excel_btn.setVisible(False)
+            self.download_btn.setVisible(False)
         else:
-            # Returning to Work View
             self.content_stack.setCurrentIndex(0)
-        
+            self.excel_btn.setVisible(True)
+            self.download_btn.setVisible(True)
+
         self.update_trash_count()
 
     def update_trash_count(self):
@@ -360,7 +362,7 @@ class StructureTabView(QWidget):
             QMessageBox.critical(self, "Export Error", str(exc))
 
     def freeze(self, frozen: bool = True):
-        freeze_widgets(frozen, self.excel_btn, self.trash_btn)
+        freeze_widgets(frozen, self.excel_btn)
         for tab in (
             self.foundation_tab,
             self.substructure_tab,

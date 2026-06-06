@@ -222,7 +222,7 @@ class TransportDialog(QDialog):
         self.source_in.setPlaceholderText("e.g. Mumbai Batching Plant")
         self.source_in.setMinimumHeight(34)
         self.source_in.textChanged.connect(self._update_summary)
-        rg.addWidget(_field("SOURCE / SUPPLIER", self.source_in, required=False), 0, 0)
+        rg.addWidget(_field("FROM - TO", self.source_in, required=False), 0, 0)
 
         self.dist_in = QDoubleSpinBox()
         self.dist_in.setRange(0, 100_000)

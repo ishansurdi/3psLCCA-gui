@@ -522,6 +522,7 @@ class ProjectWindow(QMainWindow):
         self._lock_tooltip = "Click to lock this project and prevent accidental edits."
         self.btn_lock = make_icon_btn(
             "lock-open", tooltip=self._lock_tooltip, size=30)
+        self.btn_lock.setIcon(make_icon("lock-open", color=get_token("text")))
         self.btn_lock.setFixedSize(30, 30)
         _r = "border-radius:15px; min-width:30px; min-height:30px; padding:0px; border:none;"
         self.btn_lock.setStyleSheet(
@@ -806,7 +807,10 @@ class ProjectWindow(QMainWindow):
             self.actionExportAllDataJSON.setEnabled(False)
 
         self._frozen = checked
-        self.btn_lock.setIcon(make_icon("lock" if checked else "lock-open"))
+        self.btn_lock.setIcon(
+            make_icon("lock", color=get_token("base")) if checked
+            else make_icon("lock-open", color=get_token("text"))
+        )
         self._lock_tooltip = (
             "This project is locked.\nClick here to unlock and enable editing."
             if checked else

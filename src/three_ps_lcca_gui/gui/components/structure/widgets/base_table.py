@@ -22,6 +22,17 @@ from three_ps_lcca_gui.gui.theme import FS_SM, FW_SEMIBOLD
 _HDR_FONT = QFont("Ubuntu", FS_SM, FW_SEMIBOLD)
 
 _ACTION_W = 80  # fixed Action column width
+
+
+def _make_msgbox(parent, icon, title, text):
+    """QMessageBox styled to match the app theme background."""
+    box = QMessageBox(icon, title, text, QMessageBox.Yes | QMessageBox.No, parent)
+    box.setDefaultButton(QMessageBox.No)
+    box.setStyleSheet(
+        f"QMessageBox {{ background-color: {get_token('base')}; color: {get_token('text')}; }}"
+        f"QLabel {{ color: {get_token('text')}; }}"
+    )
+    return box
 _ROW_H = 50  # row height - 11 px clearance top + bottom around 28 px button
 
 
@@ -81,9 +92,7 @@ class _ActionDelegate(BaseActionDelegate):
                     if action == "edit":
                         self._manager.open_edit_dialog(self._component, original_index)
                     elif action == "trash":
-                        self._manager.toggle_trash_status(
-                            self._component, original_index, True
-                        )
+                        self._confirm_trash(original_index)
                     elif action == "restore":
                         self._manager.toggle_trash_status(
                             self._component, original_index, False
@@ -93,15 +102,14 @@ class _ActionDelegate(BaseActionDelegate):
                     return True
         return False
 
+    def _confirm_trash(self, original_index):
+        box = _make_msgbox(self._table, QMessageBox.Warning, "Move to Trash", "Move this item to trash?")
+        if box.exec() == QMessageBox.Yes:
+            self._manager.toggle_trash_status(self._component, original_index, True)
+
     def _confirm_delete(self, original_index):
-        reply = QMessageBox.warning(
-            self._table,
-            "Permanent Delete",
-            "Remove this item? This cannot be undone.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        )
-        if reply == QMessageBox.Yes:
+        box = _make_msgbox(self._table, QMessageBox.Critical, "Permanent Delete", "Remove this item? This cannot be undone.")
+        if box.exec() == QMessageBox.Yes:
             self._manager.permanent_delete(self._component, original_index)
 
 

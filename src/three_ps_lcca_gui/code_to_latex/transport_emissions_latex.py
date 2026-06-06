@@ -9,6 +9,56 @@ _FMT    = f"{{:.{DECIMAL_PLACES_FOR_LATEX}f}}"
 _EMDASH = r"\textemdash"
 
 
+def _summary_table_to_latex(entries: list) -> str:
+    """One-row-per-vehicle overview table."""
+    rows = []
+    for table_no, (entry, total_emission) in enumerate(entries, start=1):
+        v = entry.get("vehicle", {})
+        r = entry.get("route", {})
+        capacity     = float(v.get("capacity",      0) or 0)
+        gross_weight = float(v.get("gross_weight",  0) or 0)
+        ef           = float(v.get("emission_factor", 0) or 0)
+        distance     = float(r.get("distance_km",   0) or 0)
+        origin       = r.get("origin", "") or ""
+        dest         = r.get("destination", "") or ""
+        vehicle_name = v.get("name", "").strip()
+        rows.append({
+            "Delivery":             f"Delivery {table_no}" + (f": {vehicle_name}" if vehicle_name else ""),
+            "Vehicle":              vehicle_name or _EMDASH,
+            "From-To":              origin,
+            "Distance (km)":        distance,
+            "Capacity (t)":         capacity,
+            "Gross Wt (t)":         gross_weight,
+            "EF":                   ef,
+            "Total Emissions (kgCO₂e)": total_emission,
+        })
+
+    if not rows:
+        return ""
+
+    df = pd.DataFrame(rows)
+    numeric_cols = ["Distance (km)", "Capacity (t)", "Gross Wt (t)", "EF",
+                    "Total Emissions (kgCO₂e)"]
+    return (
+        df.style.hide(axis="index")
+        .format(_FMT, subset=numeric_cols, na_rep=_EMDASH)
+        .to_latex(
+            caption="Transport Emissions — Summary by Vehicle",
+            label="tab:transport_emissions_summary",
+            hrules=True,
+            column_format=(
+                r"p{1.8cm} p{2.5cm} p{2.5cm}"
+                r">{\raggedleft\arraybackslash}p{1.5cm}"
+                r">{\raggedleft\arraybackslash}p{1.3cm}"
+                r">{\raggedleft\arraybackslash}p{1.3cm}"
+                r">{\raggedleft\arraybackslash}p{0.8cm}"
+                r">{\raggedleft\arraybackslash}p{2.2cm}"
+            ),
+            environment="longtable",
+        )
+    ) or ""
+
+
 def _build_material_index() -> dict:
     index = {}
     for chunk_id, category in STRUCTURE_CHUNKS:
@@ -89,14 +139,11 @@ def _vehicle_table_to_latex(entry: dict, mat_index: dict, table_no: int) -> str:
         })
 
     df = pd.DataFrame(rows)
-    vehicle_name = vehicle.get("name", "Vehicle") or "Vehicle"
-    caption = (
-        f"{vehicle_name} — {distance:.{DECIMAL_PLACES_FOR_LATEX}f}\\,km — "
-        f"{total_emission:,.{DECIMAL_PLACES_FOR_LATEX}f}\\,kgCO\\textsubscript{{2}}e; "
-        f"Capacity {capacity:.{DECIMAL_PLACES_FOR_LATEX}f}\\,t, "
-        f"Gross {gross_weight:.{DECIMAL_PLACES_FOR_LATEX}f}\\,t, "
-        f"Emission Factor {ef:.{DECIMAL_PLACES_FOR_LATEX}f}\\,kgCO\\textsubscript{{2}}e/t\\,km"
-    )
+    vehicle_name = vehicle.get("name", "").strip()
+    origin    = route.get("origin", "").strip()
+    route_str = origin if origin else f"{distance:.{DECIMAL_PLACES_FOR_LATEX}f}\\,km"
+    name_part = f": {vehicle_name}" if vehicle_name else ""
+    caption = f"Delivery {table_no}{name_part} — From {route_str}"
 
     return (
         df.style.hide(axis="index")
@@ -116,16 +163,45 @@ def transport_emissions_to_latex(controller=None) -> str:
     data      = get_transport_data()
     mat_index = _build_material_index()
 
-    tables   = []
-    table_no = 1
+    active_entries = []   # (entry, total_emission)
+    detail_tables  = []
+    table_no       = 1
 
     for entry in data.get("vehicles", []):
         if entry.get("state", {}).get("in_trash", False):
             continue
-        tables.append(_vehicle_table_to_latex(entry, mat_index, table_no))
+        tex = _vehicle_table_to_latex(entry, mat_index, table_no)
+        # compute total_emission for summary (re-use what _vehicle_table_to_latex already did)
+        vehicle      = entry.get("vehicle", {})
+        route        = entry.get("route", {})
+        capacity     = float(vehicle.get("capacity",     0) or 0)
+        gross_weight = float(vehicle.get("gross_weight", 0) or 0)
+        empty_weight = float(vehicle.get("empty_weight", max(0.0, gross_weight - capacity)) or 0)
+        distance     = float(route.get("distance_km",    0) or 0)
+        ef           = float(vehicle.get("emission_factor", 0) or 0)
+        total = 0.0
+        for mat_entry in entry.get("materials", []):
+            mat_uuid, kg_factor = _material_entry_values(mat_entry)
+            rec = mat_index.get(mat_uuid)
+            if not rec or rec["item"].get("state", {}).get("in_trash", False):
+                continue
+            v       = rec["item"].get("values", {})
+            qty_kg  = float(v.get("quantity", 0) or 0) * kg_factor
+            trips   = math.ceil(qty_kg / 1000.0 / capacity) if capacity > 0 else 0
+            total  += (gross_weight + empty_weight) * trips * distance * ef
+
+        active_entries.append((entry, total))
+        if tex:
+            detail_tables.append(tex)
         table_no += 1
 
-    out = "\n\n".join(t for t in tables if t)
+    parts = []
+    summary = _summary_table_to_latex(active_entries)
+    if summary:
+        parts.append(summary)
+    parts.extend(detail_tables)
+
+    out = "\n\n".join(parts)
     remarks = format_remarks_latex(data)
     if remarks:
         out += "\n\n" + remarks
