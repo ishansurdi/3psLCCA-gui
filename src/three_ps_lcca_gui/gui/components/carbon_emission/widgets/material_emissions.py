@@ -622,6 +622,11 @@ class MaterialEmissions(QWidget):
                     is_confirmed = state.get("carbon_conversion_confirmed", False)
                     suspicious = analysis["is_suspicious"] and not is_confirmed
 
+                    if suspicious and is_included_flag:
+                        state["included_in_carbon_emission"] = False
+                        is_included_flag = False
+                        self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
+
                     if valid and is_included_flag and not suspicious:
                         included_count += 1
                         carbon = calc_carbon(item)
@@ -826,6 +831,17 @@ class MaterialEmissions(QWidget):
         _cf_raw = v.get("conversion_factor")
 
         if include:
+            # Block re-inclusion of a suspicious unconfirmed item
+            is_confirmed = item_data.get("state", {}).get("carbon_conversion_confirmed", False)
+            if analysis["is_suspicious"] and not is_confirmed:
+                # Leave it in excluded; ensure flag is False in data
+                data = self.controller.engine.fetch_chunk(chunk_id) or {}
+                if comp_name in data and idx < len(data[comp_name]):
+                    data[comp_name][idx]["state"]["included_in_carbon_emission"] = False
+                    self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
+                QTimer.singleShot(0, self.on_refresh)
+                return
+
             t = self.included_table
             carbon = calc_carbon(item_data)
             row = t.rowCount()
@@ -990,6 +1006,11 @@ class MaterialEmissions(QWidget):
                     is_confirmed = state.get("carbon_conversion_confirmed", False)
                     suspicious = analysis["is_suspicious"] and not is_confirmed
 
+                    if suspicious and is_included_flag:
+                        state["included_in_carbon_emission"] = False
+                        is_included_flag = False
+                        self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
+
                     if valid and is_included_flag and not suspicious:
                         included_count += 1
                         carbon = calc_carbon(item)
@@ -1105,5 +1126,3 @@ class MaterialEmissions(QWidget):
         if self.isVisible():
             self.on_refresh()
             self._loaded = True
-
-
