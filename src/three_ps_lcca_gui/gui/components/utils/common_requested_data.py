@@ -54,7 +54,7 @@ def get_chunk(chunk_name: str) -> dict:
     """
     try:
         if _controller:
-            return _controller.get_chunk(chunk_name) or {}
+            return _controller.get_fresh_chunk(chunk_name) or {}
     except Exception:
         pass
     return {}
@@ -65,14 +65,14 @@ def get_all_data() -> dict:
     return {name: get_chunk(name) for name in _ALL_CHUNKS}
 
 
-def get_all_fresh_data() -> dict:
-    """Return all known chunks as a flat dict, bypassing controller cache."""
-    try:
-        if _controller:
-            return {name: _controller.get_fresh_chunk(name) for name in _ALL_CHUNKS}
-    except Exception:
-        pass
-    return {}
+# def get_all_fresh_data() -> dict:
+#     """Return all known chunks as a flat dict, bypassing controller cache."""
+#     try:
+#         if _controller:
+#             return {name: _controller.get_fresh_chunk(name) for name in _ALL_CHUNKS}
+#     except Exception:
+#         pass
+#     return {}
 
 
 # ── general_info ──────────────────────────────────────────────────────────────

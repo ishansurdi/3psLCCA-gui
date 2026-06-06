@@ -78,7 +78,7 @@ def setup_dev_menu(parent_window, menubar):
                 import importlib
                 import three_ps_lcca_gui.gui.components.utils.common_requested_data as crd
                 # Force engine save + clear cache (the same way "Save All Chunks" does)
-                crd.get_all_fresh_data()
+                crd.get_all_data()
                 
                 mod = importlib.import_module(module_path)
                 fn = getattr(mod, fn_name)
@@ -107,7 +107,7 @@ def setup_dev_menu(parent_window, menubar):
             from pathlib import Path
             import three_ps_lcca_gui.gui.components.utils.common_requested_data as crd
 
-            raw = crd.get_all_fresh_data()
+            raw = crd.get_all_data()
 
             helpers = {
                 # general_info
