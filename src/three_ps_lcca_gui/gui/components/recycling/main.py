@@ -388,11 +388,14 @@ class RecyclingTable(TooltipTableMixin, QTableWidget):
     def get_data(self) -> dict:
         result = self._compute()
         return {
-            "total_recovered_value": result["total_recovered_value"],
-            "included_count": result["included_count"],
-            "total_count": result["total_count"],
-            "cat_totals": result["cat_totals"],
-            "currency": result["currency"],
+            "chunk": "recycling_data",
+            "data": {
+                "total_recovered_value": result["total_recovered_value"],
+                "included_count": result["included_count"],
+                "total_count": result["total_count"],
+                "cat_totals": result["cat_totals"],
+                "currency": result["currency"],
+            },
         }
 
     def showEvent(self, event):

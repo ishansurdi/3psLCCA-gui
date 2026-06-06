@@ -1097,10 +1097,13 @@ class MaterialEmissions(QWidget):
     def get_data(self) -> dict:
         result = self._compute()
         return {
-            "total_kgCO2e": result["total_carbon"],
-            "included_count": result["included_count"],
-            "total_count": result["total_count"],
-            "cat_totals": result["cat_totals"],
+            "chunk": "material_emissions_data",
+            "data": {
+                "total_kgCO2e": result["total_carbon"],
+                "included_count": result["included_count"],
+                "total_count": result["total_count"],
+                "cat_totals": result["cat_totals"],
+            },
         }
 
     def freeze(self, frozen: bool = True):
