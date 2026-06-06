@@ -632,6 +632,7 @@ class MaterialEmissions(QWidget):
                         carbon = calc_carbon(item)
                         total_carbon += carbon
                         cat_totals[category] += carbon
+                        v.setdefault("exclusion_reason", {})["carbon"] = ""
                         included_items.append(
                             (category, chunk_id, comp_name, idx, item, carbon, analysis)
                         )
@@ -641,9 +642,11 @@ class MaterialEmissions(QWidget):
                             if not valid
                             else ("Suspicious Data" if suspicious else "User Excluded")
                         )
+                        v.setdefault("exclusion_reason", {})["carbon"] = reason
                         excluded_items.append(
                             (category, chunk_id, comp_name, idx, item, reason, analysis)
                         )
+                    self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
 
         self._populate_included(included_items)
         self._populate_excluded(excluded_items)
@@ -834,13 +837,20 @@ class MaterialEmissions(QWidget):
             # Block re-inclusion of a suspicious unconfirmed item
             is_confirmed = item_data.get("state", {}).get("carbon_conversion_confirmed", False)
             if analysis["is_suspicious"] and not is_confirmed:
-                # Leave it in excluded; ensure flag is False in data
+                # Leave it in excluded; ensure flag and reason are correct in data
                 data = self.controller.engine.fetch_chunk(chunk_id) or {}
                 if comp_name in data and idx < len(data[comp_name]):
                     data[comp_name][idx]["state"]["included_in_carbon_emission"] = False
+                    data[comp_name][idx]["values"].setdefault("exclusion_reason", {})["carbon"] = "Suspicious Data"
                     self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
                 QTimer.singleShot(0, self.on_refresh)
                 return
+
+            # Clear reason when successfully moving to included
+            live_data = self.controller.engine.fetch_chunk(chunk_id) or {}
+            if comp_name in live_data and idx < len(live_data[comp_name]):
+                live_data[comp_name][idx]["values"].setdefault("exclusion_reason", {})["carbon"] = ""
+                self.controller.engine.stage_update(chunk_name=chunk_id, data=live_data)
 
             t = self.included_table
             carbon = calc_carbon(item_data)
@@ -871,6 +881,12 @@ class MaterialEmissions(QWidget):
             t.setItem(row, 10, QTableWidgetItem())
             t._frozen_overlay.add_row(row_data)
         else:
+            # Write reason when moving to excluded
+            live_data = self.controller.engine.fetch_chunk(chunk_id) or {}
+            if comp_name in live_data and idx < len(live_data[comp_name]):
+                live_data[comp_name][idx]["values"].setdefault("exclusion_reason", {})["carbon"] = "User Excluded"
+                self.controller.engine.stage_update(chunk_name=chunk_id, data=live_data)
+
             t = self.excluded_table
             row = t.rowCount()
             t.insertRow(row)
@@ -899,9 +915,9 @@ class MaterialEmissions(QWidget):
     ):
         data = self.controller.engine.fetch_chunk(chunk_id) or {}
         if comp_name in data and data_index < len(data[comp_name]):
-            data[comp_name][data_index]["state"][
-                "included_in_carbon_emission"
-            ] = include
+            target = data[comp_name][data_index]
+            target["state"]["included_in_carbon_emission"] = include
+            target["values"].setdefault("exclusion_reason", {})["carbon"] = "" if include else "User Excluded"
             self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
             self._mark_dirty()
 
@@ -942,6 +958,7 @@ class MaterialEmissions(QWidget):
                 target["values"]["carbon_emission"] = v_vals.get("carbon_emission", 0.0)
                 target["values"]["carbon_unit"] = v_vals.get("carbon_unit", "")
                 target["values"]["conversion_factor"] = v_vals.get("conversion_factor", 1.0)
+                target["values"].setdefault("exclusion_reason", {})["carbon"] = ""
                 target["state"]["included_in_carbon_emission"] = vals.get("state", {}).get(
                     "included_in_carbon_emission", True
                 )
@@ -1016,6 +1033,7 @@ class MaterialEmissions(QWidget):
                         carbon = calc_carbon(item)
                         total_carbon += carbon
                         cat_totals[category] += carbon
+                        v.setdefault("exclusion_reason", {})["carbon"] = ""
                         included_items.append(
                             (category, chunk_id, comp_name, idx, item, carbon, analysis)
                         )
@@ -1025,9 +1043,11 @@ class MaterialEmissions(QWidget):
                             if not valid
                             else ("Suspicious Data" if suspicious else "User Excluded")
                         )
+                        v.setdefault("exclusion_reason", {})["carbon"] = reason
                         excluded_items.append(
                             (category, chunk_id, comp_name, idx, item, reason, analysis)
                         )
+                    self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
 
         return {
             "total_carbon": total_carbon,
@@ -1073,37 +1093,14 @@ class MaterialEmissions(QWidget):
 
         return {"errors": [], "warnings": warnings}
 
+
     def get_data(self) -> dict:
         result = self._compute()
-        included = [
-            {
-                "category": cat,
-                "component": comp,
-                "material": item.get("values", {}).get("material_name", ""),
-                "quantity": float(item.get("values", {}).get("quantity", 0) or 0),
-                "unit": item.get("values", {}).get("unit", ""),
-                "conversion_factor": float(
-                    item.get("values", {}).get("conversion_factor", 1) or 1
-                ),
-                "carbon_emission": float(
-                    item.get("values", {}).get("carbon_emission") or 0
-                ),
-                "carbon_unit": item.get("values", {}).get("carbon_unit", ""),
-                "total_kgCO2e": carbon,
-            }
-            for cat, chunk_id, comp, idx, item, carbon, analysis in result[
-                "included_items"
-            ]
-        ]
         return {
-            "chunk": "material_emissions_data",
-            "data": {
-                "included_items": included,
-                "cat_totals": result["cat_totals"],
-                "total_kgCO2e": result["total_carbon"],
-                "included_count": result["included_count"],
-                "total_count": result["total_count"],
-            },
+            "total_kgCO2e": result["total_carbon"],
+            "included_count": result["included_count"],
+            "total_count": result["total_count"],
+            "cat_totals": result["cat_totals"],
         }
 
     def freeze(self, frozen: bool = True):

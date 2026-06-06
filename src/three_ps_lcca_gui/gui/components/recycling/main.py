@@ -385,6 +385,16 @@ class RecyclingTable(TooltipTableMixin, QTableWidget):
         self._frozen_overlay.clear_rows()
         self.update_height()
 
+    def get_data(self) -> dict:
+        result = self._compute()
+        return {
+            "total_recovered_value": result["total_recovered_value"],
+            "included_count": result["included_count"],
+            "total_count": result["total_count"],
+            "cat_totals": result["cat_totals"],
+            "currency": result["currency"],
+        }
+
     def showEvent(self, event):
         super().showEvent(event)
         self._frozen_overlay.reposition()
@@ -727,7 +737,9 @@ class Recycling(QWidget):
     ):
         data = self.controller.engine.fetch_chunk(chunk_id) or {}
         if comp_name in data and data_index < len(data[comp_name]):
-            data[comp_name][data_index]["state"]["included_in_recyclability"] = include
+            target = data[comp_name][data_index]
+            target["state"]["included_in_recyclability"] = include
+            target["values"].setdefault("exclusion_reason", {})["recycling"] = "" if include else "User Excluded"
             self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
             self._mark_dirty()
             QTimer.singleShot(0, self.on_refresh)
@@ -750,6 +762,7 @@ class Recycling(QWidget):
                     "post_demolition_recovery_percentage"
                 )
                 target["values"]["scrap_rate"] = v_vals.get("scrap_rate")
+                target["values"].setdefault("exclusion_reason", {})["recycling"] = ""
                 target["state"]["included_in_recyclability"] = vals.get("state", {}).get(
                     "included_in_recyclability", False
                 )
@@ -802,19 +815,23 @@ class Recycling(QWidget):
                         "included_in_recyclability", True
                     )
 
+                    v = item.get("values", {})
                     if valid and included:
                         included_count += 1
                         value = calc_recovered_value(item)
                         total_value += value
                         cat_totals[category] += value
+                        v.setdefault("exclusion_reason", {})["recycling"] = ""
                         included_items.append(
                             (category, chunk_id, comp_name, idx, item, value)
                         )
                     else:
                         reason = "Missing Data" if not valid else "User Excluded"
+                        v.setdefault("exclusion_reason", {})["recycling"] = reason
                         excluded_items.append(
                             (category, chunk_id, comp_name, idx, item, reason)
                         )
+                    self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
 
         return {
             "total_recovered_value": total_value,
@@ -856,35 +873,6 @@ class Recycling(QWidget):
 
         return {"errors": [], "warnings": warnings}
 
-    def get_data(self) -> dict:
-        result = self._compute()
-        currency = result["currency"]
-        included = [
-            {
-                "material_id": item.get("id", ""),
-                "category": cat,
-                "component": comp,
-                "material": item.get("values", {}).get("material_name", ""),
-                "quantity": float(item.get("values", {}).get("quantity") or 0),
-                "unit": item.get("values", {}).get("unit", ""),
-                "recyclability_pct": _recycle_pct(item.get("values", {})),
-                "recyclable_qty": calc_recyclable_qty(item),
-                "scrap_rate": float(item.get("values", {}).get("scrap_rate") or 0),
-                "recovered_value": value,
-            }
-            for cat, chunk_id, comp, idx, item, value in result["included_items"]
-        ]
-        return {
-            "chunk": "recycling_data",
-            "data": {
-                "included_items": included,
-                "cat_totals": result["cat_totals"],
-                "total_recovered_value": result["total_recovered_value"],
-                "included_count": result["included_count"],
-                "total_count": result["total_count"],
-                "currency": currency,
-            },
-        }
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -901,5 +889,3 @@ class Recycling(QWidget):
         if self.isVisible():
             self.on_refresh()
             self._loaded = True
-
-
