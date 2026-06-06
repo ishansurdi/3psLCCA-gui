@@ -139,7 +139,27 @@ class SelectTextOnFocus(QObject):
 # ── Main Entry Point ──────────────────────────────────────────────────────────
 
 
+def _setup_logging():
+    import logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s  %(levelname)-7s  %(name)s — %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    # Quieten noisy third-party loggers
+    for noisy in ("PIL", "matplotlib", "urllib3"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
+
 def main():
+    from three_ps_lcca_gui.gui._CONFIG import DEV_MODE, ATTACH_LOGGER
+    if not DEV_MODE:
+        import builtins, warnings
+        builtins.print = lambda *a, **k: None
+        warnings.filterwarnings("ignore")
+    if ATTACH_LOGGER:
+        _setup_logging()
+
     # Windows: set AppUserModelID before QApplication so Task Manager
     # shows the app icon instead of the Python interpreter icon.
     if platform.system() == "Windows":
@@ -239,6 +259,12 @@ def main():
             sm.set_name(dlg.get_name())
         else:
             sm.set_name("")  # Mark as seen
+
+    # Start resource tracker (dev mode + logger only)
+    from three_ps_lcca_gui.gui._CONFIG import DEV_MODE, ATTACH_LOGGER
+    if DEV_MODE and ATTACH_LOGGER:
+        from three_ps_lcca_gui.gui.sys_tracker import SysTracker
+        SysTracker.instance().start()
 
     # Initialize Project Manager and Close Splash
     manager = ProjectManager()

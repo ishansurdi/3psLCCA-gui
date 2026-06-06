@@ -58,7 +58,15 @@ from three_ps_lcca_gui.core.safechunk_engine import SafeChunkEngine
 from PySide6.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QLabel, QPushButton
 from three_ps_lcca_gui.gui.components.rollback_dialog import RollbackDialog
 from three_ps_lcca_gui.gui.components.blob_manager import BlobManagerDialog
+from three_ps_lcca_gui.gui._CONFIG import DEV_MODE, FLUSH_MODE
+if FLUSH_MODE:
+    from three_ps_lcca_gui.gui.flush import flush_project_window
+if DEV_MODE:
+    from three_ps_lcca_gui.gui.sys_tracker import SysTracker
 import shutil
+import logging
+
+log = logging.getLogger("project_window")
 
 _GUI_DIR = os.path.abspath(os.path.dirname(__file__))
 _ASSETS_DIR = os.path.join(_GUI_DIR, "assets")
@@ -331,6 +339,8 @@ class ProjectWindow(QMainWindow):
         self.project_id = None
         self._needs_initial_landing = False
 
+        if FLUSH_MODE:
+            self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("3psLCCA - Home")
         _icon_path = os.path.join(_ASSETS_DIR, "logo", "logo-3psLCCA.ico")
         if os.path.exists(_icon_path):
@@ -887,8 +897,13 @@ class ProjectWindow(QMainWindow):
         )
 
     def _close_project(self):
-        if self.controller.engine and self.controller.engine.is_active():
-            self.controller.close_project()
+        if FLUSH_MODE:
+            if DEV_MODE:
+                SysTracker.instance().snapshot(f"_close_project [{self.project_id}]")
+            flush_project_window(self)
+        else:
+            if self.controller.engine and self.controller.engine.is_active():
+                self.controller.close_project()
         self.project_id = None
 
         new_win = self.manager._create_window()
@@ -1109,8 +1124,13 @@ class ProjectWindow(QMainWindow):
     # ── Close ─────────────────────────────────────────────────────────────────
 
     def closeEvent(self, event):
-        if self.controller.engine:
-            self.controller.close_project()
+        if FLUSH_MODE:
+            if DEV_MODE:
+                SysTracker.instance().snapshot(f"closeEvent [{self.project_id}]")
+            flush_project_window(self)
+        else:
+            if self.controller.engine:
+                self.controller.close_project()
         self.project_id = None
         self.manager.remove_window(self)
         self.manager.refresh_all_home_screens()

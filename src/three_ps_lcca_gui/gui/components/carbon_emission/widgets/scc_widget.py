@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QFormLayout, QStackedWidget, QWidget
 
-from three_ps_lcca_gui.gui.version import DEV_MODE
+from three_ps_lcca_gui.gui._CONFIG import DEV_MODE
 from ...base_widget import BaseDataWidget
 from ...utils.form_builder.form_definitions import FieldDef
 from ...utils.form_builder.form_builder import build_form

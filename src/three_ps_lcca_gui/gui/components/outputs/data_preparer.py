@@ -5,7 +5,7 @@ Helper class to map raw UI data dictionaries to Core LCCA objects.
 
 import datetime
 
-from three_ps_lcca_gui.gui.version import DEV_MODE
+from three_ps_lcca_gui.gui._CONFIG import DEV_MODE
 from three_ps_lcca_core.inputs.input import (
     InputMetaData,
     GeneralParameters,

@@ -1,7 +1,7 @@
 import os
 from PySide6.QtWidgets import QMenu, QMessageBox
 from PySide6.QtGui import QAction
-from three_ps_lcca_gui.gui.version import DEV_MODE
+from three_ps_lcca_gui.gui._CONFIG import DEV_MODE
 
 def setup_dev_menu(parent_window, menubar):
     """
@@ -172,6 +172,18 @@ def setup_dev_menu(parent_window, menubar):
     action_chunks = QAction("Save All Chunks (tests/chunks/)", parent_window)
     action_chunks.triggered.connect(_save_all_chunks)
     dev_menu.addAction(action_chunks)
+
+    # --- Sys Tracker ---
+    dev_menu.addSeparator()
+
+    action_tracker = QAction("Resource Monitor", parent_window)
+    action_tracker.triggered.connect(
+        lambda: __import__(
+            "three_ps_lcca_gui.gui.sys_tracker_window",
+            fromlist=["SysTrackerWindow"]
+        ).SysTrackerWindow.open(parent_window)
+    )
+    dev_menu.addAction(action_tracker)
 
     # --- Add to Menubar ---
     menubar.addMenu(dev_menu)

@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from three_ps_lcca_gui.gui.themes import get_token
-from three_ps_lcca_gui.gui.version import DEV_MODE
+from three_ps_lcca_gui.gui._CONFIG import DEV_MODE
 from three_ps_lcca_gui.gui.theme import (
     FS_LG, FS_MD, FS_BASE, FS_SM,
     FW_SEMIBOLD, FW_NORMAL,
