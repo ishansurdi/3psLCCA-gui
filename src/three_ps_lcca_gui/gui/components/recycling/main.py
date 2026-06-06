@@ -41,6 +41,9 @@ CHUNKS = [
 
 _ACTION_W = 80  # fixed action column width
 
+REASON_INCOMPLETE = "Incomplete Data"
+REASON_EXCLUDED   = "Manually Excluded"
+
 
 # ---------------------------------------------------------------------------
 # Validity check
@@ -668,7 +671,7 @@ class Recycling(QWidget):
             t.setItem(row, 5, _ri(fmt(v.get("scrap_rate"))))
             t.setItem(row, 6, QTableWidgetItem(reason))
 
-            btn_keys = ["edit"] if reason == "Missing Data" else ["edit", "include"]
+            btn_keys = ["edit"] if reason == REASON_INCOMPLETE else ["edit", "include"]
             action_item = QTableWidgetItem()
             action_item.setData(
                 Qt.UserRole,
@@ -729,7 +732,7 @@ class Recycling(QWidget):
         if comp_name in data and data_index < len(data[comp_name]):
             target = data[comp_name][data_index]
             target["state"]["included_in_recyclability"] = include
-            target["values"].setdefault("exclusion_reason", {})["recycling"] = "" if include else "User Excluded"
+            target["values"].setdefault("exclusion_reason", {})["recycling"] = "" if include else REASON_EXCLUDED
             self.controller.engine.stage_update(chunk_name=chunk_id, data=data)
             self._mark_dirty()
             QTimer.singleShot(0, self.on_refresh)
@@ -816,7 +819,7 @@ class Recycling(QWidget):
                             (category, chunk_id, comp_name, idx, item, value)
                         )
                     else:
-                        reason = "Missing Data" if not valid else "User Excluded"
+                        reason = REASON_INCOMPLETE if not valid else REASON_EXCLUDED
                         v.setdefault("exclusion_reason", {})["recycling"] = reason
                         excluded_items.append(
                             (category, chunk_id, comp_name, idx, item, reason)
@@ -853,7 +856,7 @@ class Recycling(QWidget):
             )
 
         missing = sum(
-            1 for *_, reason in result["excluded_items"] if reason == "Missing Data"
+            1 for *_, reason in result["excluded_items"] if reason == REASON_INCOMPLETE
         )
         if missing:
             warnings.append(

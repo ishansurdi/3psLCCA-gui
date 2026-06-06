@@ -6,24 +6,25 @@ from .SETTINGS import DECIMAL_PLACES_FOR_LATEX
 from .html_to_latex import format_remarks_latex
 from .structure_work_data_latex import (
     get_all_structure_chunks,
-    collect_for_emissions,
+    collect_for_recycling,
     longtable_sections,
 )
 
 _EMDASH = r"\textemdash"
 
 _INC_COLS    = 7
-_INC_SPEC    = "p{3.5cm}rp{1cm}rrp{1.5cm}r"
+_INC_SPEC    = "p{3.5cm}rp{1cm}rrrr"
 _INC_HEADERS = [
     "Material", "Quantity", "Unit",
-    "Conversion Factor", "Emission Factor",
-    NoEscape(r"EF Unit"),
-    NoEscape(r"Total (kgCO\textsubscript{2}e)"),
+    NoEscape(r"Recyclability \%"),
+    "Recyclable Quantity",
+    "Scrap Rate",
+    "Recovered Value",
 ]
 
 _EXC_COLS    = 2
 _EXC_SPEC    = "p{7cm}p{5cm}"
-_EXC_HEADERS = ["Material", "Exclusion Reason"]
+_EXC_HEADERS = ["Material", "Reason"]
 
 
 def _fmt(val) -> str:
@@ -41,13 +42,13 @@ def _get_included_table(included: dict) -> str:
     for (category, comp_name), rows in included.items():
         cells = [
             [
-                escape_latex(r["material"]),
+                escape_latex(r["name"]),
                 _fmt(r["qty"]),
                 escape_latex(r["unit"]),
-                _fmt(r["cf"]),
-                _fmt(r["ef"]),
-                escape_latex(r["ef_unit"]),
-                _fmt(r["total"]),
+                _fmt(r["pct"]),
+                _fmt(r["rec_qty"]),
+                _fmt(r["scrap"]),
+                _fmt(r["rec_val"]),
             ]
             for r in rows
         ]
@@ -55,8 +56,8 @@ def _get_included_table(included: dict) -> str:
 
     return longtable_sections(
         _INC_SPEC, _INC_COLS,
-        "Materials Included in Carbon Emissions Calculation",
-        "tab:material_emissions_included",
+        "Materials Included in Recyclability Calculation",
+        "tab:recycling_included",
         _INC_HEADERS, sections,
     )
 
@@ -66,29 +67,29 @@ def _get_excluded_table(excluded: dict) -> str:
         return ""
 
     sections = []
-    for (category, comp_name), entries in excluded.items():
-        sections.append(
-            (f"{category} — {comp_name}",
-             [[escape_latex(name), escape_latex(reason) if reason else _EMDASH]
-              for name, reason in entries])
-        )
+    for (category, comp_name), rows in excluded.items():
+        cells = [
+            [escape_latex(r["name"]), escape_latex(r["reason"]) if r["reason"] else _EMDASH]
+            for r in rows
+        ]
+        sections.append((f"{category} — {comp_name}", cells))
 
     return longtable_sections(
         _EXC_SPEC, _EXC_COLS,
-        "Materials Excluded from Carbon Emissions Calculation",
-        "tab:material_emissions_excluded",
+        "Materials Excluded from Recyclability Calculation",
+        "tab:recycling_excluded",
         _EXC_HEADERS, sections,
     )
 
 
-def material_emissions_to_latex(controller=None) -> str:
+def recycling_to_latex(controller=None) -> str:
     all_chunks = get_all_structure_chunks()
-    included, excluded = collect_for_emissions(all_chunks)
+    included, excluded = collect_for_recycling(all_chunks)
 
     parts = [_get_included_table(included), _get_excluded_table(excluded)]
     out = "\n\n".join(t for t in parts if t)
 
-    data = get_chunk("material_emissions_data")
+    data = get_chunk("recycling_data")
     remarks = format_remarks_latex(data)
     if remarks:
         out += "\n\n" + remarks

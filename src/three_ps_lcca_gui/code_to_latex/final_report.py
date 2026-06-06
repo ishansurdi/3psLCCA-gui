@@ -19,6 +19,7 @@ from .traffic_and_road_data_latex.get_all_data import (
 from .material_emissions_latex  import material_emissions_to_latex
 from .transport_emissions_latex import transport_emissions_to_latex
 from .machinery_emissions_latex import machinery_emissions_to_latex
+from .recycling_latex           import recycling_to_latex
 from .results_latex             import results_to_latex
 from .html_to_latex             import format_remarks_latex
 
@@ -93,7 +94,9 @@ _DESC = {
                      "This section quantifies the embodied carbon emissions associated "
                      "with construction materials, transportation of those materials to "
                      "site, and machinery and equipment operation. Emission factors are "
-                     "expressed in kgCO\\textsubscript{2}e per unit."),
+                     "expressed in kgCO\\textsubscript{2}e per unit. It also presents "
+                     "the recyclability of construction materials at end of life, including "
+                     "recovered quantities and salvage values."),
     "results":      ("Life Cycle Cost Analysis Results",
                      "This section presents the full life cycle cost breakdown, organised "
                      "by project stage (Initial, Use, Reconstruction, End-of-Life) and "
@@ -196,10 +199,12 @@ def final_report_to_latex(controller=None) -> str:
         material_emissions_to_latex,
         transport_emissions_to_latex,
         machinery_emissions_to_latex,
+        recycling_to_latex,
     ], controller, subsections=[
         "Material Embodied Carbon",
         "Transport Emissions",
         "Machinery and Equipment Emissions",
+        "Recyclability",
     ])
 
     parts.append(_clearpage())

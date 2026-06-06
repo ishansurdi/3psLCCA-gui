@@ -72,6 +72,10 @@ BG_SUSPICIOUS = get_token("warning")
 BG_DISABLED   = get_token("surface")
 TEXT_DARK     = get_token("text")
 
+REASON_INCOMPLETE  = "Incomplete Data"
+REASON_SUSPICIOUS  = "Suspicious Data"
+REASON_EXCLUDED    = "Manually Excluded"
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -638,9 +642,9 @@ class MaterialEmissions(QWidget):
                         )
                     else:
                         reason = (
-                            "Missing Data"
+                            REASON_INCOMPLETE
                             if not valid
-                            else ("Suspicious Data" if suspicious else "User Excluded")
+                            else (REASON_SUSPICIOUS if suspicious else REASON_EXCLUDED)
                         )
                         v.setdefault("exclusion_reason", {})["carbon"] = reason
                         excluded_items.append(
@@ -743,9 +747,9 @@ class MaterialEmissions(QWidget):
             )
             t.setItem(row, 7, QTableWidgetItem(reason))
 
-            if reason in ["Missing Data", "Suspicious Data"]:
+            if reason in [REASON_INCOMPLETE, REASON_SUSPICIOUS]:
                 t.set_row_style(
-                    row, BG_INVALID if reason == "Missing Data" else BG_SUSPICIOUS
+                    row, BG_INVALID if reason == REASON_INCOMPLETE else BG_SUSPICIOUS
                 )
                 btn_keys = ["edit"]
             else:
@@ -1039,9 +1043,9 @@ class MaterialEmissions(QWidget):
                         )
                     else:
                         reason = (
-                            "Missing Data"
+                            REASON_INCOMPLETE
                             if not valid
-                            else ("Suspicious Data" if suspicious else "User Excluded")
+                            else (REASON_SUSPICIOUS if suspicious else REASON_EXCLUDED)
                         )
                         v.setdefault("exclusion_reason", {})["carbon"] = reason
                         excluded_items.append(
@@ -1073,12 +1077,12 @@ class MaterialEmissions(QWidget):
             )
 
         missing = sum(
-            1 for *_, reason, _ in result["excluded_items"] if reason == "Missing Data"
+            1 for *_, reason, _ in result["excluded_items"] if reason == REASON_INCOMPLETE
         )
         suspicious = sum(
             1
             for *_, reason, _ in result["excluded_items"]
-            if reason == "Suspicious Data"
+            if reason == REASON_SUSPICIOUS
         )
         if missing:
             warnings.append(

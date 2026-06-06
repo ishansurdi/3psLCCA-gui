@@ -1,10 +1,10 @@
+from collections import defaultdict
+
 from pylatex import LongTable, MultiColumn, NoEscape
 from pylatex.utils import bold, italic, escape_latex
-from ..gui.components.utils.common_requested_data import (
-    get_str_foundation, get_str_sub_structure, get_str_super_structure, get_str_misc,
-    get_currency,
-)
-from ..gui.components.utils.definitions import UNIT_DISPLAY
+
+from ..gui.components.utils.common_requested_data import get_chunk, get_currency
+from ..gui.components.utils.definitions import STRUCTURE_CHUNKS, UNIT_DISPLAY
 from .SETTINGS import DECIMAL_PLACES_FOR_LATEX
 
 _EMDASH     = NoEscape(r"\textemdash")
@@ -21,6 +21,162 @@ _SOURCE_MARK = {
     "excel_modified": r"$^{\ddagger}$",
 }
 
+
+# ── Shared utilities (used by emissions + recycling latex modules) ─────────────
+
+def get_all_structure_chunks() -> dict:
+    """Fetch all four structure chunks once; returns {chunk_id: data_dict}."""
+    return {chunk_id: get_chunk(chunk_id) for chunk_id, _ in STRUCTURE_CHUNKS}
+
+
+def longtable_sections(col_spec: str, n_cols: int, caption: str, label: str,
+                       headers: list, sections: list) -> str:
+    """Build a longtable from pre-built section rows.
+
+    sections: list of (header_text, [[cell, ...], ...])
+    """
+    table = LongTable(col_spec)
+
+    table.append(NoEscape(
+        rf"\caption{{{escape_latex(caption)}}} \label{{{label}}} \\"
+    ))
+    table.append(NoEscape(r"\toprule"))
+    table.add_row(headers)
+    table.append(NoEscape(r"\midrule"))
+    table.append(NoEscape(r"\endhead"))
+
+    table.append(NoEscape(r"\midrule"))
+    table.append(NoEscape(
+        rf"\multicolumn{{{n_cols}}}{{r}}{{\footnotesize\textit{{continued on next page}}}} \\"
+    ))
+    table.append(NoEscape(r"\endfoot"))
+
+    table.append(NoEscape(r"\bottomrule"))
+    table.append(NoEscape(r"\endlastfoot"))
+
+    first = True
+    for header_text, rows in sections:
+        if not rows:
+            continue
+        if not first:
+            table.append(NoEscape(r"\midrule"))
+        first = False
+
+        table.append(NoEscape(
+            MultiColumn(n_cols, align="l",
+                        data=bold(escape_latex(header_text))).dumps() + r" \\"
+        ))
+        table.append(NoEscape(r"\midrule"))
+
+        for row in rows:
+            table.add_row(row)
+
+    return table.dumps()
+
+
+def _fmt_emission(val) -> str:
+    try:
+        return f"{float(val):,.{DECIMAL_PLACES_FOR_LATEX}f}"
+    except (TypeError, ValueError):
+        return r"\textemdash"
+
+
+def collect_for_emissions(all_chunks: dict) -> tuple[defaultdict, defaultdict]:
+    """Split structure items into (included, excluded) for material-emissions tables.
+
+    all_chunks: output of get_all_structure_chunks()
+    Returns two defaultdict(list) keyed by (category, comp_name).
+      included values: dicts with material/qty/unit/cf/ef/ef_unit/total keys
+      excluded values: (material_name, reason) tuples
+    """
+    included = defaultdict(list)
+    excluded = defaultdict(list)
+
+    for chunk_id, category in STRUCTURE_CHUNKS:
+        for comp_name, items in (all_chunks.get(chunk_id) or {}).items():
+            for item in items:
+                if item.get("state", {}).get("in_trash", False):
+                    continue
+                values = item.get("values", {})
+                state  = item.get("state", {})
+                key    = (category, comp_name)
+
+                qty     = float(values.get("quantity",          0) or 0)
+                cf      = float(values.get("conversion_factor", 1) or 1)
+                ef      = float(values.get("carbon_emission",   0) or 0)
+                unit    = UNIT_DISPLAY.get(values.get("unit", ""), values.get("unit", ""))
+                ef_unit = values.get("carbon_unit", "")
+
+                if state.get("included_in_carbon_emission") is True:
+                    included[key].append({
+                        "material": values.get("material_name", ""),
+                        "qty": qty, "unit": unit,
+                        "cf": cf, "ef": ef,
+                        "ef_unit": ef_unit,
+                        "total": qty * cf * ef,
+                    })
+                else:
+                    reason = (values.get("exclusion_reason") or {}).get("carbon", "") or ""
+                    excluded[key].append((values.get("material_name", ""), reason))
+
+    return included, excluded
+
+
+def _recycle_pct(v: dict) -> float:
+    return float(
+        v.get("post_demolition_recovery_percentage")
+        or v.get("recyclability_percentage")
+        or 0
+    )
+
+
+def collect_for_recycling(all_chunks: dict) -> tuple[defaultdict, defaultdict]:
+    """Split structure items into (included, excluded) for recycling tables.
+
+    all_chunks: output of get_all_structure_chunks()
+    Returns two defaultdict(list) keyed by (category, comp_name).
+      included values: dicts with name/qty/unit/pct/rec_qty/scrap/rec_val keys
+      excluded values: dicts with name/qty/unit/pct/scrap/reason keys
+    """
+    included = defaultdict(list)
+    excluded = defaultdict(list)
+
+    for chunk_id, category in STRUCTURE_CHUNKS:
+        for comp_name, items in (all_chunks.get(chunk_id) or {}).items():
+            for item in items:
+                if item.get("state", {}).get("in_trash", False):
+                    continue
+                values = item.get("values", {})
+                state  = item.get("state", {})
+                key    = (category, comp_name)
+
+                qty   = float(values.get("quantity",   0) or 0)
+                pct   = _recycle_pct(values)
+                scrap = float(values.get("scrap_rate", 0) or 0)
+                unit  = UNIT_DISPLAY.get(values.get("unit", ""), values.get("unit", ""))
+                name  = values.get("material_name", "")
+
+                valid         = pct > 0 and scrap > 0 and qty > 0
+                included_flag = state.get("included_in_recyclability", True)
+
+                if valid and included_flag:
+                    rec_qty = qty * (pct / 100)
+                    included[key].append({
+                        "name": name, "qty": qty, "unit": unit,
+                        "pct": pct, "rec_qty": rec_qty,
+                        "scrap": scrap, "rec_val": rec_qty * scrap,
+                    })
+                else:
+                    reason = "Incomplete Data" if not valid else "Manually Excluded"
+                    excluded[key].append({
+                        "name": name, "qty": qty, "unit": unit,
+                        "pct": pct, "scrap": scrap, "reason": reason,
+                    })
+
+    return included, excluded
+
+
+# ── Structure work table (private) ────────────────────────────────────────────
 
 def _legend(currency: str) -> NoEscape:
     cur = escape_latex(currency)
@@ -53,8 +209,6 @@ def _structure_table(chunk: dict, caption: str, label: str, currency: str) -> st
 
     table = LongTable(_COL_SPEC)
 
-    # ── first head ───────────────────────────────────────────────────────────
-    # \caption{}\label{}\\ must be a single NoEscape line before the header row
     table.append(NoEscape(
         r"\caption{" + escape_latex(caption) + r"}"
         r"\label{" + label + r"}\\"
@@ -64,7 +218,6 @@ def _structure_table(chunk: dict, caption: str, label: str, currency: str) -> st
     table.append(_MIDRULE)
     table.append(NoEscape(r"\endfirsthead"))
 
-    # ── continued head ───────────────────────────────────────────────────────
     table.add_row([MultiColumn(_N_COLS, align="l",
                                data=italic("Continued from previous page"))])
     table.append(_MIDRULE)
@@ -72,17 +225,14 @@ def _structure_table(chunk: dict, caption: str, label: str, currency: str) -> st
     table.append(_MIDRULE)
     table.end_table_header()
 
-    # ── mid-page foot ────────────────────────────────────────────────────────
     table.append(_MIDRULE)
     table.add_row([MultiColumn(_N_COLS, align="r",
                                data=italic("Continued on next page"))])
     table.end_table_footer()
 
-    # ── last foot ────────────────────────────────────────────────────────────
     table.append(_BOTTOMRULE)
     table.end_table_last_footer()
 
-    # ── data rows ────────────────────────────────────────────────────────────
     first = True
     for component_name, items in chunk.items():
         if not first:
@@ -113,11 +263,21 @@ def _structure_table(chunk: dict, caption: str, label: str, currency: str) -> st
     return table.dumps() + "\n" + str(_legend(currency))
 
 
+# ── Entry point ───────────────────────────────────────────────────────────────
+
 def structure_work_data_to_latex(controller=None) -> str:
-    currency = get_currency()
-    return "\n\n".join([
-        _structure_table(get_str_foundation(),      "Structure Work Data: Foundation",      "tab:str_foundation",      currency),
-        _structure_table(get_str_sub_structure(),   "Structure Work Data: Sub-Structure",   "tab:str_sub_structure",   currency),
-        _structure_table(get_str_super_structure(), "Structure Work Data: Super Structure", "tab:str_super_structure", currency),
-        _structure_table(get_str_misc(),            "Structure Work Data: Miscellaneous",   "tab:str_misc",            currency),
-    ])
+    currency   = get_currency()
+    all_chunks = get_all_structure_chunks()
+
+    tables = []
+    for chunk_id, label in STRUCTURE_CHUNKS:
+        captions = {
+            "str_foundation":      ("Structure Work Data: Foundation",      "tab:str_foundation"),
+            "str_sub_structure":   ("Structure Work Data: Sub-Structure",   "tab:str_sub_structure"),
+            "str_super_structure": ("Structure Work Data: Super Structure", "tab:str_super_structure"),
+            "str_misc":            ("Structure Work Data: Miscellaneous",   "tab:str_misc"),
+        }
+        caption, tab_label = captions[chunk_id]
+        tables.append(_structure_table(all_chunks[chunk_id], caption, tab_label, currency))
+
+    return "\n\n".join(tables)
