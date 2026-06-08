@@ -47,6 +47,56 @@ def setup_dev_menu(parent_window, menubar):
     action_inspector.triggered.connect(lambda: set_pesticide("beast"))
     dev_menu.addAction(action_inspector)
 
+    # --- Project Inspector ---
+    dev_menu.addSeparator()
+
+    def _open_project_inspector():
+        try:
+            import sys, importlib.util
+            from pathlib import Path
+
+            _devtools_dir = Path(__file__).resolve()
+            for _p in _devtools_dir.parents:
+                _candidate = _p / "devtools"
+                if _candidate.is_dir():
+                    _devtools_dir = _candidate
+                    break
+
+            if str(_devtools_dir) not in sys.path:
+                sys.path.insert(0, str(_devtools_dir))
+
+            _spec = importlib.util.spec_from_file_location(
+                "devtools_window", _devtools_dir / "devtools_window.py"
+            )
+            _mod = importlib.util.module_from_spec(_spec)
+            sys.modules.setdefault("devtools_window", _mod)
+            _spec.loader.exec_module(_mod)
+            DevToolsWindow = _mod.DevToolsWindow
+
+            ctrl = parent_window.controller
+            engine = getattr(ctrl, "engine", None)
+            project_dir = (
+                getattr(ctrl, "project_path", None)
+                or getattr(engine, "project_path", None)
+            )
+            if not project_dir or not Path(project_dir).exists():
+                QMessageBox.warning(parent_window, "Project Inspector",
+                                    "Could not resolve current project folder.")
+                return
+
+            win = DevToolsWindow()
+            win._load_from_dir(Path(project_dir), label=Path(project_dir).name)
+            win.show()
+            parent_window._devtools_win = win
+        except Exception as exc:
+            QMessageBox.critical(parent_window, "Project Inspector", str(exc))
+
+    action_open_inspector = QAction("Open in Project Inspector", parent_window)
+    action_open_inspector.triggered.connect(_open_project_inspector)
+    dev_menu.addAction(action_open_inspector)
+
+    dev_menu.addSeparator()
+
     # --- LaTeX Submenu ---
     # Each entry: (menu label, module path, function name, output filename)
     _LATEX_ENTRIES = [

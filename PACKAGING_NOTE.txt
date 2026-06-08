@@ -1,0 +1,17 @@
+PACKAGING CHECKLIST — Remove before distributing
+=================================================
+(Files already covered by .gitignore are not listed here)
+
+Files / folders to DELETE from the package:
+
+  launch.bat                     (developer terminal launcher — users use the desktop shortcut)
+  PACKAGING_NOTE.txt             (this file)
+  devtools/                      (doc builder and other dev tooling)
+  tests/                         (test suite)
+  Create Desktop Shortcut.bat    (packager provides this inbuilt)
+  Update.bat                     (packager provides this inbuilt)
+  .git/                          (packager provides this inbuilt)
+
+
+Additionally:
+In the file src\three_ps_lcca_gui\gui\_CONFIG.py set DEV_MODE = False
