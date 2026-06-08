@@ -238,7 +238,7 @@ RICKE_FIELDS: list[FieldDef | Section] = [
     Section("Inflation Adjustment (CPI)"),
     FieldDef(
         "cpi_ratio",
-        "CPI Ratio (current / 2018)",
+        "CPI Ratio (Reference-Year CPI / 2018 CPI)",
         "The Ricke et al. paper was published in 2018. Apply a CPI ratio (current year CPI ÷ 2018 CPI) to adjust the output for inflation. Set to 1.0 to use the original 2018 values.",
         "float",
         options=(0.0, 100.0, DECIMAL_PLACES),
@@ -283,6 +283,14 @@ class RickeWidget(ScrollableForm):
         for lbl in (self._lbl_scc, self._lbl_range, self._lbl_params, self._lbl_status):
             self.form.addRow(lbl)
 
+        self._lbl_explorer = QLabel(
+            '<a href="https://country-level-scc.github.io/explorer/">Country-level SCC Explorer</a>'
+        )
+        self._lbl_explorer.setOpenExternalLinks(True)
+        self._lbl_explorer.setStyleSheet(
+            f"color: {get_token('primary')}; font-size: {FS_SM}pt;"
+        )
+        self.form.addRow(self._lbl_explorer)
 
         # ── clear button (inside form, same pattern as demolition/traffic_data) ─
         btn_row = QWidget()

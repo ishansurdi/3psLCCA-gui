@@ -31,6 +31,8 @@ CUSTOM_FIELDS: list[FieldDef | Section] = [
             "Social Cost of Carbon is 0 - no carbon pricing will be applied to emissions; enter a positive custom SCC value in the field above",
         ),
     ),
+    FieldDef("source", "Source", "Reference or basis for this SCC value (e.g. government report, paper, agency guideline).", "text"),
+    FieldDef("comments", "Comments", "Any additional notes or justification for the chosen SCC value.", "textarea"),
 ]
 
 
@@ -93,6 +95,8 @@ class CustomWidget(ScrollableForm):
             "entered_value": value,
             "currency": currency,
             "unit": f"{currency}/kgCO₂e",
+            "source": self._field_map["source"].text() if "source" in self._field_map else "",
+            "comments": self._field_map["comments"].toPlainText() if "comments" in self._field_map else "",
         }
 
     def get_result_data(self, selected_mode: str) -> dict:

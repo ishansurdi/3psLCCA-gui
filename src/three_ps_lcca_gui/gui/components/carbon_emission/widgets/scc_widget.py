@@ -91,19 +91,23 @@ class SCCWidget(BaseDataWidget):
         return chunk
 
     def load_data(self, data: dict):
-        source = data.get("source") or data.get("mode", "ricke")
-        if source in _SELECTOR_LABELS:
-            idx = _SELECTOR_LABELS.index(source)
-        elif source in _KEYS:
-            idx = _KEYS.index(source)
-        else:
-            idx = 0
-        self._field_map["selector"].setCurrentIndex(idx)
-        self._sub_a.load_data_dict(data.get("ricke", {}))
-        custom_data = data.get("custom", {})
-        if "entered_value" in custom_data and "scc_value" not in custom_data:
-            custom_data = {"scc_value": custom_data["entered_value"]}
-        self._sub_b.load_data_dict(custom_data)
+        self._loading = True
+        try:
+            source = data.get("source") or data.get("mode", "ricke")
+            if source in _SELECTOR_LABELS:
+                idx = _SELECTOR_LABELS.index(source)
+            elif source in _KEYS:
+                idx = _KEYS.index(source)
+            else:
+                idx = 0
+            self._field_map["selector"].setCurrentIndex(idx)
+            self._sub_a.load_data_dict(data.get("ricke", {}))
+            custom_data = data.get("custom", {})
+            if "entered_value" in custom_data and "scc_value" not in custom_data:
+                custom_data = {"scc_value": custom_data["entered_value"]}
+            self._sub_b.load_data_dict(custom_data)
+        finally:
+            self._loading = False
 
     def load_data_dict(self, data: dict):
         self.load_data(data)

@@ -107,6 +107,7 @@ def setup_dev_menu(parent_window, menubar):
         ("Material Emissions",    "three_ps_lcca_gui.code_to_latex.material_emissions_latex",                          "material_emissions_to_latex",    "material_emissions.tex"),
         ("Transport Emissions",   "three_ps_lcca_gui.code_to_latex.transport_emissions_latex",                         "transport_emissions_to_latex",   "transport_emissions.tex"),
         ("Machinery Emissions",   "three_ps_lcca_gui.code_to_latex.machinery_emissions_latex",                         "machinery_emissions_to_latex",   "machinery_emissions.tex"),
+        ("Social Cost Data",     "three_ps_lcca_gui.code_to_latex.social_cost_data_latex",                             "social_cost_data_to_latex",      "social_cost_data.tex"),
         ("Recycling",            "three_ps_lcca_gui.code_to_latex.recycling_latex",                                   "recycling_to_latex",             "recycling.tex"),
         ("Final Report",         "three_ps_lcca_gui.code_to_latex.final_report",                           "final_report_to_latex",          "final_report.tex"),
         ("LCCA Results",         "three_ps_lcca_gui.code_to_latex.results_latex",                          "results_to_latex",               "results.tex"),

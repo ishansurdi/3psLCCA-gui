@@ -4,15 +4,16 @@ from ..gui.components.utils.form_builder.form_definitions import Section, FieldD
 from .html_to_latex import format_remarks_latex
 
 
-def fields_to_latex(fields: list, data: dict, caption: str, label: str) -> str:
+def fields_to_latex(fields: list, data: dict, caption: str, label: str, unit_overrides: dict = None) -> str:
     """Build a pylatex table from a list of Section/FieldDef entries and a data dict.
 
     Columns: Title | Value | Unit
     Args:
-        fields:  FIELDS list (mix of Section and FieldDef)
-        data:    chunk dict {key: value}
-        caption: table caption string
-        label:   LaTeX label string, e.g. "tab:bridge_data"
+        fields:         FIELDS list (mix of Section and FieldDef)
+        data:           chunk dict {key: value}
+        caption:        table caption string
+        label:          LaTeX label string, e.g. "tab:bridge_data"
+        unit_overrides: optional {field_key: unit_string} to replace FieldDef.unit at render time
     """
     tabular = Tabular("lll")
     tabular.append(NoEscape(r"\toprule"))
@@ -29,11 +30,14 @@ def fields_to_latex(fields: list, data: dict, caption: str, label: str) -> str:
             raw = data.get(entry.key, "")
             if raw in ("", None):
                 value = NoEscape(r"\textemdash")
+            elif isinstance(raw, NoEscape):
+                value = raw
             elif isinstance(raw, (int, float)):
                 value = MultiColumn(1, align="r", data=str(raw))
             else:
                 value = str(raw)
-            tabular.add_row(entry.title, value, entry.unit or "")
+            unit = (unit_overrides or {}).get(entry.key, entry.unit) or ""
+            tabular.add_row(entry.title, value, unit)
 
     tabular.append(NoEscape(r"\bottomrule"))
 
