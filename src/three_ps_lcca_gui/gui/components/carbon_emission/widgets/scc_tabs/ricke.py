@@ -106,8 +106,6 @@ def _lookup(df, iso3, run, dmgfuncpar, climate, ssp, rcp, disc):
     except KeyError:
         return None, "missing"
 
-CHUNK = None  # SCCWidget owns saving; sub-widgets must not autosave to the chunk
-
 _SSP_OPTIONS = [
     "SSP1 (Sustainability)",
     "SSP2 (Middle of the Road)",
@@ -256,7 +254,7 @@ RICKE_FIELDS: list[FieldDef | Section] = [
 
 class RickeWidget(ScrollableForm):
     def __init__(self, controller=None):
-        super().__init__(controller=controller, chunk_name=CHUNK)
+        super().__init__(controller=controller, chunk_name=None)
         build_form(self, RICKE_FIELDS)
         self._update_currency_suffix()
 
@@ -575,3 +573,16 @@ class RickeWidget(ScrollableForm):
         usd_to_local     = fm["usd_to_local_rate"].value() if "usd_to_local_rate" in fm else 1.0
         # DB values are USD/tCO₂; system expects currency/kgCO₂e → divide by 1000
         return result[pct_idx] * cpi_ratio * usd_to_local / 1000
+
+    def get_ricke_data(self) -> dict:
+        return self.get_data_dict()
+
+    def get_result_data(self, selected_mode: str) -> dict:
+        cost = self.get_cost()
+        currency = get_currency()
+        return {
+            "selected_mode": selected_mode,
+            "cost_of_carbon_local": cost if cost is not None else 0.0,
+            "currency": currency,
+            "unit": f"{currency}/kgCO₂e",
+        }

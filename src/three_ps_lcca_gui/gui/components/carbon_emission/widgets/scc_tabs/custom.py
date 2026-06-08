@@ -17,8 +17,6 @@ from ....utils.display_format import DECIMAL_PLACES
 from ....utils.validation_helpers import freeze_form, validate_form, clear_field_styles, confirm_clear_all
 from ....utils.common_requested_data import get_currency
 
-CHUNK = None  # SCCWidget owns saving; sub-widgets must not autosave to the chunk
-
 CUSTOM_FIELDS: list[FieldDef | Section] = [
     FieldDef(
         "scc_value",
@@ -38,7 +36,7 @@ CUSTOM_FIELDS: list[FieldDef | Section] = [
 
 class CustomWidget(ScrollableForm):
     def __init__(self, controller=None):
-        super().__init__(controller=controller, chunk_name=CHUNK)
+        super().__init__(controller=controller, chunk_name=None)
         build_form(self, CUSTOM_FIELDS)
         self._update_currency_suffix()
 
@@ -87,3 +85,22 @@ class CustomWidget(ScrollableForm):
 
     def get_cost(self) -> float | None:
         return self._field_map["scc_value"].value() if "scc_value" in self._field_map else None
+
+    def get_custom_data(self) -> dict:
+        value = self._field_map["scc_value"].value() if "scc_value" in self._field_map else 0.0
+        currency = get_currency()
+        return {
+            "entered_value": value,
+            "currency": currency,
+            "unit": f"{currency}/kgCO₂e",
+        }
+
+    def get_result_data(self, selected_mode: str) -> dict:
+        cost = self.get_cost()
+        currency = get_currency()
+        return {
+            "selected_mode": selected_mode,
+            "cost_of_carbon_local": cost if cost is not None else 0.0,
+            "currency": currency,
+            "unit": f"{currency}/kgCO₂e",
+        }
