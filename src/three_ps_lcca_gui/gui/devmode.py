@@ -70,7 +70,16 @@ def setup_dev_menu(parent_window, menubar):
         ("WPI Base Factors",     "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_base_to_latex",              "wpi_base.tex"),
         ("WPI Selected Factors", "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_selected_to_latex",          "wpi_selected.tex"),
         ("WPI Ratios",           "three_ps_lcca_gui.code_to_latex.traffic_and_road_data_latex.get_all_data", "wpi_ratio_to_latex",             "wpi_ratio.tex"),
+        
     ]
+    _PDF_ENTRIES = [
+    (
+        "Structured Code-to-LaTeX Report",
+        "three_ps_lcca_gui.code_to_latex.pdf_generation_v3.structured_code_to_latex_report",
+        "compile_structured_code_to_latex_report_pdf",
+        "structured_code_to_latex_report",
+    ),
+]
 
     def _make_save_latex(module_path, fn_name, filename):
         def _handler():
@@ -94,10 +103,45 @@ def setup_dev_menu(parent_window, menubar):
                 QMessageBox.critical(parent_window, "LaTeX Error", str(exc))
         return _handler
 
+    def _make_compile_pdf(module_path, fn_name, filename):
+        def _handler():
+            try:
+                from pathlib import Path
+                import importlib
+                import three_ps_lcca_gui.gui.components.utils.common_requested_data as crd
+
+                crd.get_all_data()
+
+                mod = importlib.import_module(module_path)
+                fn = getattr(mod, fn_name)
+
+                tests_dir = Path(__file__).parent.parent / "code_to_latex" / "tests"
+                tex_path, pdf_path = fn(
+                    parent_window.controller,
+                    output_dir=tests_dir,
+                    filename=filename,
+                    keep_artifacts=True,
+                )
+
+                QMessageBox.information(
+                    parent_window,
+                    "PDF",
+                    f"Saved to:\n{tex_path}\n{pdf_path}",
+                )
+            except Exception as exc:
+                QMessageBox.critical(parent_window, "PDF Error", str(exc))
+        return _handler
+
     latex_menu = QMenu("LaTeX", dev_menu)
+
     for label, module_path, fn_name, filename in _LATEX_ENTRIES:
         action = QAction(f"Save {label} (tests/)", parent_window)
         action.triggered.connect(_make_save_latex(module_path, fn_name, filename))
+        latex_menu.addAction(action)
+
+    for label, module_path, fn_name, filename in _PDF_ENTRIES:
+        action = QAction(f"Generate {label} (tests/)", parent_window)
+        action.triggered.connect(_make_compile_pdf(module_path, fn_name, filename))
         latex_menu.addAction(action)
     dev_menu.addMenu(latex_menu)
 
