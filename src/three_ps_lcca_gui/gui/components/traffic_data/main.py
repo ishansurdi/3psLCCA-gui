@@ -84,7 +84,7 @@ LANE_TYPES = [
         "code": "4L",
         "name": "Four Lane",
         # "name": "Four Lane (Two Way)",
-        "width": 7.0,
+        "width": 14.0,
         "capacity": 2900,
         "velocity_class": "4L",
     },
@@ -92,7 +92,7 @@ LANE_TYPES = [
         "code": "6L",
         "name": "Six Lane",
         # "name": "Six Lane (Two Way)",
-        "width": 10.5,
+        "width": 21.00,
         "capacity": 4300,
         "velocity_class": "6L",
     },
@@ -100,7 +100,7 @@ LANE_TYPES = [
         "code": "8L",
         "name": "Eight Lane",
         # "name": "Eight Lane (Two Way)",
-        "width": 14.0,
+        "width": 28.0,
         "capacity": 7200,
         "velocity_class": "8L",
     },
@@ -118,13 +118,14 @@ LANE_TYPES = [
     #     "capacity": 7500,
     #     "velocity_class": "EW",
     # },
-    # {
-    #     "code": "EW8",
-    #     "name": "8 Lane Expressway (Two Way)",
-    #     "width": None,
-    #     "capacity": 9200,
-    #     "velocity_class": "EW",
-    # },
+    {
+        "code": "EW8",
+        "name": "Expressway",
+        # "name": "8 Lane Expressway (Two Way)",
+        "width": None,
+        "capacity": 9200,
+        "velocity_class": "EW",
+    },
 ]
 
 _NONE_LANE = "- Select -"
