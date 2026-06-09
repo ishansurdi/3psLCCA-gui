@@ -153,6 +153,9 @@ def _summary_from_v3_content(controller=None) -> str:
     if end == -1:
         return ""
     content = APPENDIX_A_LATEX[:end]
+    remove_from = content.find(r"\begin{itemize}")
+    if remove_from != -1:
+        content = content[:remove_from]
     content = content.replace(r"\clearpage", r"\clearpage")
     content = content.replace(
         r"\section*{\fontsize{14pt}{16pt}\selectfont\bfseries Summary and Conclusions}",
