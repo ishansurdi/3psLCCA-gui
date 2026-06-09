@@ -3,10 +3,11 @@ from __future__ import annotations
 from pylatex.utils import escape_latex
 
 from ..SETTINGS import LATEX_FONT_SIZE
+from datetime import date
 
 
 EMDASH = r"\textemdash"
-
+generated_date = date.today().strftime("%d-%m-%Y")
 V3_PREAMBLE = [
     r"\documentclass[12pt,a4paper]{article}",
     r"\usepackage[utf8]{inputenc}",
@@ -58,12 +59,17 @@ def build_report_v3_document(body: str) -> str:
     ])
 
 
-def title_page(project_name: str) -> str:
+def title_page(project_name: str, logo_path: str = "") -> str:
     safe_project_name = escape_latex(project_name or "Unnamed Project")
     return "\n".join([
         r"\begin{titlepage}",
         r"\begin{flushright}",
-        r"\IfFileExists{../../gui/assets/logo/3pslcca_header.png}{\includegraphics[width=0.38\linewidth]{../../gui/assets/logo/3pslcca_header.png}}{}",
+        (
+            r"\IfFileExists{" + logo_path + r"}"
+            r"{\includegraphics[width=0.38\linewidth]{" + logo_path + r"}}{}"
+            if logo_path
+            else ""
+        ),
         r"\end{flushright}",
         r"\vspace*{2cm}",
         r"\noindent{\color{blue!55!black}\rule{\linewidth}{1.2pt}}",
@@ -79,7 +85,7 @@ def title_page(project_name: str) -> str:
         r"\noindent{\color{blue!55!black}\rule{\linewidth}{0.8pt}}",
         r"\vfill",
         r"\begin{flushright}",
-        r"{\large Generated from code-to-LaTeX exporters\par}",
+        r"{\small Generated on " + generated_date + r"\par}",
         r"\end{flushright}",
         r"\end{titlepage}",
     ])

@@ -321,19 +321,37 @@ class _PdfGenWorker(QThread):
     finished = Signal(str)        # emitted with final PDF path on success
     errored = Signal(str, str)    # (error_msg, tex_path_or_empty)- work dir kept alive when tex_path set
 
-    def __init__(self, export_dict, config, output_dir, filename="LCCA_Report", mode="standard"):
+    def __init__(self, export_dict, config, output_dir, filename="LCCA_Report", mode="standard", controller=None):
         super().__init__()
         self._export_dict = export_dict
         self._config = config
         self._output_dir = output_dir
         self._filename = filename
         self._mode = mode
+        self._controller = controller
 
     def run(self):
         work_dir = tempfile.mkdtemp(prefix="3psLCCA_")
         try:
             stem = self._filename
             work_stem = os.path.join(work_dir, stem)
+
+            if self._mode == "lcca_v3":
+                import three_ps_lcca_gui.gui.components.utils.common_requested_data as crd
+                from three_ps_lcca_gui.code_to_latex.pdf_generation_v3.lcca_report_builder import (
+                    compile_lcca_report_pdf,
+                )
+
+                crd.get_all_data()
+                _, final_pdf = compile_lcca_report_pdf(
+                    self._controller,
+                    output_dir=self._output_dir,
+                    filename=stem,
+                    config=self._config,
+                )
+                shutil.rmtree(work_dir, ignore_errors=True)
+                self.finished.emit(str(final_pdf))
+                return
 
             if self._mode == "provenance":
                 # from ....report.v2_report.mod_provenance_generate import generate_report as gen_provenance
@@ -389,10 +407,17 @@ class ReportSectionDialog(QDialog):
     """
 
 
-    def __init__(self, export_dict: dict, mode="standard", parent=None):
+    def __init__(self, export_dict: dict, mode="standard", controller=None, parent=None):
         super().__init__(parent)
         self._mode = mode
-        title_text = "Report Customization" if mode == "standard" else "Data Provenance Report V2"
+        self._controller = controller
+        title_text = (
+            "Report Customization"
+            if mode == "standard"
+            else "LCCA V3 Report Customization"
+            if mode == "lcca_v3"
+            else "Data Provenance Report V2"
+        )
         self.setWindowTitle(title_text)
         self.setObjectName("report_section_dialog")
         self.resize(600, 700)
@@ -407,7 +432,13 @@ class ReportSectionDialog(QDialog):
         main_layout.setSpacing(16)
 
         # Title
-        title_text = "Report Customization" if self._mode == "standard" else "Data Provenance Report V2"
+        title_text = (
+            "Report Customization"
+            if self._mode == "standard"
+            else "LCCA V3 Report Customization"
+            if self._mode == "lcca_v3"
+            else "Data Provenance Report V2"
+        )
         self.lbl_title = QLabel(title_text)
         self.lbl_title.setFont(_f(FS_DISP, FW_BOLD))
         self.lbl_title.setStyleSheet(f"color: {get_token('primary')};")
@@ -531,7 +562,14 @@ class ReportSectionDialog(QDialog):
         self._set_ui_enabled(False)
         QApplication.processEvents()
 
-        self._worker = _PdfGenWorker(export, config, output_dir, filename=filename, mode=self._mode)
+        self._worker = _PdfGenWorker(
+            export,
+            config,
+            output_dir,
+            filename=filename,
+            mode=self._mode,
+            controller=self._controller,
+        )
         self._worker.finished.connect(self._on_pdf_success)
         self._worker.errored.connect(self._on_pdf_error)
         self._worker.finished.connect(self._worker.deleteLater)

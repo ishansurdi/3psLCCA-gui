@@ -1358,40 +1358,13 @@ class OutputsPage(ScrollableForm):
         return d
     
     def _generate_pdf_report(self):
-        from pathlib import Path
-        from PySide6.QtWidgets import QFileDialog, QMessageBox
-        import three_ps_lcca_gui.gui.components.utils.common_requested_data as crd
-        from three_ps_lcca_gui.code_to_latex.pdf_generation_v3.lcca_report_builder import (
-            compile_lcca_report_pdf,
+        dlg = ReportSectionDialog(
+            export_dict=self._build_export_dict(),
+            mode="lcca_v3",
+            controller=self.controller,
+            parent=self,
         )
-
-        default_name = self._build_export_dict().get("project_name", "LCCA_Report")
-        for char in '<>:"/\\|?*':
-            default_name = default_name.replace(char, "_")
-
-        save_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save PDF Report",
-            str(Path.home() / "Documents" / f"{default_name}.pdf"),
-            "PDF Files (*.pdf)",
-        )
-        if not save_path:
-            return
-
-        save_path = Path(save_path)
-        if save_path.suffix.lower() != ".pdf":
-            save_path = save_path.with_suffix(".pdf")
-
-        try:
-            crd.get_all_data()
-            tex_path, pdf_path = compile_lcca_report_pdf(
-                self.controller,
-                output_dir=save_path.parent,
-                filename=save_path.stem,
-            )
-            QMessageBox.information(self, "PDF Report", f"Saved to:\n{pdf_path}")
-        except Exception as exc:
-            QMessageBox.critical(self, "PDF Report Error", str(exc))
+        dlg.exec()
 
     # def _generate_pdf_report(self):
     #     dlg = ReportSectionDialog(export_dict=self._build_export_dict(), mode="provenance", parent=self)

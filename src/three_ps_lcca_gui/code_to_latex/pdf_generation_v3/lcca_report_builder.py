@@ -6,14 +6,30 @@ from pathlib import Path
 from typing import Callable
 import shutil
 import tempfile
+import os
 
 from pylatex.utils import escape_latex
 
 from three_ps_lcca_gui.report.constants import (
+    KEY_SHOW_AVG_TRAFFIC,
+    KEY_SHOW_BRIDGE_DESC,
+    KEY_SHOW_CONSTRUCTION,
+    KEY_SHOW_FINANCIAL,
+    KEY_SHOW_INTRODUCTION,
+    KEY_SHOW_LCCA_RESULTS,
+    KEY_SHOW_MATERIAL_EMISSION,
+    KEY_SHOW_ONSITE_EMISSION,
+    KEY_SHOW_PEAK_HOUR,
     KEY_PLOT_PILLAR_BARS,
     KEY_PLOT_PILLAR_DONUT,
     KEY_PLOT_STAGE_BARS,
     KEY_PLOT_SUSTAINABILITY_MATRIX,
+    KEY_SHOW_ROAD_TRAFFIC,
+    KEY_SHOW_SOCIAL_CARBON,
+    KEY_SHOW_TITLE_PAGE,
+    KEY_SHOW_TRANSPORT_EMISSION,
+    KEY_SHOW_USE_STAGE,
+    KEY_SHOW_VEHICLE_EMISSION,
 )
 
 from ..bridge_data_latex import bridge_data_to_latex
@@ -288,38 +304,39 @@ def _appendix_c_wpi(controller) -> str:
     ])
 
 
-def lcca_report_body(controller=None, plot_paths: dict | None = None) -> str:
+def lcca_report_body(controller=None, plot_paths: dict | None = None, config: dict | None = None, logo_path: str = "") -> str:
+    config = config or {}
     parts = [
-        title_page(_project_name(controller)),
+        title_page(_project_name(controller), logo_path=logo_path) if config.get(KEY_SHOW_TITLE_PAGE, True) else "",
         front_matter(),
-        introduction_to_latex(),
+        introduction_to_latex() if config.get(KEY_SHOW_INTRODUCTION, True) else "",
         clearpage(),
         section("Input data"),
-        subsection("Bridge geometry and description"),
-        _part(controller, "Bridge Data", bridge_data_to_latex),
-        subsection("Financial inputs"),
-        _part(controller, "Financial Data", financial_data_to_latex),
-        subsection("Construction data"),
-        _part(controller, "Structure Work Data", structure_work_data_to_latex, wide=True, size=r"\footnotesize"),
-        subsection("Maintenance data"),
-        _part(controller, "Maintenance Data", maintenance_data_to_latex),
+        subsection("Bridge geometry and description") if config.get(KEY_SHOW_BRIDGE_DESC, True) else "",
+        _part(controller, "Bridge Data", bridge_data_to_latex) if config.get(KEY_SHOW_BRIDGE_DESC, True) else "",
+        subsection("Financial inputs") if config.get(KEY_SHOW_FINANCIAL, True) else "",
+        _part(controller, "Financial Data", financial_data_to_latex) if config.get(KEY_SHOW_FINANCIAL, True) else "",
+        subsection("Construction data") if config.get(KEY_SHOW_CONSTRUCTION, True) else "",
+        _part(controller, "Structure Work Data", structure_work_data_to_latex, wide=True, size=r"\footnotesize") if config.get(KEY_SHOW_CONSTRUCTION, True) else "",
+        subsection("Maintenance data") if config.get(KEY_SHOW_USE_STAGE, True) else "",
+        _part(controller, "Maintenance Data", maintenance_data_to_latex) if config.get(KEY_SHOW_USE_STAGE, True) else "",
         subsection("Traffic data"),
-        _part(controller, "Traffic and Road Data", traffic_fields_to_latex),
-        _part(controller, "Vehicle Traffic Data", vehicle_data_to_latex),
-        _part(controller, "Traffic Diversion Emissions", diversion_emissions_to_latex),
-        _part(controller, "Peak Hour Distribution", peak_hour_distribution_to_latex),
+        _part(controller, "Traffic and Road Data", traffic_fields_to_latex) if config.get(KEY_SHOW_ROAD_TRAFFIC, True) else "",
+        _part(controller, "Vehicle Traffic Data", vehicle_data_to_latex) if config.get(KEY_SHOW_AVG_TRAFFIC, True) else "",
+        _part(controller, "Traffic Diversion Emissions", diversion_emissions_to_latex) if config.get(KEY_SHOW_VEHICLE_EMISSION, True) else "",
+        _part(controller, "Peak Hour Distribution", peak_hour_distribution_to_latex) if config.get(KEY_SHOW_PEAK_HOUR, True) else "",
         subsection("Environmental input data"),
-        _part(controller, "Social Cost Data", social_cost_data_to_latex),
-        _part(controller, "Material Emissions", material_emissions_to_latex, wide=True, size=r"\scriptsize"),
-        _part(controller, "Transport Emissions", transport_emissions_to_latex, wide=True, size=r"\tiny"),
-        _part(controller, "Machinery and Equipment Emissions", machinery_emissions_to_latex, wide=True, size=r"\scriptsize"),
+        _part(controller, "Social Cost Data", social_cost_data_to_latex) if config.get(KEY_SHOW_SOCIAL_CARBON, True) else "",
+        _part(controller, "Material Emissions", material_emissions_to_latex, wide=True, size=r"\scriptsize") if config.get(KEY_SHOW_MATERIAL_EMISSION, True) else "",
+        _part(controller, "Transport Emissions", transport_emissions_to_latex, wide=True, size=r"\tiny") if config.get(KEY_SHOW_TRANSPORT_EMISSION, True) else "",
+        _part(controller, "Machinery and Equipment Emissions", machinery_emissions_to_latex, wide=True, size=r"\scriptsize") if config.get(KEY_SHOW_ONSITE_EMISSION, True) else "",
         subsection("Recycling data"),
         _part(controller, "Recycling", recycling_to_latex, wide=True, size=r"\scriptsize"),
         clearpage(),
-        section("LCCA results"),
-        subsection("Life cycle cost results"),
-        _results_part(controller),
-        _result_figures(plot_paths),
+        section("LCCA results") if config.get(KEY_SHOW_LCCA_RESULTS, True) else "",
+        subsection("Life cycle cost results") if config.get(KEY_SHOW_LCCA_RESULTS, True) else "",
+        _results_part(controller) if config.get(KEY_SHOW_LCCA_RESULTS, True) else "",
+        _result_figures(plot_paths) if config.get(KEY_SHOW_LCCA_RESULTS, True) else "",
         clearpage(),
         _summary_from_v3_content(controller),
         clearpage(),
@@ -329,9 +346,9 @@ def lcca_report_body(controller=None, plot_paths: dict | None = None) -> str:
     return "\n\n".join(part for part in parts if part and part.strip())
 
 
-def build_structured_code_to_latex_report_document(controller=None, plot_paths: dict | None = None) -> str:
+def build_structured_code_to_latex_report_document(controller=None,plot_paths: dict | None = None,config: dict | None = None,logo_path: str = "",) -> str:
     return build_report_v3_document(
-        lcca_report_body(controller, plot_paths)
+        lcca_report_body(controller, plot_paths, config=config, logo_path=logo_path)
     )
 
 
@@ -373,6 +390,7 @@ def compile_lcca_report_pdf(
     output_dir: str | Path | None = None,
     filename: str = "structured_code_to_latex_report",
     keep_artifacts: bool = False,
+    config: dict | None = None,
 ) -> tuple[Path, Path]:
     try:
         from three_ps_lcca_gui.gui.components.utils.common_requested_data import set_controller
@@ -414,8 +432,15 @@ def compile_lcca_report_pdf(
         except Exception as exc:
             print(f"[structured_code_to_latex_report] chart generation failed: {exc}")
 
+        logo_file = Path(__file__).resolve().parents[2] / "gui" / "assets" / "logo" / "3pslcca_header.png"
+        logo_path = os.path.relpath(logo_file, work_dir).replace("\\", "/")
         tex_path.write_text(
-            build_structured_code_to_latex_report_document(controller, plot_paths),
+            build_structured_code_to_latex_report_document(
+                controller,
+                plot_paths,
+                config=config,
+                logo_path=logo_path,
+            ),
             encoding="utf-8",
         )
 
