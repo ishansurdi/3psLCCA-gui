@@ -36,16 +36,15 @@ from .appendix_A_content import APPENDIX_A_LATEX
 from .latex_helpers import (
     build_report_v3_document,
     clearpage,
-    format_value,
     front_matter,
     section,
-    simple_table,
     subsection,
     title_page,
     wide_block,
 )
 from .sections.appendices import appendices_to_latex
 from .sections.introduction import introduction_to_latex
+from ..social_cost_data_latex import social_cost_data_to_latex
 
 
 def _project_name(controller=None) -> str:
@@ -81,19 +80,7 @@ def _chunk(controller, name: str) -> dict:
     return {}
 
 
-def _social_carbon_table(controller) -> str:
-    result = _chunk(controller, "social_cost_data").get("result", {})
-    rows = [[
-        "Social Cost of Carbon (SCC) Rs/kgCO2e",
-        format_value(result.get("cost_of_carbon_local"), 4),
-    ]]
-    return simple_table(
-        "Social Cost of Carbon",
-        "tab:social_cost_carbon",
-        ["Description", "Value"],
-        rows,
-        r"p{9cm}>{\raggedleft\arraybackslash}p{4cm}",
-    )
+
 
 
 def _part(controller, title: str, exporter: Callable, wide: bool = False, size: str = r"\scriptsize") -> str:
@@ -319,7 +306,7 @@ def lcca_report_body(controller=None, plot_paths: dict | None = None) -> str:
         _part(controller, "Traffic Diversion Emissions", diversion_emissions_to_latex),
         _part(controller, "Peak Hour Distribution", peak_hour_distribution_to_latex),
         subsection("Environmental input data"),
-        _part(controller, "Social Cost of Carbon", _social_carbon_table),
+        _part(controller, "Social Cost Data", social_cost_data_to_latex),
         _part(controller, "Material Emissions", material_emissions_to_latex, wide=True, size=r"\scriptsize"),
         _part(controller, "Transport Emissions", transport_emissions_to_latex, wide=True, size=r"\tiny"),
         _part(controller, "Machinery and Equipment Emissions", machinery_emissions_to_latex, wide=True, size=r"\scriptsize"),
