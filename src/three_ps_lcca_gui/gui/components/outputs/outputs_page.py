@@ -1361,8 +1361,8 @@ class OutputsPage(ScrollableForm):
         from pathlib import Path
         from PySide6.QtWidgets import QFileDialog, QMessageBox
         import three_ps_lcca_gui.gui.components.utils.common_requested_data as crd
-        from three_ps_lcca_gui.code_to_latex.pdf_generation_v3.structured_code_to_latex_report import (
-            compile_structured_code_to_latex_report_pdf,
+        from three_ps_lcca_gui.code_to_latex.pdf_generation_v3.lcca_report_builder import (
+            compile_lcca_report_pdf,
         )
 
         default_name = self._build_export_dict().get("project_name", "LCCA_Report")
@@ -1384,7 +1384,7 @@ class OutputsPage(ScrollableForm):
 
         try:
             crd.get_all_data()
-            tex_path, pdf_path = compile_structured_code_to_latex_report_pdf(
+            tex_path, pdf_path = compile_lcca_report_pdf(
                 self.controller,
                 output_dir=save_path.parent,
                 filename=save_path.stem,

@@ -1,14 +1,8 @@
-from pathlib import Path
-
-from ..document import paragraph, section
+from ..latex_helpers import paragraph, section
 
 
 def _framework_figure() -> str:
-    image_path = (
-        Path(__file__).resolve().parents[1]
-        / "images"
-        / "image_1.png"
-    ).as_posix()
+    image_path = "../pdf_generation_v3/images/image_1.png"
 
     return "\n".join([
         r"\begin{figure}[H]",

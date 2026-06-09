@@ -74,9 +74,9 @@ def setup_dev_menu(parent_window, menubar):
     ]
     _PDF_ENTRIES = [
     (
-        "Structured Code-to-LaTeX Report",
-        "three_ps_lcca_gui.code_to_latex.pdf_generation_v3.structured_code_to_latex_report",
-        "compile_structured_code_to_latex_report_pdf",
+        "LCCA PDF Report",
+        "three_ps_lcca_gui.code_to_latex.pdf_generation_v3.lcca_report_builder",
+        "compile_lcca_report_pdf",
         "structured_code_to_latex_report",
     ),
 ]

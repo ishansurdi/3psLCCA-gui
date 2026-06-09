@@ -4,7 +4,7 @@ import re
 
 from ..appendix_A_content import APPENDIX_A_LATEX
 from ..appendix_B_content import APPENDIX_B_LATEX
-from ..document import appendix_counter
+from ..latex_helpers import appendix_counter
 
 
 def _strip_v3_incompatible_latex(latex: str) -> str:

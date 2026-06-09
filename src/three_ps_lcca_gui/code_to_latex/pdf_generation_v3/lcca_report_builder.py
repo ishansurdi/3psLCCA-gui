@@ -16,7 +16,6 @@ from three_ps_lcca_gui.report.constants import (
     KEY_PLOT_SUSTAINABILITY_MATRIX,
 )
 
-from ..SETTINGS import LATEX_FONT_SIZE
 from ..bridge_data_latex import bridge_data_to_latex
 from ..financial_data_latex import financial_data_to_latex
 from ..maintenance_data_latex import maintenance_data_to_latex
@@ -34,49 +33,19 @@ from ..machinery_emissions_latex import machinery_emissions_to_latex
 from ..recycling_latex import recycling_to_latex
 from ..results_latex import results_to_latex
 from .appendix_A_content import APPENDIX_A_LATEX
+from .latex_helpers import (
+    build_report_v3_document,
+    clearpage,
+    format_value,
+    front_matter,
+    section,
+    simple_table,
+    subsection,
+    title_page,
+    wide_block,
+)
 from .sections.appendices import appendices_to_latex
-from .sections.input_data import _social_carbon_table
 from .sections.introduction import introduction_to_latex
-
-
-PREAMBLE = [
-    r"\documentclass[12pt,a4paper]{article}",
-    r"\usepackage[utf8]{inputenc}",
-    r"\usepackage{booktabs}",
-    r"\usepackage{array}",
-    r"\usepackage{longtable}",
-    r"\usepackage{graphicx}",
-    r"\usepackage{caption}",
-    r"\usepackage{float}",
-    r"\usepackage{pdflscape}",
-    r"\usepackage{adjustbox}",
-    r"\usepackage{etoolbox}",
-    r"\usepackage{amsmath}",
-    r"\usepackage{xcolor}",
-    r"\usepackage{tocloft}",
-    r"\usepackage{titlesec}",
-    r"\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}",
-    r"\usepackage[hidelinks,hypertexnames=false]{hyperref}",
-    r"\DeclareUnicodeCharacter{20B9}{Rs.}",
-    r"\DeclareUnicodeCharacter{2082}{\textsubscript{2}}",
-    r"\DeclareUnicodeCharacter{2013}{--}",
-    r"\DeclareUnicodeCharacter{2014}{--}",
-    r"\setlength{\tabcolsep}{4pt}",
-    r"\renewcommand{\arraystretch}{1.18}",
-    r"\setlength{\LTleft}{0pt}",
-    r"\setlength{\LTright}{0pt}",
-    r"\setlength{\LTcapwidth}{\textwidth}",
-    r"\renewcommand{\contentsname}{Table of Contents}",
-    r"\renewcommand{\listtablename}{List of Tables}",
-    r"\renewcommand{\listfigurename}{List of Figures}",
-    r"\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}",
-    r"\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}",
-    r"\titleformat{\section}{\Large\bfseries\color{blue!55!black}}{\thesection}{0.75em}{}",
-    r"\titleformat{\subsection}{\large\bfseries\color{blue!55!black}}{\thesubsection}{0.75em}{}",
-    r"\BeforeBeginEnvironment{tabular}{\begin{adjustbox}{max width=\linewidth}}",
-    r"\AfterEndEnvironment{tabular}{\end{adjustbox}}",
-    r"\sloppy",
-]
 
 
 def _project_name(controller=None) -> str:
@@ -90,56 +59,6 @@ def _project_name(controller=None) -> str:
             except Exception:
                 pass
     return "Unnamed Project"
-
-
-def _section(title: str) -> str:
-    return r"\section{" + escape_latex(title) + r"}"
-
-
-def _subsection(title: str) -> str:
-    return r"\subsection{" + escape_latex(title) + r"}"
-
-
-def _title_page(project_name: str) -> str:
-    return "\n".join([
-        r"\begin{titlepage}",
-        r"\begin{flushright}",
-        r"\IfFileExists{../../gui/assets/logo/3pslcca_header.png}{\includegraphics[width=0.38\linewidth]{../../gui/assets/logo/3pslcca_header.png}}{}",
-        r"\end{flushright}",
-        r"\vspace*{2cm}",
-        r"\noindent{\color{blue!55!black}\rule{\linewidth}{1.2pt}}",
-        r"\vspace{0.8cm}",
-        r"\begin{flushright}",
-        r"{\Huge\bfseries Software Generated Report\par}",
-        r"\vspace{0.45cm}",
-        r"{\LARGE Life Cycle Cost Assessment\par}",
-        r"\vspace{0.8cm}",
-        r"{\Large " + escape_latex(project_name) + r"\par}",
-        r"\end{flushright}",
-        r"\vspace{0.8cm}",
-        r"\noindent{\color{blue!55!black}\rule{\linewidth}{0.8pt}}",
-        r"\vfill",
-        r"\begin{flushright}",
-        r"{\large Generated from code-to-LaTeX exporters\par}",
-        r"\end{flushright}",
-        r"\end{titlepage}",
-    ])
-
-
-def _front_matter() -> str:
-    return "\n".join([
-        r"\clearpage",
-        r"\pagenumbering{roman}",
-        r"\tableofcontents",
-        r"\clearpage",
-        r"\addcontentsline{toc}{section}{List of Tables}",
-        r"\listoftables",
-        r"\clearpage",
-        r"\addcontentsline{toc}{section}{List of Figures}",
-        r"\listoffigures",
-        r"\clearpage",
-        r"\pagenumbering{arabic}",
-    ])
 
 
 def _call_exporter(controller, exporter: Callable, title: str) -> str:
@@ -162,55 +81,19 @@ def _chunk(controller, name: str) -> dict:
     return {}
 
 
-def _wide_block(latex: str, size: str = r"\scriptsize") -> str:
-    if not latex:
-        return ""
-    if r"\begin{landscape}" in latex:
-        latex = latex.replace(r"\begin{landscape}", "").replace(r"\end{landscape}", "")
-    return "\n".join([
-        r"\begingroup",
-        size,
-        r"\centering",
-        r"\setlength{\tabcolsep}{2pt}",
-        r"\setlength{\LTleft}{\fill}",
-        r"\setlength{\LTright}{\fill}",
-        latex,
-        r"\normalsize",
-        r"\endgroup",
-    ])
-
-
-def _landscape_block(latex: str, size: str = r"\scriptsize") -> str:
-    if not latex:
-        return ""
-    if r"\begin{landscape}" in latex:
-        latex = latex.replace(r"\begin{landscape}", "").replace(r"\end{landscape}", "")
-        return "\n".join([
-            r"\begin{landscape}",
-            r"\begingroup",
-            size,
-            r"\centering",
-            r"\setlength{\tabcolsep}{2pt}",
-            r"\setlength{\LTleft}{\fill}",
-            r"\setlength{\LTright}{\fill}",
-            latex,
-            r"\normalsize",
-            r"\endgroup",
-            r"\end{landscape}",
-        ])
-    return "\n".join([
-        r"\begin{landscape}",
-        r"\begingroup",
-        size,
-        r"\centering",
-        r"\setlength{\tabcolsep}{2pt}",
-        r"\setlength{\LTleft}{\fill}",
-        r"\setlength{\LTright}{\fill}",
-        latex,
-        r"\normalsize",
-        r"\endgroup",
-        r"\end{landscape}",
-    ])
+def _social_carbon_table(controller) -> str:
+    result = _chunk(controller, "social_cost_data").get("result", {})
+    rows = [[
+        "Social Cost of Carbon (SCC) Rs/kgCO2e",
+        format_value(result.get("cost_of_carbon_local"), 4),
+    ]]
+    return simple_table(
+        "Social Cost of Carbon",
+        "tab:social_cost_carbon",
+        ["Description", "Value"],
+        rows,
+        r"p{9cm}>{\raggedleft\arraybackslash}p{4cm}",
+    )
 
 
 def _part(controller, title: str, exporter: Callable, wide: bool = False, size: str = r"\scriptsize") -> str:
@@ -218,7 +101,7 @@ def _part(controller, title: str, exporter: Callable, wide: bool = False, size: 
     latex = latex.replace(r"\begin{table}[h!]", r"\begin{table}[H]")
     latex = latex.replace(r"\begin{table}[htbp]", r"\begin{table}[H]")
     if wide:
-        latex = _wide_block(latex, size=size)
+        latex = wide_block(latex, size=size)
     return latex
 
 
@@ -357,17 +240,6 @@ def _valid_result_cache(controller) -> dict:
     cache = _chunk(controller, "comparison_cache")
     if isinstance(cache, dict) and cache.get("is_valid") and cache.get("results"):
         return cache
-
-    try:
-        from .sections.results import _calculated_cache
-        cache = _calculated_cache(controller)
-    except Exception as exc:
-        print(f"[structured_code_to_latex_report] result calculation failed: {exc}")
-        cache = {}
-
-    if isinstance(cache, dict) and cache.get("results"):
-        cache["is_valid"] = True
-        return cache
     return {}
 
 
@@ -376,7 +248,7 @@ def _results_part(controller) -> str:
     if not cache:
         return r"\textit{No calculated LCCA results available.}"
     latex = results_to_latex(_ResultCacheController(controller, cache))
-    return _wide_block(latex, size=r"\footnotesize")
+    return wide_block(latex, size=r"\footnotesize")
 
 
 def _plot_figure(plot_paths: dict | None, key: str, caption: str) -> str:
@@ -426,41 +298,41 @@ def _appendix_c_wpi(controller) -> str:
     ])
 
 
-def structured_code_to_latex_report_body(controller=None, plot_paths: dict | None = None) -> str:
+def lcca_report_body(controller=None, plot_paths: dict | None = None) -> str:
     parts = [
-        _title_page(_project_name(controller)),
-        _front_matter(),
+        title_page(_project_name(controller)),
+        front_matter(),
         introduction_to_latex(),
-        r"\clearpage",
-        _section("Input data"),
-        _subsection("Bridge geometry and description"),
+        clearpage(),
+        section("Input data"),
+        subsection("Bridge geometry and description"),
         _part(controller, "Bridge Data", bridge_data_to_latex),
-        _subsection("Financial inputs"),
+        subsection("Financial inputs"),
         _part(controller, "Financial Data", financial_data_to_latex),
-        _subsection("Construction data"),
+        subsection("Construction data"),
         _part(controller, "Structure Work Data", structure_work_data_to_latex, wide=True, size=r"\footnotesize"),
-        _subsection("Maintenance data"),
+        subsection("Maintenance data"),
         _part(controller, "Maintenance Data", maintenance_data_to_latex),
-        _subsection("Traffic data"),
+        subsection("Traffic data"),
         _part(controller, "Traffic and Road Data", traffic_fields_to_latex),
         _part(controller, "Vehicle Traffic Data", vehicle_data_to_latex),
         _part(controller, "Traffic Diversion Emissions", diversion_emissions_to_latex),
         _part(controller, "Peak Hour Distribution", peak_hour_distribution_to_latex),
-        _subsection("Environmental input data"),
+        subsection("Environmental input data"),
         _part(controller, "Social Cost of Carbon", _social_carbon_table),
         _part(controller, "Material Emissions", material_emissions_to_latex, wide=True, size=r"\scriptsize"),
         _part(controller, "Transport Emissions", transport_emissions_to_latex, wide=True, size=r"\tiny"),
         _part(controller, "Machinery and Equipment Emissions", machinery_emissions_to_latex, wide=True, size=r"\scriptsize"),
-        _subsection("Recycling data"),
+        subsection("Recycling data"),
         _part(controller, "Recycling", recycling_to_latex, wide=True, size=r"\scriptsize"),
-        r"\clearpage",
-        _section("LCCA results"),
-        _subsection("Life cycle cost results"),
+        clearpage(),
+        section("LCCA results"),
+        subsection("Life cycle cost results"),
         _results_part(controller),
         _result_figures(plot_paths),
-        r"\clearpage",
+        clearpage(),
         _summary_from_v3_content(controller),
-        r"\clearpage",
+        clearpage(),
         _fit_appendix_b_tables(appendices_to_latex()),
         _appendix_c_wpi(controller),
     ]
@@ -468,13 +340,9 @@ def structured_code_to_latex_report_body(controller=None, plot_paths: dict | Non
 
 
 def build_structured_code_to_latex_report_document(controller=None, plot_paths: dict | None = None) -> str:
-    return "\n".join([
-        *PREAMBLE,
-        r"\begin{document}",
-        LATEX_FONT_SIZE,
-        structured_code_to_latex_report_body(controller, plot_paths),
-        r"\end{document}",
-    ])
+    return build_report_v3_document(
+        lcca_report_body(controller, plot_paths)
+    )
 
 
 def _dedupe_lot_entries(lot_path: Path) -> None:
@@ -496,7 +364,21 @@ def _dedupe_lot_entries(lot_path: Path) -> None:
     lot_path.write_text("\n".join(output) + "\n", encoding="utf-8")
 
 
-def compile_structured_code_to_latex_report_pdf(
+def _copy_static_assets(work_dir: Path) -> None:
+    src = Path(__file__).resolve().parent / "images" / "image_1.png"
+    if not src.exists():
+        return
+
+    dst = work_dir.parent / "pdf_generation_v3" / "images" / "image_1.png"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+
+    if src.resolve() == dst.resolve():
+        return
+
+    shutil.copy2(src, dst)
+
+
+def compile_lcca_report_pdf(
     controller=None,
     output_dir: str | Path | None = None,
     filename: str = "structured_code_to_latex_report",
@@ -526,6 +408,7 @@ def compile_structured_code_to_latex_report_pdf(
 
         tex_path = work_dir / f"{filename}.tex"
         pdf_path = work_dir / f"{filename}.pdf"
+        _copy_static_assets(work_dir)
 
         plot_paths = {}
         try:
