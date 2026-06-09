@@ -166,24 +166,24 @@ REPORT_SCHEMA = [
                     {
                         "title": "Material emission factors",
                         "key": KEY_SHOW_MATERIAL_EMISSION,
-                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Material Emissions", material_emissions_to_latex, wide=True, size=r"\scriptsize")
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Material Emissions", material_emissions_to_latex, wide=True, size=r"\footnotesize")
                     },
                     {
                         "title": "Transport emissions",
                         "key": KEY_SHOW_TRANSPORT_EMISSION,
-                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Transport Emissions", transport_emissions_to_latex, wide=True, size=r"\tiny")
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Transport Emissions", transport_emissions_to_latex, wide=True, size=r"\footnotesize")
                     },
                     {
                         "title": "On-site emissions",
                         "key": KEY_SHOW_ONSITE_EMISSION,
-                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Machinery and Equipment Emissions", machinery_emissions_to_latex, wide=True, size=r"\scriptsize")
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Machinery and Equipment Emissions", machinery_emissions_to_latex, wide=True, size=r"\footnotesize")
                     },
                 ]
             },
             {
                 "title": "Recycling data",
                 "key": KEY_SHOW_RECYCLING,
-                "render": lambda ctrl, config, paths, logo: subsection("Recycling data") + "\n" + _part(ctrl, "Recycling", recycling_to_latex, wide=True, size=r"\scriptsize")
+                "render": lambda ctrl, config, paths, logo: subsection("Recycling data") + "\n" + _part(ctrl, "Recycling", recycling_to_latex, wide=True, size=r"\footnotesize")
             },
         ]
     },

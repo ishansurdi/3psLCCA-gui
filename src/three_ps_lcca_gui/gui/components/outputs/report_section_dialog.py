@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QStyle,
 )
-from PySide6.QtCore import Qt, Signal, QThread, QSize, QRect, QStandardPaths
+from PySide6.QtCore import Qt, Signal, QThread, QSize, QRect, QStandardPaths, QTimer, QVariantAnimation, QEasingCurve
 from PySide6.QtGui import QPainter, QColor, QPalette
 
 from three_ps_lcca_gui.gui.themes import get_token, theme_manager
@@ -311,12 +311,10 @@ class _PdfGenWorker(QThread):
             work_stem = os.path.join(work_dir, stem)
 
             if self._mode == "lcca_v3":
-                import three_ps_lcca_gui.gui.components.utils.common_requested_data as crd
                 from three_ps_lcca_gui.code_to_latex.pdf_generation_v3.lcca_report_builder import (
                     compile_lcca_report_pdf,
                 )
 
-                crd.get_all_data()
                 _, final_pdf = compile_lcca_report_pdf(
                     self._controller,
                     output_dir=self._output_dir,
@@ -381,6 +379,21 @@ class ReportSectionDialog(QDialog):
         self.resize(600, 700)
         self._export_dict = export_dict
         self._worker = None
+        self._dot_timer = QTimer(self)
+        self._dot_timer.setInterval(450)
+        self._dot_timer.timeout.connect(self._tick_dots)
+        self._dot_count = 0
+
+        self._animating = False
+        self._bg_anim = QVariantAnimation(self)
+        self._bg_anim.setStartValue(QColor(get_token("primary")))
+        self._bg_anim.setEndValue(QColor(get_token("primary")).lighter(160))
+        self._bg_anim.setDuration(900)
+        self._bg_anim.setEasingCurve(QEasingCurve.InOutSine)
+        self._bg_anim.setLoopCount(1)
+        self._bg_anim.valueChanged.connect(self._on_btn_anim)
+        self._bg_anim.finished.connect(self._ping_pong_anim)
+
         self._init_ui()
 
     def _init_ui(self):
@@ -471,6 +484,26 @@ class ReportSectionDialog(QDialog):
         total_count = len(config)
         self.lbl_status.setText(f"{selected_count} of {total_count} sections selected")
 
+    def _tick_dots(self):
+        self._dot_count = (self._dot_count + 1) % 4
+        self.lbl_status.setText("Generating" + "." * self._dot_count)
+
+    def _ping_pong_anim(self):
+        if not self._animating:
+            return
+        from PySide6.QtCore import QAbstractAnimation
+        self._bg_anim.setDirection(
+            QAbstractAnimation.Backward
+            if self._bg_anim.direction() == QAbstractAnimation.Forward
+            else QAbstractAnimation.Forward
+        )
+        self._bg_anim.start()
+
+    def _on_btn_anim(self, color: QColor):
+        self.btn_save_as.setStyleSheet(
+            f"QPushButton {{ background-color: {color.name()}; color: white; border: none; }}"
+        )
+
     def _set_ui_enabled(self, enabled):
         """Enable/disable UI controls during generation."""
         self.btn_save_as.setEnabled(enabled)
@@ -509,10 +542,20 @@ class ReportSectionDialog(QDialog):
 
     def _generate_pdf(self, output_dir, filename):
         """Launch background PDF generation."""
+        import three_ps_lcca_gui.gui.components.utils.common_requested_data as crd
+        crd.get_all_data()
+
         config = self.tree_sections.get_config()
         export = self._export_dict
 
         self._set_ui_enabled(False)
+        self._dot_count = 0
+        self.lbl_status.setText("Generating.")
+        self._dot_timer.start()
+        self._animating = True
+        self.btn_save_as.setFixedSize(self.btn_save_as.size())
+        self._bg_anim.setDirection(QVariantAnimation.Forward)
+        self._bg_anim.start()
         QApplication.processEvents()
 
         self._worker = _PdfGenWorker(
@@ -529,8 +572,16 @@ class ReportSectionDialog(QDialog):
         self._worker.errored.connect(self._worker.deleteLater)
         self._worker.start()
 
+    def _stop_anim(self):
+        self._animating = False
+        self._dot_timer.stop()
+        self._bg_anim.stop()
+        self.btn_save_as.setStyleSheet(btn_primary())
+        self.lbl_status.setText("")
+
     def _on_pdf_success(self, pdf_path):
         """Handle successful PDF generation."""
+        self._stop_anim()
         self._set_ui_enabled(True)
         QMessageBox.information(
             self,
@@ -544,6 +595,7 @@ class ReportSectionDialog(QDialog):
 
     def _on_pdf_error(self, error_msg: str, tex_path: str):
         """Handle PDF generation error- offer .tex export when available."""
+        self._stop_anim()
         self._set_ui_enabled(True)
 
         if not tex_path:
