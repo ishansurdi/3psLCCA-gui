@@ -1356,10 +1356,19 @@ class OutputsPage(ScrollableForm):
                 self.controller.active_display_name or self.controller.active_project_id
             )
         return d
-
+    
     def _generate_pdf_report(self):
-        dlg = ReportSectionDialog(export_dict=self._build_export_dict(), mode="provenance", parent=self)
+        dlg = ReportSectionDialog(
+            export_dict=self._build_export_dict(),
+            mode="lcca_v3",
+            controller=self.controller,
+            parent=self,
+        )
         dlg.exec()
+
+    # def _generate_pdf_report(self):
+    #     dlg = ReportSectionDialog(export_dict=self._build_export_dict(), mode="provenance", parent=self)
+    #     dlg.exec()
 
     # def _generate_provenance_report(self):
     #     """Triggers the modular V2 report generation using the tree-based dialog."""

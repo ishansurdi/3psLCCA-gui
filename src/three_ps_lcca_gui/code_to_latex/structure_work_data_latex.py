@@ -116,7 +116,7 @@ def collect_for_emissions(all_chunks: dict) -> tuple[defaultdict, defaultdict]:
                         "total": qty * cf * ef,
                     })
                 else:
-                    reason = (values.get("exclusion_reason") or {}).get("carbon", "") or ""
+                    reason = (values.get("exclusion_reason") or {}).get("carbon", "") or "Incomplete Data"
                     excluded[key].append((values.get("material_name", ""), reason))
 
     return included, excluded
