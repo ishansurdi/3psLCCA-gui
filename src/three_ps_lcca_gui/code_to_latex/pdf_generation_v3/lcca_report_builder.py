@@ -1,36 +1,57 @@
 from __future__ import annotations
 
+import os
 import re
+import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Callable
-import shutil
-import tempfile
-import os
+
+try:
+    from three_ps_lcca_gui.gui.components.utils.common_requested_data import set_controller as _set_controller
+except Exception:
+    _set_controller = None
+
+try:
+    from osdag_latex_env import OsdagLatexEnv as _OsdagLatexEnv
+    _PDFLATEX = str(getattr(_OsdagLatexEnv(), "pdflatex", "pdflatex"))
+except Exception:
+    _PDFLATEX = "pdflatex"
 
 from pylatex.utils import escape_latex
 
-from three_ps_lcca_gui.report.constants import (
-    KEY_SHOW_AVG_TRAFFIC,
-    KEY_SHOW_BRIDGE_DESC,
-    KEY_SHOW_CONSTRUCTION,
-    KEY_SHOW_FINANCIAL,
-    KEY_SHOW_INTRODUCTION,
-    KEY_SHOW_LCCA_RESULTS,
-    KEY_SHOW_MATERIAL_EMISSION,
-    KEY_SHOW_ONSITE_EMISSION,
-    KEY_SHOW_PEAK_HOUR,
-    KEY_PLOT_PILLAR_BARS,
-    KEY_PLOT_PILLAR_DONUT,
-    KEY_PLOT_STAGE_BARS,
-    KEY_PLOT_SUSTAINABILITY_MATRIX,
-    KEY_SHOW_ROAD_TRAFFIC,
-    KEY_SHOW_SOCIAL_CARBON,
-    KEY_SHOW_TITLE_PAGE,
-    KEY_SHOW_TRANSPORT_EMISSION,
-    KEY_SHOW_USE_STAGE,
-    KEY_SHOW_VEHICLE_EMISSION,
-)
+# ─────────────────────────────────────────────────────────────────────────────
+# Report Configuration Keys
+# ─────────────────────────────────────────────────────────────────────────────
+KEY_SHOW_TITLE_PAGE         = "show_title_page"
+KEY_SHOW_INTRODUCTION       = "show_introduction"
+KEY_SHOW_BRIDGE_DESC        = "show_bridge_desc"
+KEY_SHOW_FINANCIAL          = "show_financial"
+KEY_SHOW_CONSTRUCTION       = "show_construction"
+KEY_SHOW_USE_STAGE          = "show_use_stage"
+KEY_SHOW_AVG_TRAFFIC        = "show_avg_traffic"
+KEY_SHOW_ROAD_TRAFFIC       = "show_road_traffic"
+KEY_SHOW_PEAK_HOUR          = "show_peak_hour"
+KEY_SHOW_VEHICLE_EMISSION   = "show_vehicle_emission"
+KEY_SHOW_SOCIAL_CARBON      = "show_social_carbon"
+KEY_SHOW_MATERIAL_EMISSION  = "show_material_emission"
+KEY_SHOW_TRANSPORT_EMISSION = "show_transport_emission"
+KEY_SHOW_ONSITE_EMISSION    = "show_onsite_emission"
+KEY_SHOW_RECYCLING          = "show_recycling"
+KEY_SHOW_TOC                = "show_toc"
+KEY_SHOW_LCCA_RESULTS       = "show_lcca_results"
+KEY_SHOW_SUMMARY            = "show_summary"
+KEY_SHOW_APPENDIX_A         = "show_appendix_a"
+KEY_SHOW_APPENDIX_B         = "show_appendix_b"
+KEY_SHOW_APPENDIX_C         = "show_appendix_c"
+
+# Plot Keys
+KEY_PLOT_PILLAR_DONUT          = "plot_pillar_donut"
+KEY_PLOT_SUSTAINABILITY_MATRIX = "plot_sustainability_matrix"
+KEY_PLOT_STAGE_BARS            = "plot_stage_bars"
+KEY_PLOT_PILLAR_BARS           = "plot_pillar_bars"
+
 
 from ..bridge_data_latex import bridge_data_to_latex
 from ..financial_data_latex import financial_data_to_latex
@@ -61,6 +82,143 @@ from .latex_helpers import (
 from .sections.appendices import appendices_to_latex
 from .sections.introduction import introduction_to_latex
 from ..social_cost_data_latex import social_cost_data_to_latex
+from ...report.plot_exporter import generate_plots
+
+
+REPORT_SCHEMA = [
+    {
+        "title": "Title page",
+        "key": KEY_SHOW_TITLE_PAGE,
+        "render": lambda ctrl, config, paths, logo: title_page(_project_name(ctrl), logo_path=logo)
+    },
+    {
+        "title": "Table of contents",
+        "key": KEY_SHOW_TOC,
+        "render": lambda ctrl, config, paths, logo: front_matter()
+    },
+    {
+        "title": "Introduction",
+        "key": KEY_SHOW_INTRODUCTION,
+        "render": lambda ctrl, config, paths, logo: introduction_to_latex()
+    },
+    {
+        "title": "Input data",
+        "key": None,
+        "render_header": lambda: clearpage() + "\n" + section("Input data"),
+        "children": [
+            {
+                "title": "Bridge geometry and description",
+                "key": KEY_SHOW_BRIDGE_DESC,
+                "render": lambda ctrl, config, paths, logo: subsection("Bridge geometry and description") + "\n" + _part(ctrl, "Bridge Data", bridge_data_to_latex)
+            },
+            {
+                "title": "Financial inputs",
+                "key": KEY_SHOW_FINANCIAL,
+                "render": lambda ctrl, config, paths, logo: subsection("Financial inputs") + "\n" + _part(ctrl, "Financial Data", financial_data_to_latex)
+            },
+            {
+                "title": "Construction data",
+                "key": KEY_SHOW_CONSTRUCTION,
+                "render": lambda ctrl, config, paths, logo: subsection("Construction data") + "\n" + _part(ctrl, "Structure Work Data", structure_work_data_to_latex, wide=True, size=r"\footnotesize")
+            },
+            {
+                "title": "Maintenance data",
+                "key": KEY_SHOW_USE_STAGE,
+                "render": lambda ctrl, config, paths, logo: subsection("Maintenance data") + "\n" + _part(ctrl, "Maintenance Data", maintenance_data_to_latex)
+            },
+            {
+                "title": "Traffic data",
+                "key": None,
+                "render_header": lambda: subsection("Traffic data"),
+                "children": [
+                    {
+                        "title": "Traffic and road data",
+                        "key": KEY_SHOW_ROAD_TRAFFIC,
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Traffic and Road Data", traffic_fields_to_latex)
+                    },
+                    {
+                        "title": "Average daily traffic",
+                        "key": KEY_SHOW_AVG_TRAFFIC,
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Vehicle Traffic Data", vehicle_data_to_latex)
+                    },
+                    {
+                        "title": "Traffic diversion emissions",
+                        "key": KEY_SHOW_VEHICLE_EMISSION,
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Traffic Diversion Emissions", diversion_emissions_to_latex)
+                    },
+                    {
+                        "title": "Peak hour distribution",
+                        "key": KEY_SHOW_PEAK_HOUR,
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Peak Hour Distribution", peak_hour_distribution_to_latex)
+                    },
+                ]
+            },
+            {
+                "title": "Environmental input data",
+                "key": None,
+                "render_header": lambda: subsection("Environmental input data"),
+                "children": [
+                    {
+                        "title": "Social cost of carbon",
+                        "key": KEY_SHOW_SOCIAL_CARBON,
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Social Cost Data", social_cost_data_to_latex)
+                    },
+                    {
+                        "title": "Material emission factors",
+                        "key": KEY_SHOW_MATERIAL_EMISSION,
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Material Emissions", material_emissions_to_latex, wide=True, size=r"\scriptsize")
+                    },
+                    {
+                        "title": "Transport emissions",
+                        "key": KEY_SHOW_TRANSPORT_EMISSION,
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Transport Emissions", transport_emissions_to_latex, wide=True, size=r"\tiny")
+                    },
+                    {
+                        "title": "On-site emissions",
+                        "key": KEY_SHOW_ONSITE_EMISSION,
+                        "render": lambda ctrl, config, paths, logo: _part(ctrl, "Machinery and Equipment Emissions", machinery_emissions_to_latex, wide=True, size=r"\scriptsize")
+                    },
+                ]
+            },
+            {
+                "title": "Recycling data",
+                "key": KEY_SHOW_RECYCLING,
+                "render": lambda ctrl, config, paths, logo: subsection("Recycling data") + "\n" + _part(ctrl, "Recycling", recycling_to_latex, wide=True, size=r"\scriptsize")
+            },
+        ]
+    },
+    {
+        "title": "LCCA results",
+        "key": KEY_SHOW_LCCA_RESULTS,
+        "render": lambda ctrl, config, paths, logo: clearpage() + "\n" + section("LCCA results") + "\n" + subsection("Life cycle cost results") + "\n" + _results_part(ctrl) + "\n" + _result_figures(paths)
+    },
+    {
+        "title": "Summary and conclusions",
+        "key": KEY_SHOW_SUMMARY,
+        "render": lambda ctrl, config, paths, logo: clearpage() + "\n" + _summary_from_v3_content(ctrl)
+    },
+    {
+        "title": "Appendices",
+        "key": None,
+        "children": [
+            {
+                "title": "Appendix A: Assumptions",
+                "key": KEY_SHOW_APPENDIX_A,
+                "render": lambda ctrl, config, paths, logo: clearpage() + "\n" + appendices_to_latex({KEY_SHOW_APPENDIX_A: True, KEY_SHOW_APPENDIX_B: False})
+            },
+            {
+                "title": "Appendix B: Calculation methodology",
+                "key": KEY_SHOW_APPENDIX_B,
+                "render": lambda ctrl, config, paths, logo: clearpage() + "\n" + _fit_appendix_b_tables(appendices_to_latex({KEY_SHOW_APPENDIX_A: False, KEY_SHOW_APPENDIX_B: True}))
+            },
+            {
+                "title": "Appendix C: Miscellaneous data",
+                "key": KEY_SHOW_APPENDIX_C,
+                "render": lambda ctrl, config, paths, logo: _appendix_c_wpi(ctrl)
+            },
+        ]
+    },
+]
 
 
 def _project_name(controller=None) -> str:
@@ -304,45 +462,43 @@ def _appendix_c_wpi(controller) -> str:
     ])
 
 
+def _render_schema_item(item, controller, config, plot_paths, logo_path):
+    """Recursively render schema items based on config toggles."""
+    # If the item has a key, check if it's enabled
+    key = item.get("key")
+    if key and not config.get(key, True):
+        return ""
+
+    # If it's a parent (has children)
+    if "children" in item:
+        child_content = []
+        for child in item["children"]:
+            child_content.append(_render_schema_item(child, controller, config, plot_paths, logo_path))
+        
+        body = "\n\n".join(c for c in child_content if c.strip())
+        if not body:
+            return ""
+            
+        header = ""
+        if "render_header" in item:
+            header = item["render_header"]()
+            
+        return header + "\n" + body
+
+    # It's a leaf node with a render function
+    if "render" in item:
+        return item["render"](controller, config, plot_paths, logo_path)
+    
+    return ""
+
+
 def lcca_report_body(controller=None, plot_paths: dict | None = None, config: dict | None = None, logo_path: str = "") -> str:
     config = config or {}
-    parts = [
-        title_page(_project_name(controller), logo_path=logo_path) if config.get(KEY_SHOW_TITLE_PAGE, True) else "",
-        front_matter(),
-        introduction_to_latex() if config.get(KEY_SHOW_INTRODUCTION, True) else "",
-        clearpage(),
-        section("Input data"),
-        subsection("Bridge geometry and description") if config.get(KEY_SHOW_BRIDGE_DESC, True) else "",
-        _part(controller, "Bridge Data", bridge_data_to_latex) if config.get(KEY_SHOW_BRIDGE_DESC, True) else "",
-        subsection("Financial inputs") if config.get(KEY_SHOW_FINANCIAL, True) else "",
-        _part(controller, "Financial Data", financial_data_to_latex) if config.get(KEY_SHOW_FINANCIAL, True) else "",
-        subsection("Construction data") if config.get(KEY_SHOW_CONSTRUCTION, True) else "",
-        _part(controller, "Structure Work Data", structure_work_data_to_latex, wide=True, size=r"\footnotesize") if config.get(KEY_SHOW_CONSTRUCTION, True) else "",
-        subsection("Maintenance data") if config.get(KEY_SHOW_USE_STAGE, True) else "",
-        _part(controller, "Maintenance Data", maintenance_data_to_latex) if config.get(KEY_SHOW_USE_STAGE, True) else "",
-        subsection("Traffic data"),
-        _part(controller, "Traffic and Road Data", traffic_fields_to_latex) if config.get(KEY_SHOW_ROAD_TRAFFIC, True) else "",
-        _part(controller, "Vehicle Traffic Data", vehicle_data_to_latex) if config.get(KEY_SHOW_AVG_TRAFFIC, True) else "",
-        _part(controller, "Traffic Diversion Emissions", diversion_emissions_to_latex) if config.get(KEY_SHOW_VEHICLE_EMISSION, True) else "",
-        _part(controller, "Peak Hour Distribution", peak_hour_distribution_to_latex) if config.get(KEY_SHOW_PEAK_HOUR, True) else "",
-        subsection("Environmental input data"),
-        _part(controller, "Social Cost Data", social_cost_data_to_latex) if config.get(KEY_SHOW_SOCIAL_CARBON, True) else "",
-        _part(controller, "Material Emissions", material_emissions_to_latex, wide=True, size=r"\scriptsize") if config.get(KEY_SHOW_MATERIAL_EMISSION, True) else "",
-        _part(controller, "Transport Emissions", transport_emissions_to_latex, wide=True, size=r"\tiny") if config.get(KEY_SHOW_TRANSPORT_EMISSION, True) else "",
-        _part(controller, "Machinery and Equipment Emissions", machinery_emissions_to_latex, wide=True, size=r"\scriptsize") if config.get(KEY_SHOW_ONSITE_EMISSION, True) else "",
-        subsection("Recycling data"),
-        _part(controller, "Recycling", recycling_to_latex, wide=True, size=r"\scriptsize"),
-        clearpage(),
-        section("LCCA results") if config.get(KEY_SHOW_LCCA_RESULTS, True) else "",
-        subsection("Life cycle cost results") if config.get(KEY_SHOW_LCCA_RESULTS, True) else "",
-        _results_part(controller) if config.get(KEY_SHOW_LCCA_RESULTS, True) else "",
-        _result_figures(plot_paths) if config.get(KEY_SHOW_LCCA_RESULTS, True) else "",
-        clearpage(),
-        _summary_from_v3_content(controller),
-        clearpage(),
-        _fit_appendix_b_tables(appendices_to_latex()),
-        _appendix_c_wpi(controller),
-    ]
+    
+    parts = []
+    for item in REPORT_SCHEMA:
+        parts.append(_render_schema_item(item, controller, config, plot_paths, logo_path))
+        
     return "\n\n".join(part for part in parts if part and part.strip())
 
 
@@ -392,11 +548,11 @@ def compile_lcca_report_pdf(
     keep_artifacts: bool = False,
     config: dict | None = None,
 ) -> tuple[Path, Path]:
-    try:
-        from three_ps_lcca_gui.gui.components.utils.common_requested_data import set_controller
-        set_controller(controller)
-    except Exception:
-        pass
+    if _set_controller is not None:
+        try:
+            _set_controller(controller)
+        except Exception:
+            pass
 
     if output_dir is None:
         output_dir = Path(__file__).resolve().parent / "tests"
@@ -420,7 +576,6 @@ def compile_lcca_report_pdf(
 
         plot_paths = {}
         try:
-            from three_ps_lcca_gui.report.plot_exporter import generate_plots
             cache = _valid_result_cache(controller)
             if cache.get("results"):
                 currency = (
@@ -444,16 +599,33 @@ def compile_lcca_report_pdf(
             encoding="utf-8",
         )
 
-        lot_path = tex_path.with_suffix(".lot")
-        for _ in range(3):
-            subprocess.run(
-                ["pdflatex", "-interaction=nonstopmode", tex_path.name],
-                cwd=work_dir,
-                check=True,
-                capture_output=True,
-                text=True,
+        if not shutil.which(_PDFLATEX):
+            raise RuntimeError(
+                "pdflatex was not found. To generate PDF reports, please install a TeX distribution:\n"
+                "  • Windows: MiKTeX — https://miktex.org\n"
+                "  • Windows: TeX Live — https://tug.org/texlive\n"
+                "  • macOS:   MacTeX — https://www.tug.org/mactex\n"
+                "  • Linux:   sudo apt install texlive-latex-recommended\n\n"
+                "After installation, restart the application."
             )
-            _dedupe_lot_entries(lot_path)
+
+        lot_path = tex_path.with_suffix(".lot")
+        subprocess.run(
+            [_PDFLATEX, "-interaction=nonstopmode", "-draftmode", tex_path.name],
+            cwd=work_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        _dedupe_lot_entries(lot_path)
+        subprocess.run(
+            [_PDFLATEX, "-interaction=nonstopmode", tex_path.name],
+            cwd=work_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        _dedupe_lot_entries(lot_path)
 
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF was not generated: {pdf_path}")

@@ -10,40 +10,93 @@ EMDASH = r"\textemdash"
 generated_date = date.today().strftime("%d-%m-%Y")
 V3_PREAMBLE = [
     r"\documentclass[12pt,a4paper]{article}",
+
+    # ── Encoding & fonts ──────────────────────────────────────────────────────
     r"\usepackage[utf8]{inputenc}",
+    r"\usepackage[T1]{fontenc}",       # proper output font encoding
+    r"\usepackage{newtxtext}",         # Times-style body font (professional)
+    r"\usepackage{newtxmath}",         # matching math font
+    r"\usepackage{microtype}",         # microtypography: protrusion + expansion
+
+    # ── Core layout ───────────────────────────────────────────────────────────
+    r"\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}",
+    r"\usepackage{setspace}",          # line-spacing control
+    r"\setstretch{1.15}",              # comfortable reading spacing
+    r"\setlength{\parskip}{6pt}",      # space between paragraphs
+    r"\setlength{\parindent}{0pt}",    # no first-line indent (modern style)
+
+    # ── Tables ────────────────────────────────────────────────────────────────
     r"\usepackage{booktabs}",
     r"\usepackage{array}",
     r"\usepackage{longtable}",
+    r"\usepackage{tabularx}",
+    r"\usepackage{multirow}",
+    r"\usepackage{makecell}",          # \thead, per-cell formatting
+
+    # ── Graphics & floats ─────────────────────────────────────────────────────
     r"\usepackage{graphicx}",
-    r"\usepackage{caption}",
     r"\usepackage{float}",
     r"\usepackage{pdflscape}",
     r"\usepackage{adjustbox}",
-    r"\usepackage{etoolbox}",
+
+    # ── Captions ──────────────────────────────────────────────────────────────
+    r"\usepackage{caption}",
+    r"\captionsetup{font=small, labelfont=bf, labelsep=period, skip=4pt}",
+
+    # ── Math ──────────────────────────────────────────────────────────────────
     r"\usepackage{amsmath}",
+
+    # ── Colour & lists ────────────────────────────────────────────────────────
     r"\usepackage{xcolor}",
+    r"\usepackage{enumitem}",
+    r"\setlist{noitemsep, topsep=4pt, partopsep=0pt}",
+
+    # ── Headers / footers ─────────────────────────────────────────────────────
+    r"\usepackage{fancyhdr}",
+    r"\usepackage{lastpage}",
+    r"\fancyhf{}",
+    r"\renewcommand{\headrulewidth}{0.4pt}",
+    r"\renewcommand{\footrulewidth}{0.4pt}",
+    r"\fancyhead[L]{\small\nouppercase{\leftmark}}",
+    r"\fancyhead[R]{\small 3PS LCCA}",
+    r"\fancyfoot[C]{\small Page~\thepage~of~\pageref*{LastPage}}",
+    r"\AtBeginDocument{\pagestyle{fancy}}",
+
+    # ── Section / ToC styling ─────────────────────────────────────────────────
     r"\usepackage{tocloft}",
     r"\usepackage{titlesec}",
-    r"\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}",
-    r"\usepackage[hidelinks,hypertexnames=false]{hyperref}",
-    r"\DeclareUnicodeCharacter{20B9}{Rs.}",
-    r"\DeclareUnicodeCharacter{2082}{\textsubscript{2}}",
-    r"\DeclareUnicodeCharacter{2013}{--}",
-    r"\DeclareUnicodeCharacter{2014}{--}",
-    r"\setlength{\tabcolsep}{4pt}",
-    r"\renewcommand{\arraystretch}{1.18}",
-    r"\setlength{\LTleft}{0pt}",
-    r"\setlength{\LTright}{0pt}",
-    r"\setlength{\LTcapwidth}{\textwidth}",
+    r"\usepackage{etoolbox}",
+    r"\titleformat{\section}{\Large\bfseries\color{blue!55!black}}{\thesection}{0.75em}{}",
+    r"\titleformat{\subsection}{\large\bfseries\color{blue!55!black}}{\thesubsection}{0.75em}{}",
+    r"\titleformat{\subsubsection}{\normalsize\bfseries\color{blue!55!black}}{\thesubsubsection}{0.75em}{}",
+    r"\titlespacing*{\section}{0pt}{18pt}{8pt}",
+    r"\titlespacing*{\subsection}{0pt}{14pt}{6pt}",
+    r"\titlespacing*{\subsubsection}{0pt}{10pt}{4pt}",
     r"\renewcommand{\contentsname}{Table of Contents}",
     r"\renewcommand{\listtablename}{List of Tables}",
     r"\renewcommand{\listfigurename}{List of Figures}",
     r"\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}",
     r"\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}",
-    r"\titleformat{\section}{\Large\bfseries\color{blue!55!black}}{\thesection}{0.75em}{}",
-    r"\titleformat{\subsection}{\large\bfseries\color{blue!55!black}}{\thesubsection}{0.75em}{}",
+
+    # ── PDF metadata & bookmarks ──────────────────────────────────────────────
+    r"\usepackage[hidelinks,hypertexnames=false]{hyperref}",
+    r"\usepackage{bookmark}",          # reliable PDF bookmarks (load after hyperref)
+
+    # ── Unicode shorthands ────────────────────────────────────────────────────
+    r"\DeclareUnicodeCharacter{20B9}{Rs.}",
+    r"\DeclareUnicodeCharacter{2082}{\textsubscript{2}}",
+    r"\DeclareUnicodeCharacter{2013}{--}",
+    r"\DeclareUnicodeCharacter{2014}{--}",
+
+    # ── Global table defaults ─────────────────────────────────────────────────
+    r"\setlength{\tabcolsep}{4pt}",
+    r"\renewcommand{\arraystretch}{1.18}",
+    r"\setlength{\LTleft}{0pt}",
+    r"\setlength{\LTright}{0pt}",
+    r"\setlength{\LTcapwidth}{\textwidth}",
     r"\BeforeBeginEnvironment{tabular}{\begin{adjustbox}{max width=\linewidth}}",
     r"\AfterEndEnvironment{tabular}{\end{adjustbox}}",
+    r"\AtBeginEnvironment{tabular}{\footnotesize}",
     r"\sloppy",
 ]
 

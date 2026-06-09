@@ -41,33 +41,12 @@ from three_ps_lcca_gui.gui.theme import (
 from three_ps_lcca_gui.gui.styles import font as _f, btn_primary, btn_outline
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Config keys
+# Config keys & Schema
 # ─────────────────────────────────────────────────────────────────────────────
-from three_ps_lcca_gui.report.constants import (
-    KEY_SHOW_BRIDGE_DESC,
-    KEY_SHOW_FINANCIAL,
-    KEY_SHOW_CONSTRUCTION,
-    KEY_SHOW_LCC_ASSUMPTIONS,
-    KEY_SHOW_USE_STAGE,
-    KEY_SHOW_AVG_TRAFFIC,
-    KEY_SHOW_ROAD_TRAFFIC,
-    KEY_SHOW_PEAK_HOUR,
-    KEY_SHOW_HUMAN_INJURY,
-    KEY_SHOW_VEHICLE_DAMAGE,
-    KEY_SHOW_TYRE_COST,
-    KEY_SHOW_FUEL_OIL,
-    KEY_SHOW_NEW_VEHICLE,
-    KEY_SHOW_SOCIAL_CARBON,
-    KEY_SHOW_MATERIAL_EMISSION,
-    KEY_SHOW_USE_EMISSION,
-    KEY_SHOW_VEHICLE_EMISSION,
-    KEY_SHOW_ONSITE_EMISSION,
-    KEY_SHOW_TRANSPORT_EMISSION,
+from three_ps_lcca_gui.code_to_latex.pdf_generation_v3.lcca_report_builder import (
+    REPORT_SCHEMA,
     KEY_SHOW_TITLE_PAGE,
-    KEY_SHOW_INTRODUCTION,
     KEY_SHOW_LCCA_RESULTS,
-    SECTION_MAP,
-    SUBSECTION_TABLE_MAP,
 )
 
 
@@ -205,12 +184,10 @@ class SectionTreeWidget(QTreeWidget):
         option.state &= ~(QStyle.State_Selected | QStyle.State_MouseOver | QStyle.State_HasFocus)
         super().drawRow(painter, option, index)
 
-    def build_from_sections(self, section_map, table_map):
-        """Populate tree widget from SECTION_MAP and SUBSECTION_TABLE_MAP."""
+    def build_from_sections(self):
+        """Populate tree widget directly from the data-driven REPORT_SCHEMA."""
         self.clear()
-        if not isinstance(section_map, dict):
-            return
-
+        
         from PySide6.QtGui import QFont as _QFont, QColor as _QColor
         font_section = _QFont("Ubuntu", FS_BASE); font_section.setWeight(_QFont.Weight.DemiBold)
         font_sub    = _QFont("Ubuntu", FS_BASE)
@@ -219,37 +196,34 @@ class SectionTreeWidget(QTreeWidget):
         col_sub     = _QColor(get_token("text"))
         col_table   = _QColor(get_token("text_secondary"))
 
-        for section_name, subsections in section_map.items():
-            section_item = QTreeWidgetItem(self, [section_name])
-            section_item.setFlags(section_item.flags() | Qt.ItemIsUserCheckable)
-            section_item.setCheckState(0, Qt.Checked)
-            section_item.setFont(0, font_section)
-            section_item.setForeground(0, col_section)
-            if section_name == "Title page":
-                section_item.setData(0, Qt.UserRole, KEY_SHOW_TITLE_PAGE)
-            elif section_name == "Introduction":
-                section_item.setData(0, Qt.UserRole, KEY_SHOW_INTRODUCTION)
-            elif section_name == "LCCA results":
-                section_item.setData(0, Qt.UserRole, KEY_SHOW_LCCA_RESULTS)
+        def _add_item(schema_item, parent_widget):
+            tree_item = QTreeWidgetItem(parent_widget, [schema_item["title"]])
+            tree_item.setFlags(tree_item.flags() | Qt.ItemIsUserCheckable)
+            tree_item.setCheckState(0, Qt.Checked)
+            
+            # Formatting based on depth
+            if isinstance(parent_widget, QTreeWidget):
+                tree_item.setFont(0, font_section)
+                tree_item.setForeground(0, col_section)
+            elif parent_widget.parent() and isinstance(parent_widget.parent(), QTreeWidget):
+                tree_item.setFont(0, font_sub)
+                tree_item.setForeground(0, col_sub)
+            else:
+                tree_item.setFont(0, font_table)
+                tree_item.setForeground(0, col_table)
 
-            if isinstance(subsections, (list, tuple)):
-                for subsection in subsections:
-                    sub_item = QTreeWidgetItem(section_item, [str(subsection)])
-                    sub_item.setFlags(sub_item.flags() | Qt.ItemIsUserCheckable)
-                    sub_item.setCheckState(0, Qt.Checked)
-                    sub_item.setFont(0, font_sub)
-                    sub_item.setForeground(0, col_sub)
+            # Map the config key
+            key = schema_item.get("key")
+            if key:
+                tree_item.setData(0, Qt.UserRole, key)
 
-                    if subsection in table_map:
-                        for label, config_key in table_map[subsection]:
-                            table_item = QTreeWidgetItem(sub_item, [label])
-                            table_item.setFlags(
-                                table_item.flags() | Qt.ItemIsUserCheckable
-                            )
-                            table_item.setCheckState(0, Qt.Checked)
-                            table_item.setFont(0, font_table)
-                            table_item.setForeground(0, col_table)
-                            table_item.setData(0, Qt.UserRole, config_key)
+            # Recursively add children
+            if "children" in schema_item:
+                for child in schema_item["children"]:
+                    _add_item(child, tree_item)
+
+        for top_item in REPORT_SCHEMA:
+            _add_item(top_item, self)
 
         self.expandAll()
 
@@ -321,7 +295,7 @@ class _PdfGenWorker(QThread):
     finished = Signal(str)        # emitted with final PDF path on success
     errored = Signal(str, str)    # (error_msg, tex_path_or_empty)- work dir kept alive when tex_path set
 
-    def __init__(self, export_dict, config, output_dir, filename="LCCA_Report", mode="standard", controller=None):
+    def __init__(self, export_dict, config, output_dir, filename="LCCA_Report", mode="lcca_v3", controller=None):
         super().__init__()
         self._export_dict = export_dict
         self._config = config
@@ -352,20 +326,6 @@ class _PdfGenWorker(QThread):
                 shutil.rmtree(work_dir, ignore_errors=True)
                 self.finished.emit(str(final_pdf))
                 return
-
-            if self._mode == "provenance":
-                # from ....report.v2_report.mod_provenance_generate import generate_report as gen_provenance
-                from three_ps_lcca_gui.report.mod_provenance_generate import generate_report as gen_provenance
-                gen_provenance(
-                    work_stem, export_dict=self._export_dict, config_override=self._config,
-                    output_dir=work_dir,
-                )
-            else:
-                from three_ps_lcca_gui.report.lcca_generate import generate_report
-                generate_report(
-                    work_stem, export_dict=self._export_dict, config_override=self._config,
-                    output_dir=work_dir,
-                )
 
             work_pdf = work_stem + ".pdf"
             if os.path.exists(work_pdf):
@@ -407,14 +367,12 @@ class ReportSectionDialog(QDialog):
     """
 
 
-    def __init__(self, export_dict: dict, mode="standard", controller=None, parent=None):
+    def __init__(self, export_dict: dict, mode="lcca_v3", controller=None, parent=None):
         super().__init__(parent)
         self._mode = mode
         self._controller = controller
         title_text = (
-            "Report Customization"
-            if mode == "standard"
-            else "LCCA V3 Report Customization"
+            "LCCA V3 Report Customization"
             if mode == "lcca_v3"
             else "Data Provenance Report V2"
         )
@@ -433,9 +391,7 @@ class ReportSectionDialog(QDialog):
 
         # Title
         title_text = (
-            "Report Customization"
-            if self._mode == "standard"
-            else "LCCA V3 Report Customization"
+            "LCCA Report Customization"
             if self._mode == "lcca_v3"
             else "Data Provenance Report V2"
         )
@@ -445,12 +401,9 @@ class ReportSectionDialog(QDialog):
         self.lbl_title.setAlignment(Qt.AlignLeft)
         main_layout.addWidget(self.lbl_title)
 
-        subtitle_text = (
-            "Select the sections and data tables to include in your final LCCA PDF report."
-            if self._mode == "standard"
-            else "Select the sections and data tables to include in your final modular LCCA PDF report."
+        self.lbl_subtitle = QLabel(
+            "Select the sections and data tables to include in your final modular LCCA PDF report."
         )
-        self.lbl_subtitle = QLabel(subtitle_text)
         self.lbl_subtitle.setFont(_f(FS_BASE, FW_NORMAL))
         self.lbl_subtitle.setStyleSheet(f"color: {get_token('text_secondary')};")
         self.lbl_subtitle.setWordWrap(True)
@@ -474,7 +427,7 @@ class ReportSectionDialog(QDialog):
 
         # Tree widget
         self.tree_sections = SectionTreeWidget()
-        self.tree_sections.build_from_sections(SECTION_MAP, SUBSECTION_TABLE_MAP)
+        self.tree_sections.build_from_sections()
         self.tree_sections.selectionChanged.connect(self.on_selection_changed)
         tree_layout.addWidget(self.tree_sections)
 

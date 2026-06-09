@@ -11,9 +11,12 @@ PNGs are created via tempfile.mkstemp inside output_dir so pdflatex can resolve
 them by basename alone (it runs from that same directory).
 """
 
+import concurrent.futures
 import os
 import tempfile
 
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.ticker
 import numpy as np
 import matplotlib.pyplot as plt
@@ -485,15 +488,22 @@ def generate_plots(results: dict, output_dir: str, currency: str = "INR") -> dic
          lambda: SustainabilityBarPlotter(_build_agg_pillar_data(results), currency).setup_plot()),
     ]
 
-    for key, guard, builder in _jobs:
+    def _run_job(job):
+        key, guard, builder = job
         try:
             if not guard():
-                continue
+                return key, None
             fig = builder()
             fd, path = _make_temp(key, output_dir)
             _save(fig, fd, path)
-            out[key] = os.path.basename(path)
+            return key, os.path.basename(path)
         except Exception as e:
             print(f"[plot_exporter] {key} failed: {e}")
+            return key, None
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for key, basename in executor.map(_run_job, _jobs):
+            if basename:
+                out[key] = basename
 
     return out

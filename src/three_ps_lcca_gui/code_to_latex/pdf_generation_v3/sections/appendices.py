@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 
+from ..lcca_report_builder import KEY_SHOW_APPENDIX_A, KEY_SHOW_APPENDIX_B
 from ..appendix_A_content import APPENDIX_A_LATEX
 from ..appendix_B_content import APPENDIX_B_LATEX
 from ..latex_helpers import appendix_counter
@@ -86,10 +87,13 @@ def _appendix_b_content() -> str:
     return content
 
 
-def appendices_to_latex() -> str:
-    return "\n\n".join([
-        appendix_counter("A"),
-        _appendix_a_content(),
-        appendix_counter("B"),
-        _appendix_b_content(),
-    ])
+def appendices_to_latex(config: dict | None = None) -> str:
+    config = config or {}
+    parts = []
+    if config.get(KEY_SHOW_APPENDIX_A, True):
+        parts.append(appendix_counter("A"))
+        parts.append(_appendix_a_content())
+    if config.get(KEY_SHOW_APPENDIX_B, True):
+        parts.append(appendix_counter("B"))
+        parts.append(_appendix_b_content())
+    return "\n\n".join(parts)
