@@ -20,6 +20,12 @@ def open_glossary(slug_parts: list[str] | None = None, parent=None) -> None:
     _open_glossary(slug_parts)
 
 
+def close_glossary() -> None:
+    """Terminate the glossary subprocess if running."""
+    from .webview_handler import close_glossary as _close_glossary
+    _close_glossary()
+
+
 def open_doc(slug_parts: list[str], parent=None) -> None:
     if not slug_parts:
         return

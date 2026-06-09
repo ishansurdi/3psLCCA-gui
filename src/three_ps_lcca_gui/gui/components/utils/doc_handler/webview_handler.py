@@ -128,10 +128,42 @@ def run():
     api._cleanup()
 
 
+def close_glossary() -> None:
+    """Terminate the glossary subprocess if it is running."""
+    if not _LOCK_FILE.exists():
+        return
+    try:
+        import psutil
+        pid = int(_LOCK_FILE.read_text().strip())
+        proc = psutil.Process(pid)
+        if str(FILE_PATH) in proc.cmdline():
+            proc.terminate()
+    except Exception:
+        pass
+    finally:
+        _LOCK_FILE.unlink(missing_ok=True)
+        _NAV_FILE.unlink(missing_ok=True)
+
+
+def _focus_glossary_window() -> None:
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        u32 = ctypes.windll.user32
+        hwnd = u32.FindWindowW(None, "Glossary")
+        if hwnd:
+            u32.ShowWindow(hwnd, 9)        # SW_RESTORE (un-minimise if needed)
+            u32.SetForegroundWindow(hwnd)
+    except Exception:
+        pass
+
+
 def open_glossary(slug_parts=None) -> None:
     if _is_running():
         if slug_parts:
             _NAV_FILE.write_text("/".join(slug_parts) + ".md", encoding="utf-8")
+        _focus_glossary_window()
         return
     subprocess.Popen(
         [sys.executable, str(FILE_PATH),

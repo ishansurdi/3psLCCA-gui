@@ -185,6 +185,8 @@ class ProjectManager:
         if win in self.windows:
             self.windows.remove(win)
         if not self.windows:
+            from three_ps_lcca_gui.gui.components.utils.doc_handler import close_glossary
+            close_glossary()
             QApplication.quit()
 
     def refresh_all_home_screens(self):
