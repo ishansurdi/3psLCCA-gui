@@ -350,7 +350,7 @@ class _PdfGenWorker(QThread):
 
         except Exception as e:
             shutil.rmtree(work_dir, ignore_errors=True)
-            self.errored.emit(f"{type(e).__name__}: {e}\n\n{traceback.format_exc()}", "")
+            self.errored.emit(f"{type(e).__name__}: {e}", "")
 
 
 # ==============================================================================

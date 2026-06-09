@@ -589,15 +589,15 @@ def compile_lcca_report_pdf(
 
         logo_file = Path(__file__).resolve().parents[2] / "gui" / "assets" / "logo" / "3pslcca_header.png"
         logo_path = os.path.relpath(logo_file, work_dir).replace("\\", "/")
-        tex_path.write_text(
-            build_structured_code_to_latex_report_document(
-                controller,
-                plot_paths,
-                config=config,
-                logo_path=logo_path,
-            ),
-            encoding="utf-8",
+        tex_content = build_structured_code_to_latex_report_document(
+            controller,
+            plot_paths,
+            config=config,
+            logo_path=logo_path,
         )
+        tex_path.write_text(tex_content, encoding="utf-8")
+        # Always write .tex to the final output dir so it's recoverable if compilation fails
+        final_tex_path.write_text(tex_content, encoding="utf-8")
 
         if not shutil.which(_PDFLATEX):
             raise RuntimeError(
@@ -609,22 +609,31 @@ def compile_lcca_report_pdf(
                 "After installation, restart the application."
             )
 
+        def _run_pdflatex(*extra_args):
+            result = subprocess.run(
+                [_PDFLATEX, "-interaction=nonstopmode", *extra_args, tex_path.name],
+                cwd=work_dir,
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                log_file = tex_path.with_suffix(".log")
+                log_snippet = ""
+                if log_file.exists():
+                    lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
+                    error_lines = [l for l in lines if l.startswith("!") or "Error" in l or "error" in l]
+                    log_snippet = "\n".join(error_lines[-30:]) if error_lines else "\n".join(lines[-40:])
+                raise RuntimeError(
+                    f"pdflatex failed (exit {result.returncode}).\n\n"
+                    f"LaTeX errors:\n{log_snippet or result.stdout[-3000:] or '(no output)'}\n\n"
+                    f"The .tex file has been saved to:\n  {final_tex_path}"
+                )
+
         lot_path = tex_path.with_suffix(".lot")
-        subprocess.run(
-            [_PDFLATEX, "-interaction=nonstopmode", "-draftmode", tex_path.name],
-            cwd=work_dir,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        _run_pdflatex("-draftmode")
         _dedupe_lot_entries(lot_path)
-        subprocess.run(
-            [_PDFLATEX, "-interaction=nonstopmode", tex_path.name],
-            cwd=work_dir,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        _run_pdflatex()
+
         _dedupe_lot_entries(lot_path)
 
         if not pdf_path.exists():
