@@ -63,6 +63,7 @@ class DevToolsWindow(QMainWindow):
 
         # ── Source state ──────────────────────────────────────────────────────
         self._source_label: str = ""
+        self._source_dir: Path | None = None
         self._temp_dir: str | None = None
 
         # chunk name → original raw bytes (as loaded)
@@ -123,6 +124,7 @@ class DevToolsWindow(QMainWindow):
 
         layout.addWidget(self._tbtn("📁  Open Folder", self._open_folder))
         layout.addWidget(self._tbtn("📦  Open Archive (.3ps)", self._open_archive))
+        layout.addWidget(self._tbtn("🔄  Refresh", self._refresh))
 
         sep = QLabel("|")
         sep.setStyleSheet("color:#444; padding:0 4px;")
@@ -363,7 +365,14 @@ class DevToolsWindow(QMainWindow):
 
         self._load_from_dir(Path(tmp), label=Path(path).name)
 
+    def _refresh(self):
+        if not self._source_dir or not self._source_dir.exists():
+            self._set_status("Nothing to refresh — open a project first.")
+            return
+        self._load_from_dir(self._source_dir, label=self._source_label)
+
     def _load_from_dir(self, directory: Path, label: str):
+        self._source_dir = directory
         # Reset state
         self._chunk_raw.clear()
         self._chunk_modified.clear()

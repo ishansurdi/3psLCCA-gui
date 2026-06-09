@@ -4,7 +4,6 @@ from three_ps_lcca_gui.gui._CONFIG import DEV_MODE
 from ...base_widget import BaseDataWidget
 from ...utils.form_builder.form_definitions import FieldDef
 from ...utils.form_builder.form_builder import build_form
-from ...utils.common_requested_data import get_currency
 from ...utils.validation_helpers import freeze_form, clear_field_styles
 from .scc_tabs.ricke import RickeWidget
 from .scc_tabs.custom import CustomWidget
@@ -67,27 +66,23 @@ class SCCWidget(BaseDataWidget):
         self._sub_b.clear_validation()
 
     def get_data_dict(self) -> dict:
+        if self.controller and self.controller.engine and self.controller.engine.is_active():
+            chunk = dict(self.controller.get_chunk(self.chunk_name) or {})
+        else:
+            chunk = {}
+
         idx = self._field_map["selector"].currentIndex()
         label = _SELECTOR_LABELS[idx]
-        currency = get_currency()
-        unit = f"{currency}/kgCO₂e"
-        cost = self._active().get_cost()
-        raw_custom = self._sub_b.get_data_dict()
-        return {
-            "source": label,
-            "ricke": self._sub_a.get_data_dict(),
-            "custom": {
-                "entered_value": raw_custom.get("scc_value", 0.0),
-                "currency": currency,
-                "unit": unit,
-            },
-            "result": {
-                "selected_mode": label,
-                "cost_of_carbon_local": cost if cost is not None else 0.0,
-                "currency": currency,
-                "unit": unit,
-            },
-        }
+        chunk["source"] = label
+
+        if idx == 0:
+            chunk["ricke"] = self._sub_a.get_ricke_data()
+            chunk["result"] = self._sub_a.get_result_data(label)
+        else:
+            chunk["custom"] = self._sub_b.get_custom_data()
+            chunk["result"] = self._sub_b.get_result_data(label)
+
+        return chunk
 
     def get_data(self) -> dict:
         chunk = {"chunk": "social_cost_data", "data": self.get_data_dict()}
@@ -96,19 +91,23 @@ class SCCWidget(BaseDataWidget):
         return chunk
 
     def load_data(self, data: dict):
-        source = data.get("source") or data.get("mode", "ricke")
-        if source in _SELECTOR_LABELS:
-            idx = _SELECTOR_LABELS.index(source)
-        elif source in _KEYS:
-            idx = _KEYS.index(source)
-        else:
-            idx = 0
-        self._field_map["selector"].setCurrentIndex(idx)
-        self._sub_a.load_data_dict(data.get("ricke", {}))
-        custom_data = data.get("custom", {})
-        if "entered_value" in custom_data and "scc_value" not in custom_data:
-            custom_data = {"scc_value": custom_data["entered_value"]}
-        self._sub_b.load_data_dict(custom_data)
+        self._loading = True
+        try:
+            source = data.get("source") or data.get("mode", "ricke")
+            if source in _SELECTOR_LABELS:
+                idx = _SELECTOR_LABELS.index(source)
+            elif source in _KEYS:
+                idx = _KEYS.index(source)
+            else:
+                idx = 0
+            self._field_map["selector"].setCurrentIndex(idx)
+            self._sub_a.load_data_dict(data.get("ricke", {}))
+            custom_data = data.get("custom", {})
+            if "entered_value" in custom_data and "scc_value" not in custom_data:
+                custom_data = {"scc_value": custom_data["entered_value"]}
+            self._sub_b.load_data_dict(custom_data)
+        finally:
+            self._loading = False
 
     def load_data_dict(self, data: dict):
         self.load_data(data)

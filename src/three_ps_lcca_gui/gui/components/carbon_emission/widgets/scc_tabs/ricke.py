@@ -106,8 +106,6 @@ def _lookup(df, iso3, run, dmgfuncpar, climate, ssp, rcp, disc):
     except KeyError:
         return None, "missing"
 
-CHUNK = None  # SCCWidget owns saving; sub-widgets must not autosave to the chunk
-
 _SSP_OPTIONS = [
     "SSP1 (Sustainability)",
     "SSP2 (Middle of the Road)",
@@ -240,7 +238,7 @@ RICKE_FIELDS: list[FieldDef | Section] = [
     Section("Inflation Adjustment (CPI)"),
     FieldDef(
         "cpi_ratio",
-        "CPI Ratio (current / 2018)",
+        "CPI Ratio (Reference-Year CPI / 2018 CPI)",
         "The Ricke et al. paper was published in 2018. Apply a CPI ratio (current year CPI ÷ 2018 CPI) to adjust the output for inflation. Set to 1.0 to use the original 2018 values.",
         "float",
         options=(0.0, 100.0, DECIMAL_PLACES),
@@ -256,7 +254,7 @@ RICKE_FIELDS: list[FieldDef | Section] = [
 
 class RickeWidget(ScrollableForm):
     def __init__(self, controller=None):
-        super().__init__(controller=controller, chunk_name=CHUNK)
+        super().__init__(controller=controller, chunk_name=None)
         build_form(self, RICKE_FIELDS)
         self._update_currency_suffix()
 
@@ -285,6 +283,14 @@ class RickeWidget(ScrollableForm):
         for lbl in (self._lbl_scc, self._lbl_range, self._lbl_params, self._lbl_status):
             self.form.addRow(lbl)
 
+        self._lbl_explorer = QLabel(
+            '<a href="https://country-level-scc.github.io/explorer/">Country-level SCC Explorer</a>'
+        )
+        self._lbl_explorer.setOpenExternalLinks(True)
+        self._lbl_explorer.setStyleSheet(
+            f"color: {get_token('primary')}; font-size: {FS_SM}pt;"
+        )
+        self.form.addRow(self._lbl_explorer)
 
         # ── clear button (inside form, same pattern as demolition/traffic_data) ─
         btn_row = QWidget()
@@ -575,3 +581,16 @@ class RickeWidget(ScrollableForm):
         usd_to_local     = fm["usd_to_local_rate"].value() if "usd_to_local_rate" in fm else 1.0
         # DB values are USD/tCO₂; system expects currency/kgCO₂e → divide by 1000
         return result[pct_idx] * cpi_ratio * usd_to_local / 1000
+
+    def get_ricke_data(self) -> dict:
+        return self.get_data_dict()
+
+    def get_result_data(self, selected_mode: str) -> dict:
+        cost = self.get_cost()
+        currency = get_currency()
+        return {
+            "selected_mode": selected_mode,
+            "cost_of_carbon_local": cost if cost is not None else 0.0,
+            "currency": currency,
+            "unit": f"{currency}/kgCO₂e",
+        }
